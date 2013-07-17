@@ -1,6 +1,6 @@
 from fabric.api import *
 
-# Analycis modules
+# Analytics modules
 from XMLHandler import *
 
 # Flow of control:
@@ -32,6 +32,8 @@ class Container(object):
         self.user = _user
         self.pwd = _pwd
 
+    # The following are methods used to spawn a new container
+    
     def sshd_up(self):
         """ set up sshd """
         self.cnt_id = local('docker run -d -p 22 ' + self.image + 
@@ -65,11 +67,18 @@ class Container(object):
         print 'Halting the current container...\n\n'
         local('docker stop ' + self.cnt_id)
 
+    # The following are methods used to perform actions common to several containers
+
     def count_sloc(self, path):
         """ use cloc to get the static lines of code for any given directory """
         with cd(path):
             lines = run("cloc . | grep SUM: | awk '{print $5}'")
         return lines
+
+    def checkout(self, path, revision):
+        """ checkout the revision we want """
+        with cd(path):
+            run('git checkout ' + revision)
 
 
 
@@ -83,11 +92,6 @@ class Redis(Container):
         # no errors yet (:
         self.compileError = False
         self.maketestError = False
-
-    def checkout(self):
-        """ checkout the revision we want """
-        with cd('/home/redis'):
-            run('git checkout ' + self.current_revision)
 
     def compile(self):
         """ compile redis """
@@ -106,16 +110,12 @@ class Redis(Container):
                     result = run('make test')
                     if result.failed:
                         self.maketestError = True
-        else:
-            pass
             
     def overall_coverage(self):
         """ collect overall coverage results """
         if self.compileError == False and self.maketestError == False:
             with cd('/home/redis/src'):
                 run('gcov *.c | tail -1 > coverage-' + self.current_revision) 
-        else:
-            pass
         
     def collect(self):
         """ create a Collector to collect all info and a XMLHandler to parse them """
@@ -139,13 +139,16 @@ class Redis(Container):
 class Analytics(object):
     """ Main class. Usage: Analytics(custom program class, docker_image, revisions (tuple)) """
     
-    def __init__(self, _pclass, _image, _revisions):
+    def __init__(self, _pclass, _image, _path, _revisions):
         # the class itself
         self.pclass = _pclass
         # the class name as a string
         self.pname = str(_pclass)
         # docker image
         self.image = _image
+        # path for the program to be built-in in the container image
+        self.path = _path
+        # revisions #
         self.revisions = _revisions
         # e.g. if program is 'Redis', local dir will be 'Redis-local'
         self.localrepo = self.pname + '-local'        
@@ -172,7 +175,7 @@ class Analytics(object):
             print i
             r = self.pclass(self.image, 'root', 'root', i)
             r.spawn()
-            r.checkout()
+            r.checkout(self.path, i)
             r.compile()    # long steps
             r.make_test()  #
             r.overall_coverage()
@@ -186,8 +189,8 @@ def main():
     # start a new test targeting Redis, using docker image 'manlio/redis' 
     # and testing revisions 2.4.0, 2.6.14 and 2.6.2
 
-    a = Analytics(Redis, 'manlio/redis', ('2.4.0', '2.6.14', '2.6.2'))
-    #a = Analytics(Redis, 'manlio/redis', ('2.4.0',)) # compile error
+    #a = Analytics(Redis, 'manlio/redis', '/home/redis', ('2.4.0', '2.6.14', '2.6.2'))
+    a = Analytics(Redis, 'manlio/redis', '/home/redis', ('2.6.2',))
     a.go()
     
     # Tests:
