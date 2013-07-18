@@ -31,9 +31,13 @@ class Container(object):
         self.image = _image
         self.user = _user
         self.pwd = _pwd
+        # no errors yet :)
+        self.compileError = False
+        self.maketestError = False
+
 
     # The following are methods used to spawn a new container
-    
+    #
     def sshd_up(self):
         """ set up sshd """
         self.cnt_id = local('docker run -d -p 22 ' + self.image + 
@@ -63,12 +67,12 @@ class Container(object):
 
     def halt(self):
         """ shutdown the current container """
-        print '\n===> YEEH if you read this it means everything went alright!'
-        print 'Halting the current container...\n\n'
+        print '\n\nHalting the current container...\n\n'
         local('docker stop ' + self.cnt_id)
 
     # The following are methods used to perform actions common to several containers
-
+    #
+    # TODO: improve this to support multiple arguments, both dirs and files
     def count_sloc(self, path):
         """ use cloc to get the static lines of code for any given directory """
         with cd(path):
@@ -80,6 +84,28 @@ class Container(object):
         with cd(path):
             run('git checkout ' + revision)
 
+    def overall_coverage(self, path):
+        """ collect overall coverage results """
+        if self.compileError == False and self.maketestError == False:
+            with cd(path):
+                run('gcov *.c | tail -1 > coverage-' + self.current_revision) 
+
+    def collect(self, source_path, tsuite_path):
+        """ create a Collector to collect all info and a XMLHandler to parse them """
+        c = Collector()
+        c.revision = self.current_revision
+        c.tsuite_size = self.count_sloc(tsuite_path)
+        # if no errors have been detected
+        if self.compileError == False and self.maketestError == False:
+            c.summary = run('cat ' + source_path + '/coverage-' + self.current_revision)
+        else:
+            c.compileError = self.compileError
+            c.maketestError = self.maketestError
+        # pass the Collector() obj to the XML handler to store results in nice XML
+        x = XMLHandler(c)
+        x.extractData()
+        x.dumpXML()
+
 
 
 class Redis(Container):
@@ -89,9 +115,6 @@ class Redis(Container):
         Container.__init__(self, _image, _user, _pwd)
         # revision we're working with
         self.current_revision = _current_revision
-        # no errors yet (:
-        self.compileError = False
-        self.maketestError = False
 
     def compile(self):
         """ compile redis """
@@ -110,36 +133,41 @@ class Redis(Container):
                     result = run('make test')
                     if result.failed:
                         self.maketestError = True
-            
-    def overall_coverage(self):
-        """ collect overall coverage results """
-        if self.compileError == False and self.maketestError == False:
-            with cd('/home/redis/src'):
-                run('gcov *.c | tail -1 > coverage-' + self.current_revision) 
-        
-    def collect(self):
-        """ create a Collector to collect all info and a XMLHandler to parse them """
-        # TODO: (?) get rid of the hardcoded bit and move this to Container()
-        c = Collector()
-        c.revision = self.current_revision
-        # if no errors have been detected
-        if self.compileError == False and self.maketestError == False:
-            c.summary = run('cat /home/redis/src/coverage-' + self.current_revision)
-            c.tsuite_size = self.count_sloc('/home/redis/tests/')
-        else:
-            c.compileError = self.compileError
-            c.maketestError = self.maketestError
-        # pass the Collector() obj to the XML handler to store results in nice XML
-        x = XMLHandler(c)
-        x.extractData()
-        x.dumpXML()
+                
 
+# TODO: add testapp.c to sloc args    
+class Memcached(Container):
+    """ Memcached class """
+
+    def __init__(self, _image, _user, _pwd, _current_revision):
+        Container.__init__(self, _image, _user, _pwd)
+        # revision we're working with
+        self.current_revision = _current_revision
+
+    def compile(self):
+        """ compile Memcached """
+        with cd('/home/memcached'):
+           with settings(warn_only=True):
+               result = run('sh autogen.sh && sh configure && make clean && make')
+               if result.failed:
+                   self.compileError = True
+
+    def make_test(self):
+        """ run the test suite """
+        # if compile failed, skip this step
+        if self.compileError == False: 
+            with cd('/home/memcached'):
+                with settings(warn_only=True):
+                    result = run('make test')
+                    if result.failed:
+                        self.maketestError = True
+        
 
 
 class Analytics(object):
     """ Main class. Usage: Analytics(custom program class, docker_image, revisions (tuple)) """
     
-    def __init__(self, _pclass, _image, _path, _revisions):
+    def __init__(self, _pclass, _image, _path, _source_path, _tsuite_path, _revisions):
         # the class itself
         self.pclass = _pclass
         # the class name as a string
@@ -148,6 +176,10 @@ class Analytics(object):
         self.image = _image
         # path for the program to be built-in in the container image
         self.path = _path
+        # source path
+        self.source_path = _source_path
+        # test suite path
+        self.tsuite_path = _tsuite_path
         # revisions #
         self.revisions = _revisions
         # e.g. if program is 'Redis', local dir will be 'Redis-local'
@@ -175,37 +207,46 @@ class Analytics(object):
             print i
             r = self.pclass(self.image, 'root', 'root', i)
             r.spawn()
-            r.checkout(self.path, i)
+            #r.checkout(self.path, i)
             r.compile()    # long steps
             r.make_test()  #
-            r.overall_coverage()
-            r.collect()
+            r.overall_coverage(self.source_path)
+            r.collect(self.source_path, self.tsuite_path)
             r.halt()
         
 
 def main():
     """ let's do something """
 
-    # start a new test targeting Redis, using docker image 'manlio/redis' 
-    # and testing revisions 2.4.0, 2.6.14 and 2.6.2
-
-    #a = Analytics(Redis, 'manlio/redis', '/home/redis', ('2.4.0', '2.6.14', '2.6.2'))
-    a = Analytics(Redis, 'manlio/redis', '/home/redis', ('2.6.2',))
-    a.go()
+    # Archetype:
+    #x = Analytics(Program,
+    #              docker image,
+    #              absolute path,
+    #              source path,
+    #              test suite size,
+    #              (versions)
+    #              )
     
-    # Tests:
-
-    # ==> Spawn a new redis container
-    # r = Redis('manlio/red-covered', 'root', 'root', '2.6.14')
-    # r.spawn()
-    # r.overall_coverage()
-    # r.collect()
-    # r.halt()
+    # Redis
+    #r = Analytics(Redis, 
+    #              'manlio/red-covered', 
+    #              '/home/redis', 
+    #              '/home/redis/src', 
+    #              '/home/redis/tests',
+    #              ('2.6.2',)
+    #              )
+    #r.go()
     
-    # ==> Spawn a new container
-    # c = Container('manlio/dev', 'root', 'root')
-    # c.spawn()
-    # c.halt()
+    # Memcached
+    m = Analytics(Memcached, 
+                  'manlio/memcached',  
+                  '/home/memcached', 
+                  '/home/memcached', 
+                  '/home/memcached/t',
+                  ('1.4.8',)
+                  )
+    m.go()
+    
 
 
 if __name__== "__main__":
