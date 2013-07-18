@@ -35,9 +35,9 @@ class Container(object):
         self.compileError = False
         self.maketestError = False
 
-
     # The following are methods used to spawn a new container
     #
+
     def sshd_up(self):
         """ set up sshd """
         self.cnt_id = local('docker run -d -p 22 ' + self.image + 
@@ -72,13 +72,14 @@ class Container(object):
 
     # The following are methods used to perform actions common to several containers
     #
-    # TODO: improve this to support multiple arguments, both dirs and files
-    def count_sloc(self, path):
-        """ use cloc to get the static lines of code for any given directory """
-        with cd(path):
-            lines = run("cloc . | grep SUM: | awk '{print $5}'")
-        return lines
 
+    def count_sloc(self, path):
+        """ use cloc to get the static lines of code for any given file or directory """
+        lines = 0
+        for p in path:
+            lines += int(run("cloc " + p + " | tail -2 | awk '{print $5}'"))
+        return str(lines)
+            
     def checkout(self, path, revision):
         """ checkout the revision we want """
         with cd(path):
@@ -135,7 +136,7 @@ class Redis(Container):
                         self.maketestError = True
                 
 
-# TODO: add testapp.c to sloc args    
+
 class Memcached(Container):
     """ Memcached class """
 
@@ -239,10 +240,10 @@ def main():
     
     # Memcached
     m = Analytics(Memcached, 
-                  'manlio/memcached',  
+                  'mem-covered',  
                   '/home/memcached', 
                   '/home/memcached', 
-                  '/home/memcached/t',
+                  ('/home/memcached/t','/home/memcached/testapp.c'),
                   ('1.4.8',)
                   )
     m.go()
