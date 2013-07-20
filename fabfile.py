@@ -89,7 +89,7 @@ class Container(object):
         """ collect overall coverage results """
         if self.compileError == False and self.maketestError == False:
             with cd(path):
-                run('gcov *.c | tail -1 > coverage-' + self.current_revision) 
+                run('gcov * | tail -1 > coverage-' + self.current_revision) 
 
     def collect(self, source_path, tsuite_path):
         """ create a Collector to collect all info and a XMLHandler to parse them """
@@ -97,6 +97,7 @@ class Container(object):
         # the class name which is actually running this method, as a string
         c.name = self.__class__.__name__
         c.revision = self.current_revision
+        # compute test suite size as SLOC. Note tsuite_path MUST be a tuple!
         c.tsuite_size = self.count_sloc(tsuite_path)
         # if no errors have been detected
         if self.compileError == False and self.maketestError == False:
@@ -165,7 +166,45 @@ class Memcached(Container):
                     result = run('make test')
                     if result.failed:
                         self.maketestError = True
-        
+
+
+
+class Zeromq(Container):
+    """ Zeromq class """
+
+    def __init__(self, _image, _user, _pwd, _current_revision):
+        Container.__init__(self, _image, _user, _pwd)
+        # revision we're working with
+        self.current_revision = _current_revision
+
+    def compile(self):
+        """ compile Zeromq """
+        with cd('/home/zeromq3-x'):
+           with settings(warn_only=True):
+               result = run(("sh autogen.sh && sh configure --without-documentation "
+                             "--with-gcov=yes CFLAGS='-O0 -fprofile-arcs -ftest-coverage' "
+                             "CXXFLAGS='-O0 -fprofile-arcs -ftest-coverage' && make -j4 " ))
+               if result.failed:
+                   self.compileError = True
+
+    def make_test(self):
+        """ run the test suite """
+        # if compile failed, skip this step
+        if self.compileError == False: 
+            with cd('/home/zeromq3-x'):
+                with settings(warn_only=True):
+                    result = run(("make check CFLAGS='-O0' CXXFLAGS='-O0'"))
+                    if result.failed:
+                        self.maketestError = True
+            # extra coverage steps
+            with cd('/home/zeromq3-x/src'):
+                # moving the gcov files to the right place
+                run('mv .libs/*.gcda .')
+                run('mv .libs/*.gcno .')
+                # remove 'libzmq_la-' prefix from gcov files
+                run("rename 's/libzmq_la-//' *.gcda")
+                run("rename 's/libzmq_la-//' *.gcno")
+
 
 
 class Analytics(object):
@@ -210,32 +249,41 @@ def main():
     # Archetype:
     #x = Analytics(Program,
     #              docker image,
-    #              absolute path,
-    #              source path,
-    #              test suite size,
+    #              absolute path,     
+    #              source path,         # where the .gcno files are
+    #              (test suite path),   # must be a tuple
     #              (versions)
     #              )
     
     # Redis
-    #r = Analytics(Redis, 
-    #              'manlio/red-covered', 
-    #              '/home/redis', 
-    #              '/home/redis/src', 
-    #              '/home/redis/tests',
-    #              ('2.6.2',)
-    #              )
+    r = Analytics(Redis, 
+                  'manlio/redis', 
+                  '/home/redis', 
+                  '/home/redis/src', 
+                  ('/home/redis/tests',),
+                  ('2.6.2',)
+                  )
     #r.go()
-    
+
     # Memcached
     m = Analytics(Memcached, 
-                  'mem-covered',  
+                  'manlio/memcached',  
                   '/home/memcached', 
                   '/home/memcached', 
                   ('/home/memcached/t','/home/memcached/testapp.c'),
                   ('1.4.8',)
                   )
-    m.go()
-    
+    #m.go()
+
+    # Zeromq
+    z = Analytics(Zeromq,
+                  'manlio/zeromq',
+                  '/home/zeromq3-x',
+                  '/home/zeromq3-x/src',
+                  ('/home/zeromq3-x/tests',),
+                  ('3.2.3',)
+                  )
+    z.go()
 
 
 if __name__== "__main__":
