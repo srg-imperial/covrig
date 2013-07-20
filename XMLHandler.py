@@ -5,7 +5,8 @@ class XMLHandler(object):
         an object of class Collector() is passed on init """
     
     def __init__(self, _collector):
-        # extract revision number
+        # extract program name and revision from the collector obj
+        self.name = _collector.name
         self.rev = _collector.revision
         self.compileErr = False
         self.maketestErr = False
@@ -37,7 +38,7 @@ class XMLHandler(object):
             self.exitStatus = 'OK'
 
     def dumpXML(self):
-        root = ET.Element('report')
+        root = ET.Element(self.name + ' report')
 
         rev = ET.SubElement(root, 'revision #' + self.rev)
 
@@ -58,7 +59,8 @@ class XMLHandler(object):
         field3.text = self.tsize
 
         tree = ET.ElementTree(root)
-        tree.write('summary-' + self.rev + '.xml')
+        # output file of kind ProgramName-revision.xml
+        tree.write(self.name + '-' + self.rev + '.xml')
 
 
 
