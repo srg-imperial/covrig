@@ -94,6 +94,8 @@ class Container(object):
     def collect(self, source_path, tsuite_path):
         """ create a Collector to collect all info and a XMLHandler to parse them """
         c = Collector()
+        # the class name which is actually running this method, as a string
+        c.name = self.__class__.__name__
         c.revision = self.current_revision
         c.tsuite_size = self.count_sloc(tsuite_path)
         # if no errors have been detected
@@ -149,7 +151,8 @@ class Memcached(Container):
         """ compile Memcached """
         with cd('/home/memcached'):
            with settings(warn_only=True):
-               result = run('sh autogen.sh && sh configure && make clean && make')
+               result = run(("sh autogen.sh && sh configure && make clean && "
+                             "make CFLAGS+='-fprofile-arcs -ftest-coverage -g -O0 -pthread'"))
                if result.failed:
                    self.compileError = True
 
@@ -171,8 +174,6 @@ class Analytics(object):
     def __init__(self, _pclass, _image, _path, _source_path, _tsuite_path, _revisions):
         # the class itself
         self.pclass = _pclass
-        # the class name as a string
-        self.pname = str(_pclass)
         # docker image
         self.image = _image
         # path for the program to be built-in in the container image
@@ -183,20 +184,7 @@ class Analytics(object):
         self.tsuite_path = _tsuite_path
         # revisions #
         self.revisions = _revisions
-        # e.g. if program is 'Redis', local dir will be 'Redis-local'
-        self.localrepo = self.pname + '-local'        
-
-        # supported project repos
-        self.repos = {'Redis' : 'https://github.com/antirez/redis.git'}
-
-    # local_clone() and get_tags() are only useful if the list of versions
-    # to be tested is NOT specified as an argument when creating a new 
-    # Analytics() object.
-    def local_clone(self):
-        """ get a local clone to inspect """
-        local('mkdir -p analytics && cd analytics')    
-        local('git clone ' + self.repos[self.pname] + ' ' + self.localrepo)
-
+ 
     def get_tags(self):
         """ get the list of all tagged revisions """
         self.taglist = local('cd ' + self.localrepo + 
