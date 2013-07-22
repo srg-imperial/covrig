@@ -1,4 +1,4 @@
-import xml.etree.cElementTree as ET
+from lxml import etree as ET
 
 class XMLHandler(object):
     """ Create an XML file for collecting the results;
@@ -38,9 +38,9 @@ class XMLHandler(object):
             self.exitStatus = 'OK'
 
     def dumpXML(self):
-        root = ET.Element(self.name + ' report')
+        root = ET.Element(self.name + '-report')
 
-        rev = ET.SubElement(root, 'revision #' + self.rev)
+        rev = ET.SubElement(root, 'revision-' + self.rev)
 
         field0 = ET.SubElement(rev, 'ExitStatus')
         field0.set('data', 'Exit Status')
@@ -60,7 +60,7 @@ class XMLHandler(object):
 
         tree = ET.ElementTree(root)
         # output file of kind ProgramName-revision.xml
-        tree.write(self.name + '-' + self.rev + '.xml')
+        tree.write(self.name + '-' + self.rev + '.xml', pretty_print=True)
 
 
 
