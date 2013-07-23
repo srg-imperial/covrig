@@ -87,7 +87,7 @@ class Container(object):
 
     def overall_coverage(self, path):
         """ collect overall coverage results """
-        if self.compileError == False and self.maketestError == False:
+        if self.compileError == False and self.maketestError != 1:
             with cd(path):
                 run('gcov * | tail -1 > coverage-' + self.current_revision) 
 
@@ -99,12 +99,18 @@ class Container(object):
         c.revision = self.current_revision
         # compute test suite size as SLOC. Note tsuite_path MUST be a tuple!
         c.tsuite_size = self.count_sloc(tsuite_path)
-        # if no errors have been detected
-        if self.compileError == False and self.maketestError == False:
-            c.summary = run('cat ' + source_path + '/coverage-' + self.current_revision)
+        # if compilation failed
+        if self.compileError == True:
+            c.compileError = True
+        # if the test suite failed (i.e. the test suite is broken or cannot be run)
+        elif self.maketestError == 1:
+            c.maketestError = True
+        # proceed in all other cases
         else:
+            c.summary = run('cat ' + source_path + '/coverage-' + self.current_revision)
             c.compileError = self.compileError
             c.maketestError = self.maketestError
+
         # pass the Collector() obj to the XML handler to store results in nice XML
         x = XMLHandler(c)
         x.extractData()
@@ -136,7 +142,7 @@ class Redis(Container):
                 with settings(warn_only=True):
                     result = run('make test')
                     if result.failed:
-                        self.maketestError = True
+                        self.maketestError = result.return_code
                 
 
 
@@ -165,7 +171,7 @@ class Memcached(Container):
                 with settings(warn_only=True):
                     result = run('make test')
                     if result.failed:
-                        self.maketestError = True
+                        self.maketestError = result.return_code
 
 
 
@@ -195,7 +201,7 @@ class Zeromq(Container):
                 with settings(warn_only=True):
                     result = run(("make check CFLAGS='-O0' CXXFLAGS='-O0'"))
                     if result.failed:
-                        self.maketestError = True
+                        self.maketestError = result.return_code
             # extra coverage steps
             with cd('/home/zeromq3-x/src'):
                 # moving the gcov files to the right place
@@ -235,7 +241,7 @@ class Analytics(object):
             print i
             r = self.pclass(self.image, 'root', 'root', i)
             r.spawn()
-            #r.checkout(self.path, i)
+            r.checkout(self.path, i)
             r.compile()    # long steps
             r.make_test()  #
             r.overall_coverage(self.source_path)
@@ -261,9 +267,9 @@ def main():
                   '/home/redis', 
                   '/home/redis/src', 
                   ('/home/redis/tests',),
-                  ('2.6.2',)
+                  ('2.6.14','2.6.13')
                   )
-    #r.go()
+    r.go()
 
     # Memcached
     m = Analytics(Memcached, 
@@ -271,9 +277,9 @@ def main():
                   '/home/memcached', 
                   '/home/memcached', 
                   ('/home/memcached/t','/home/memcached/testapp.c'),
-                  ('1.4.8',)
+                  ('1.4.15','1.4.14')
                   )
-    #m.go()
+    m.go()
 
     # Zeromq
     z = Analytics(Zeromq,
@@ -281,7 +287,7 @@ def main():
                   '/home/zeromq3-x',
                   '/home/zeromq3-x/src',
                   ('/home/zeromq3-x/tests',),
-                  ('3.2.3',)
+                  ('v3.2.3',)
                   )
     z.go()
 

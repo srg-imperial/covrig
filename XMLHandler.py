@@ -8,34 +8,38 @@ class XMLHandler(object):
         # extract program name and revision from the collector obj
         self.name = _collector.name
         self.rev = _collector.revision
-        self.compileErr = False
-        self.maketestErr = False
+        self.compileErr = _collector.compileError
+        self.maketestErr = _collector.maketestError
         self.eloc = '0'
         self.ocoverage = '0'
         self.tsize = '0'
-        # make sure no errors occurred
-        if _collector.compileError == False and _collector.maketestError == False: 
+
+        # make sure no fatal errors occurred
+        if self.compileErr == False and self.maketestErr != 1:
             # input is in this form: Lines executed:65.38% of 15576
             self.summary = _collector.summary
             # extract test suite size as sloc
             self.tsize = _collector.tsuite_size
-        else:
-            self.compileErr = _collector.compileError
-            self.maketestErr = _collector.maketestError
     
     def extractData(self):
-        # report errors
+        # compilation failed
         if self.compileErr == True:
             self.exitStatus = 'compileError'
-        elif self.maketestErr == True:
+        # test suite failed (broken or didn't run)
+        elif self.maketestErr == 1:
             self.exitStatus = 'testError'
+        # all other cases:
         else:
             # extract lines executed and total eloc
             self.summary = self.summary.split('%')
             self.ocoverage = filter( lambda x: x in '0123456789.', self.summary[0] )
             self.eloc = filter( lambda x: x in '0123456789.', self.summary[1] )
-            # everything was OK
-            self.exitStatus = 'OK'
+            # test suite returned exit code 2 (i.e. one or more test failed)            
+            if self.maketestErr == 2:
+                self.exitStatus = 'SomeTestFailed'
+            else:
+                # everything should be OK
+                self.exitStatus = 'OK'
 
     def dumpXML(self):
         root = ET.Element(self.name + '-report')
