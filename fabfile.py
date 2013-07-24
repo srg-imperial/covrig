@@ -83,6 +83,9 @@ class Container(object):
     def checkout(self, path, revision):
         """ checkout the revision we want """
         with cd(path):
+            # set the revision for current execution (commit sha)
+            self.current_revision = revision
+            # checkout revision
             run('git checkout ' + revision)
 
     def overall_coverage(self, path):
@@ -121,10 +124,8 @@ class Container(object):
 class Redis(Container):
     """ redis class """
     
-    def __init__(self, _image, _user, _pwd, _current_revision):
+    def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
-        # revision we're working with
-        self.current_revision = _current_revision
 
     def compile(self):
         """ compile redis """
@@ -149,11 +150,9 @@ class Redis(Container):
 class Memcached(Container):
     """ Memcached class """
 
-    def __init__(self, _image, _user, _pwd, _current_revision):
+    def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
-        # revision we're working with
-        self.current_revision = _current_revision
-
+  
     def compile(self):
         """ compile Memcached """
         with cd('/home/memcached'):
@@ -178,10 +177,8 @@ class Memcached(Container):
 class Zeromq(Container):
     """ Zeromq class """
 
-    def __init__(self, _image, _user, _pwd, _current_revision):
+    def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
-        # revision we're working with
-        self.current_revision = _current_revision
 
     def compile(self):
         """ compile Zeromq """
@@ -216,7 +213,7 @@ class Zeromq(Container):
 class Analytics(object):
     """ Main class. Usage: Analytics(custom program class, docker_image, revisions (tuple)) """
     
-    def __init__(self, _pclass, _image, _path, _source_path, _tsuite_path, _revisions):
+    def __init__(self, _pclass, _image, _path, _source_path, _tsuite_path, _commits):
         # the class itself
         self.pclass = _pclass
         # docker image
@@ -227,26 +224,35 @@ class Analytics(object):
         self.source_path = _source_path
         # test suite path
         self.tsuite_path = _tsuite_path
-        # revisions #
-        self.revisions = _revisions
+        # commits
+        self.commits = _commits
  
-    def get_tags(self):
-        """ get the list of all tagged revisions """
-        self.taglist = local('cd ' + self.localrepo + 
-                             ' && git tag | sort --version-sort', capture=True)
+    def get_commit_list(self):
+        """ get the list of the commits to be analyzed """
+        # get the log list; the perl one-liner is to get rid of the damn colored output
+        commit_list = run('cd ' + self.source_path + ' && git log -' + 
+                          str(self.commits) + " --format=%h | perl -pe 's/\e\[?.*?[\@-~]//g' ")
+        return commit_list.splitlines()
+        
 
     def go(self):
         """ run all the tests for every version specified in a new container """
-        for i in self.revisions:
-            print i
-            r = self.pclass(self.image, 'root', 'root', i)
+
+        # get the list of commits SHA 
+        r = self.pclass(self.image, 'root', 'root')
+        r.spawn()
+        clist = self.get_commit_list()
+        r.halt()
+
+        for i in clist:
+            r = self.pclass(self.image, 'root', 'root')
             r.spawn()
             r.checkout(self.path, i)
             r.compile()    # long steps
             r.make_test()  #
             r.overall_coverage(self.source_path)
             r.collect(self.source_path, self.tsuite_path)
-            r.halt()
+
         
 
 def main():
@@ -267,7 +273,7 @@ def main():
                   '/home/redis', 
                   '/home/redis/src', 
                   ('/home/redis/tests',),
-                  ('2.6.14','2.6.13')
+                  1,
                   )
     r.go()
 
@@ -277,7 +283,7 @@ def main():
                   '/home/memcached', 
                   '/home/memcached', 
                   ('/home/memcached/t','/home/memcached/testapp.c'),
-                  ('1.4.15','1.4.14')
+                  2,
                   )
     m.go()
 
@@ -287,7 +293,7 @@ def main():
                   '/home/zeromq3-x',
                   '/home/zeromq3-x/src',
                   ('/home/zeromq3-x/tests',),
-                  ('v3.2.3',)
+                  1
                   )
     z.go()
 
