@@ -92,7 +92,7 @@ class Container(object):
         """ collect overall coverage results """
         if self.compileError == False and self.maketestError != 1:
             with cd(path):
-                run('gcov * | tail -1 > coverage-' + self.current_revision) 
+                run('gcov * | tail -1 > coverage.txt') 
 
     def collect(self, source_path, tsuite_path):
         """ create a Collector to collect all info and a XMLHandler to parse them """
@@ -110,14 +110,14 @@ class Container(object):
             c.maketestError = True
         # proceed in all other cases
         else:
-            c.summary = run('cat ' + source_path + '/coverage-' + self.current_revision)
+            c.summary = run('cat ' + source_path + '/coverage.txt')
             c.compileError = self.compileError
             c.maketestError = self.maketestError
 
         # pass the Collector() obj to the XML handler to store results in nice XML
         x = XMLHandler(c)
         x.extractData()
-        x.dumpXML()
+        x.dumpCSV()
 
 
 
@@ -264,7 +264,7 @@ def main():
     #              absolute path,     
     #              source path,         # where the .gcno files are
     #              (test suite path),   # must be a tuple
-    #              (versions)
+    #              commits              # e.g. 10 means "last 10 commits"
     #              )
     
     # Redis
@@ -275,7 +275,7 @@ def main():
                   ('/home/redis/tests',),
                   1,
                   )
-    r.go()
+    #r.go()
 
     # Memcached
     m = Analytics(Memcached, 
@@ -293,7 +293,7 @@ def main():
                   '/home/zeromq3-x',
                   '/home/zeromq3-x/src',
                   ('/home/zeromq3-x/tests',),
-                  1
+                  2
                   )
     z.go()
 

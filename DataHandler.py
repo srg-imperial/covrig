@@ -1,4 +1,6 @@
-from lxml import etree as ET
+import csv
+from os.path import isfile
+from os import makedirs
 
 class XMLHandler(object):
     """ Create an XML file for collecting the results;
@@ -41,30 +43,23 @@ class XMLHandler(object):
                 # everything should be OK
                 self.exitStatus = 'OK'
 
-    def dumpXML(self):
-        root = ET.Element(self.name + '-report')
 
-        rev = ET.SubElement(root, 'revision-' + self.rev)
-
-        field0 = ET.SubElement(rev, 'ExitStatus')
-        field0.set('data', 'Exit Status')
-        field0.text = self.exitStatus 
-
-        field1 = ET.SubElement(rev, 'ELOC')
-        field1.set('data', 'Executable Lines of Code')
-        field1.text = self.eloc 
-
-        field2 = ET.SubElement(rev, 'OCoverage')
-        field2.set('data', 'Overall Coverage')
-        field2.text = self.ocoverage
-
-        field3 = ET.SubElement(rev, 'TSize')
-        field3.set('data', 'Test Suite Size')
-        field3.text = self.tsize
-
-        tree = ET.ElementTree(root)
-        # output file of kind ProgramName-revision.xml
-        tree.write(self.name + '-' + self.rev + '.xml', pretty_print=True)
+    def dumpCSV(self):
+        """ dump the extracted data to a CSV file """
+        # results are stored in data/project-name/project-name.csv;
+        # if the csv already exists, append a row to it
+        if isfile('data/' + self.name + '/' + self.name + '.csv'):
+            with open('data/' + self.name + '/' + self.name + '.csv', 'a') as fp:
+                a = csv.writer(fp, delimiter=',')
+                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, self.exitStatus] ]
+                a.writerows(data)
+        # otherwise create it 
+        else:
+            makedirs('data/' + self.name)
+            with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
+                a = csv.writer(fp, delimiter=',')
+                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, self.exitStatus] ]
+                a.writerows(data)
 
 
 
