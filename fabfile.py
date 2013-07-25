@@ -94,12 +94,15 @@ class Container(object):
             with cd(path):
                 run('gcov * | tail -1 > coverage.txt') 
 
-    def collect(self, source_path, tsuite_path):
+    def collect(self, source_path, tsuite_path, author_name, timestamp):
         """ create a Collector to collect all info and a XMLHandler to parse them """
         c = Collector()
         # the class name which is actually running this method, as a string
         c.name = self.__class__.__name__
+        # fill in some info about the test
         c.revision = self.current_revision
+        c.author_name = author_name
+        c.timestamp = timestamp
         # compute test suite size as SLOC. Note tsuite_path MUST be a tuple!
         c.tsuite_size = self.count_sloc(tsuite_path)
         # if compilation failed
@@ -231,7 +234,7 @@ class Analytics(object):
         """ get the list of the commits to be analyzed """
         # get the log list; the perl one-liner is to get rid of the damn colored output
         commit_list = run('cd ' + self.source_path + ' && git log -' + 
-                          str(self.commits) + " --format=%h | perl -pe 's/\e\[?.*?[\@-~]//g' ")
+                          str(self.commits) + " --format=%h__%ct__%an | perl -pe 's/\e\[?.*?[\@-~]//g' ")
         return commit_list.splitlines()
         
 
@@ -244,14 +247,21 @@ class Analytics(object):
         clist = self.get_commit_list()
         r.halt()
 
-        for i in clist:
-            r = self.pclass(self.image, 'root', 'root')
-            r.spawn()
-            r.checkout(self.path, i)
-            r.compile()    # long steps
-            r.make_test()  #
-            r.overall_coverage(self.source_path)
-            r.collect(self.source_path, self.tsuite_path)
+        # clist is like ['73ae855__antirez__1373553520', '3fc7f32__antirez__1373553467']
+        for i in clist:            
+            a = i.split('__')
+            commit_id = a[0]
+            timestamp = a[1]
+            author_name = a[2]
+
+            # run a new container; remember that c is now an instance of SubClass(Container)!
+            c = self.pclass(self.image, 'root', 'root')
+            c.spawn()
+            c.checkout(self.path, commit_id)
+            c.compile()    # long steps
+            c.make_test()  #
+            c.overall_coverage(self.source_path)
+            c.collect(self.source_path, self.tsuite_path, author_name, timestamp )
 
         
 
@@ -273,9 +283,9 @@ def main():
                   '/home/redis', 
                   '/home/redis/src', 
                   ('/home/redis/tests',),
-                  1,
+                  5,
                   )
-    #r.go()
+    r.go()
 
     # Memcached
     m = Analytics(Memcached, 
@@ -293,7 +303,7 @@ def main():
                   '/home/zeromq3-x',
                   '/home/zeromq3-x/src',
                   ('/home/zeromq3-x/tests',),
-                  2
+                  5
                   )
     z.go()
 

@@ -7,9 +7,11 @@ class XMLHandler(object):
         an object of class Collector() is passed on init """
     
     def __init__(self, _collector):
-        # extract program name and revision from the collector obj
+        # extract information from the collector obj
         self.name = _collector.name
         self.rev = _collector.revision
+        self.author_name = _collector.author_name
+        self.timestamp = _collector.timestamp
         self.compileErr = _collector.compileError
         self.maketestErr = _collector.maketestError
         self.eloc = '0'
@@ -51,14 +53,16 @@ class XMLHandler(object):
         if isfile('data/' + self.name + '/' + self.name + '.csv'):
             with open('data/' + self.name + '/' + self.name + '.csv', 'a') as fp:
                 a = csv.writer(fp, delimiter=',')
-                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, self.exitStatus] ]
+                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
+                          self.author_name, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
         # otherwise create it 
         else:
             makedirs('data/' + self.name)
             with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
-                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, self.exitStatus] ]
+                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
+                          self.author_name, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
 
 
