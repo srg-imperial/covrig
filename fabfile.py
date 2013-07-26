@@ -1,7 +1,7 @@
 from fabric.api import *
 
 # Analytics modules
-from XMLHandler import *
+from DataHandler import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -88,6 +88,29 @@ class Container(object):
             # checkout revision
             run('git checkout ' + revision)
 
+    def backup(self, path, commit):
+        """ create a tar.gz with all the .gcda and .gcno files and save it to localhost """
+        with cd(path):
+            cnid = 'coverage-' + commit
+            run('mkdir ' + cnid)
+            # find all the gcno/gcda files and copy them to ~/coverage-xxxxx/
+            run("find . -iname *.gcno | xargs -I '{}' cp {} " + cnid)
+            run("find . -iname *.gcda | xargs -I '{}' cp {} " + cnid)
+            # save gcov/gcc/g++ info
+            with cd(cnid):
+                run('gcov -v | head -1 > build_info.txt')
+                run('echo >> build_info.txt')
+                run('gcc -v &>> build_info.txt')
+                # don't raise any error if g++ is not installed 
+                with settings(warn_only=True):
+                    run('echo >> build_info.txt')
+                    run('g++ -v &>> build_info.txt')
+            # create an archive
+            run('tar -cjf ' + cnid + 'tar.bz2 ' + cnid)
+            # scp to localhost (get <remote path> , <local path>)
+            local('mkdir -p data/' + self.__class__.__name__)
+            get(cnid + 'tar.bz2', 'data/' + self.__class__.__name__ + '/' + cnid + '.tar.bz2')
+            
     def overall_coverage(self, path):
         """ collect overall coverage results """
         if self.compileError == False and self.maketestError != 1:
@@ -260,6 +283,7 @@ class Analytics(object):
             c.checkout(self.path, commit_id)
             c.compile()    # long steps
             c.make_test()  #
+            c.backup(self.path, commit_id)
             c.overall_coverage(self.source_path)
             c.collect(self.source_path, self.tsuite_path, author_name, timestamp )
 

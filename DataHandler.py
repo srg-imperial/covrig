@@ -58,7 +58,6 @@ class XMLHandler(object):
                 a.writerows(data)
         # otherwise create it 
         else:
-            makedirs('data/' + self.name)
             with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
