@@ -1,8 +1,8 @@
 import csv
 from os.path import isfile
-from os import makedirs
 
-class XMLHandler(object):
+
+class DataHandler(object):
     """ Create an XML file for collecting the results;
         an object of class Collector() is passed on init """
     
@@ -68,8 +68,7 @@ class XMLHandler(object):
 
 class Collector(object):
     """ little helper-object for store info extracted from a container """
-    # Unfortunately I cannot run fab commands from here;
-    # therefore, (interesting) member variables are set by Container::collect()
+    # (interesting) member variables are set by Container::collect()
 
     def __init__(self):
         # think positive
