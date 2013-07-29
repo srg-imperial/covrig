@@ -8,6 +8,11 @@ class Memcached(Container):
 
     def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
+        
+        # set variables
+        self.path = '/home/memcached'
+        self.source_path = '/home/memcached'
+        self.tsuite_path = ('/home/memcached/t','/home/memcached/testapp.c')
   
     def compile(self):
         """ compile Memcached """

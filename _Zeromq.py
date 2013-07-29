@@ -10,6 +10,11 @@ class Zeromq(Container):
     def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
 
+        # set variables
+        self.path = '/home/zeromq3-x'
+        self.source_path = '/home/zeromq3-x/src'
+        self.tsuite_path = ('/home/zeromq3-x/tests',)
+
     def compile(self):
         """ compile Zeromq """
         with cd('/home/zeromq3-x'):

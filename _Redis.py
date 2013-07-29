@@ -10,6 +10,11 @@ class Redis(Container):
     def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
 
+        # set variables
+        self.path = '/home/redis'
+        self.source_path = '/home/redis/src'
+        self.tsuite_path = ('/home/redis/tests',)
+
     def compile(self):
         """ compile redis """
         with cd('/home/redis'):
