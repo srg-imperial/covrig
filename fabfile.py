@@ -72,9 +72,11 @@ class Analytics(object):
             c.checkout(self.path, commit_id)
             c.compile()    # long steps
             c.make_test()  #
-            c.backup(self.path, commit_id)
             c.overall_coverage(self.source_path)
+            c.backup(self.path, commit_id)
+            c.patch_coverage(self.path)
             c.collect(self.source_path, self.tsuite_path, author_name, timestamp )
+            c.halt()
 
         
 
@@ -82,13 +84,13 @@ def main():
     """ let's do something """
 
     # Archetype:
-    #x = Analytics(Program,
-    #              docker image,
-    #              absolute path,     
-    #              source path,         # where the .gcno files are
-    #              (test suite path),   # must be a tuple
-    #              commits              # e.g. 10 means "last 10 commits"
-    #              )
+    # x = Analytics(Program,
+    #               docker image,
+    #               absolute path,     
+    #               source path,         # where the .gcno files are
+    #               (test suite path),   # must be a tuple
+    #               commits              # e.g. 10 means "last 10 commits"
+    #               )
     
     # Redis
     r = Analytics(Redis, 

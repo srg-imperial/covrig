@@ -1,3 +1,4 @@
+from __future__ import division
 from fabric.api import *
 
 # Analytics modules
@@ -44,6 +45,8 @@ class Container(object):
         self.sshd_up()
         self.set_ip()
         self.fabric_setup()
+        # create a ~/data/program-name directory where data will be collected
+        local('mkdir -p data/' + self.__class__.__name__)
 
     def halt(self):
         """ shutdown the current container """
@@ -66,7 +69,7 @@ class Container(object):
             # set the revision for current execution (commit sha)
             self.current_revision = revision
             # checkout revision
-            run('git checkout ' + revision)
+            run('git checkout ' + revision) 
 
     def backup(self, path, commit):
         """ create a tar.gz with all the .gcda and .gcno files and save it to localhost """
@@ -86,16 +89,52 @@ class Container(object):
                     run('echo >> build_info.txt')
                     run('g++ -v &>> build_info.txt')
             # create an archive
-            run('tar -cjf ' + cnid + 'tar.bz2 ' + cnid)
-            # scp to localhost (get <remote path> , <local path>)
-            local('mkdir -p data/' + self.__class__.__name__)
-            get(cnid + 'tar.bz2', 'data/' + self.__class__.__name__ + '/' + cnid + '.tar.bz2')
+            run('tar -cjf ' + cnid + '.tar.bz2 ' + cnid)
+            # scp to localhost/data (get <remote path> , <local path>)
+            get(cnid + '.tar.bz2', 'data/' + self.__class__.__name__ + '/' + cnid + '.tar.bz2')
             
     def overall_coverage(self, path):
         """ collect overall coverage results """
         if self.compileError == False and self.maketestError != 1:
             with cd(path):
                 run('gcov * | tail -1 > coverage.txt', quiet=True) 
+
+    def patch_coverage(self, path):
+        """ compute the coverage for the current commit """
+        self.edited_lines = 0
+        self.covered_lines = 0
+        self.average = 0
+
+        # get a list of the changed files for the current commit
+        with cd(path):
+            changed_files = run("git show --pretty='format:' --name-only | perl -pe 's/\e\[?.*?[\@-~]//g'")
+            # check didn't return an empty set
+            if changed_files:
+                # for every changed file, get the line numbers
+                for f in changed_files.split('\r\n'):
+                    # we're interested only in c/cpp files
+                    extension = f.split('.')
+                    if extension[1] == 'c' or extension[1] == 'cpp':
+                        line_numbers = run("git blame --porcelain " + f + " | grep " + 
+                                           self.current_revision + " | awk '{print $2}'")
+                        # check every line with its .gcov equivalent
+                        for l in line_numbers.split('\r\n'):
+                            cov = run("cat " + f + ".gcov | grep ' " + l + ":' | awk '{print $1}'")
+                            # line is actual code, not covered
+                            if cov == '#####:':
+                                self.edited_lines += 1
+                            # line is actual code, thus has been covered :)
+                            elif cov != '-:':
+                                self.covered_lines += 1
+                                self.edited_lines += 1
+                    else:
+                        print extension[1] + ': we are not interested in this kind of file\n'
+            # no file changed
+            else:
+                print '\nNo files changed (?)'
+        # save results
+        if self.covered_lines != 0:
+            self.average = round(self.covered_lines/self.edited_lines, 3)*100
 
     def collect(self, source_path, tsuite_path, author_name, timestamp):
         """ create a Collector to collect all info and a XMLHandler to parse them """
@@ -116,6 +155,11 @@ class Container(object):
             c.maketestError = True
         # proceed in all other cases
         else:
+            # fill patch coverage results
+            c.edited_lines = self.edited_lines
+            c.covered_lines = self.covered_lines
+            c.average = self.average 
+            # fill overall coverage results and exit status
             c.summary = run('cat ' + source_path + '/coverage.txt')
             c.compileError = self.compileError
             c.maketestError = self.maketestError

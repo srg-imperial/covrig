@@ -17,6 +17,9 @@ class DataHandler(object):
         self.eloc = '0'
         self.ocoverage = '0'
         self.tsize = '0'
+        self.cov_lines = _collector.covered_lines
+        self.edi_lines = _collector.edited_lines
+        self.average = _collector.average
 
         # make sure no fatal errors occurred
         if self.compileErr == False and self.maketestErr != 1:
@@ -54,14 +57,17 @@ class DataHandler(object):
             with open('data/' + self.name + '/' + self.name + '.csv', 'a') as fp:
                 a = csv.writer(fp, delimiter=',')
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
-                          self.author_name, self.timestamp, self.exitStatus] ]
+                          self.author_name, self.edi_lines, self.cov_lines, 
+                          self.average, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
+                
         # otherwise create it 
         else:
             with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
-                          self.author_name, self.timestamp, self.exitStatus] ]
+                          self.author_name, self.edi_lines, self.cov_lines, 
+                          self.average, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
 
 
