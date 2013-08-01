@@ -52,6 +52,7 @@ class Container(object):
         """ shutdown the current container """
         print '\n\nHalting the current container...\n\n'
         local('docker stop ' + self.cnt_id)
+        local('docker rm ' + self.cnt_id)
 
     # The following are methods used to perform actions common to several containers
     #
