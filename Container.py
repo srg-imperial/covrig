@@ -121,6 +121,9 @@ class Container(object):
                 for f in changed_files.split('\r\n'):
                     # we're interested only in c/cpp files
                     extension = f.split('.')
+                    # if the file doesn't have any extension, exit
+                    if len(extension) < 2:
+                        return
                     if extension[1] == 'c' or extension[1] == 'cpp':
                         line_numbers = run("git blame --porcelain " + f + " | grep " + 
                                            self.current_revision + " | awk '{print $2}'")
