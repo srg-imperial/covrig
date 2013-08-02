@@ -78,9 +78,11 @@ class Container(object):
             self.current_revision = revision
             # checkout revision
             run('git checkout ' + revision) 
-
+    
     def backup(self, commit):
         """ create a tar.gz with all the .gcda and .gcno files and save it to localhost """
+        if self.compileError == True:
+            return
         with cd(self.path):
             cnid = 'coverage-' + commit
             run('mkdir ' + cnid)
@@ -103,9 +105,10 @@ class Container(object):
             
     def overall_coverage(self):
         """ collect overall coverage results """
-        if self.compileError == False and self.maketestError != 1:
-            with cd(self.source_path):
-                run('gcov * | tail -1 > coverage.txt', quiet=True) 
+        if self.compileError == True:
+            return
+        with cd(self.source_path):
+            run('gcov * | tail -1 > coverage.txt', quiet=True) 
 
     def patch_coverage(self):
         """ compute the coverage for the current commit """
@@ -113,6 +116,8 @@ class Container(object):
         self.covered_lines = 0
         self.average = 0
 
+        if self.compileError == True:
+            return
         # get a list of the changed files for the current commit
         with cd(self.path):
             changed_files = run("git show --pretty='format:' --name-only | perl -pe 's/\e\[?.*?[\@-~]//g'")
@@ -158,20 +163,18 @@ class Container(object):
         c.timestamp = timestamp
         # compute test suite size as SLOC. Note tsuite_path MUST be a tuple!
         c.tsuite_size = self.count_sloc(self.tsuite_path)
-        # if compilation failed
+        # if compilation failed, halt
         if self.compileError == True:
             c.compileError = True
-        # if the test suite failed (i.e. the test suite is broken or cannot be run)
-        elif self.maketestError == 1:
-            c.maketestError = True
-        # proceed in all other cases
+        # go on
         else:
             # fill patch coverage results
             c.edited_lines = self.edited_lines
             c.covered_lines = self.covered_lines
             c.average = self.average 
             # fill overall coverage results and exit status
-            c.summary = run('cat ' + self.source_path + '/coverage.txt')
+            with settings(warn_only=True):
+                c.summary = run('cat ' + self.source_path + '/coverage.txt')
             c.compileError = self.compileError
             c.maketestError = self.maketestError
 

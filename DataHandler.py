@@ -22,7 +22,7 @@ class DataHandler(object):
         self.average = _collector.average
 
         # make sure no fatal errors occurred
-        if self.compileErr == False and self.maketestErr != 1:
+        if self.compileErr == False:
             # input is in this form: Lines executed:65.38% of 15576
             self.summary = _collector.summary
             # extract test suite size as sloc
@@ -32,21 +32,25 @@ class DataHandler(object):
         # compilation failed
         if self.compileErr == True:
             self.exitStatus = 'compileError'
-        # test suite failed (broken or didn't run)
-        elif self.maketestErr == 1:
-            self.exitStatus = 'testError'
+        # test suite returned exit code 2 (at least something failed)            
+        elif self.maketestErr == 2:
+                self.exitStatus = 'SomeTestFailed'
+        # make test timed out
+        elif self.maketestErr == 124:
+            self.exitStatus = 'TimedOut'
         # all other cases:
         else:
             # extract lines executed and total eloc
             self.summary = self.summary.split('%')
+            # in case we didn't collect any data return immediately
+            if len(self.summary) < 2:
+                self.exitStatus = 'NoCoverageLines'
+                return
+            # otherwise save whatever we got
             self.ocoverage = filter( lambda x: x in '0123456789.', self.summary[0] )
             self.eloc = filter( lambda x: x in '0123456789.', self.summary[1] )
-            # test suite returned exit code 2 (i.e. one or more test failed)            
-            if self.maketestErr == 2:
-                self.exitStatus = 'SomeTestFailed'
-            else:
-                # everything should be OK
-                self.exitStatus = 'OK'
+            # everything should be OK
+            self.exitStatus = 'OK'
 
 
     def dumpCSV(self):
@@ -80,4 +84,8 @@ class Collector(object):
         # think positive
         self.compileError = False
         self.maketestError = False
+        self.edited_lines = 0
+        self.covered_lines = 0
+        self.average = 0
+        
 

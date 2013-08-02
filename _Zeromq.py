@@ -14,6 +14,8 @@ class Zeromq(Container):
         self.path = '/home/zeromq3-x'
         self.source_path = '/home/zeromq3-x/src'
         self.tsuite_path = ('/home/zeromq3-x/tests',)
+        # set timeout (in seconds) for the test suite to run
+        self.timeout = 120
 
     def compile(self):
         """ compile Zeromq """
@@ -31,14 +33,16 @@ class Zeromq(Container):
         if self.compileError == False: 
             with cd('/home/zeromq3-x'):
                 with settings(warn_only=True):
-                    result = run(("make check CFLAGS='-O0' CXXFLAGS='-O0'"))
+                    result = run(("timeout " + str(self.timeout) + 
+                                  " make check CFLAGS='-O0' CXXFLAGS='-O0'"))
                     if result.failed:
                         self.maketestError = result.return_code
             # extra coverage steps
-            with cd('/home/zeromq3-x/src'):
-                # moving the gcov files to the right place
-                run('mv .libs/*.gcda .')
-                run('mv .libs/*.gcno .')
-                # remove 'libzmq_la-' prefix from gcov files
-                run("rename 's/libzmq_la-//' *.gcda")
-                run("rename 's/libzmq_la-//' *.gcno")
+            with settings(warn_only=True):            
+                with cd('/home/zeromq3-x/src'):
+                    # moving the gcov files to the right place
+                    run('mv .libs/*.gcda .')
+                    run('mv .libs/*.gcno .')
+                    # remove 'libzmq_la-' prefix from gcov files
+                    run("rename 's/libzmq_la-//' *.gcda")
+                    run("rename 's/libzmq_la-//' *.gcno")
