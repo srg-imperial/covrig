@@ -150,7 +150,7 @@ class Container(object):
                 print '\nNo files changed (?)'
         # save results
         if self.covered_lines != 0:
-            self.average = round(self.covered_lines/self.edited_lines, 3)*100
+            self.average = round( (self.covered_lines/self.edited_lines)*100), 3)
 
     def collect(self, author_name, timestamp):
         """ create a Collector to collect all info and a XMLHandler to parse them """
