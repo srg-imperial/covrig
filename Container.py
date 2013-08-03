@@ -61,8 +61,16 @@ class Container(object):
         """ get the list of the commits to be analyzed """
         # get the log list; the perl one-liner is to get rid of the damn colored output
         commit_list = run('cd ' + self.source_path + ' && git log -' + 
-                          str(commits_no) + " --format=%h__%ct__%an | perl -pe 's/\e\[?.*?[\@-~]//g' ")
+                          str(commits_no) + " --format=%h__%ct__%an | "
+                          + "perl -pe 's/\e\[?.*?[\@-~]//g' ")
         return commit_list.splitlines()
+
+    def get_commit_custom(self, single_commit):
+        """ attach timestamp and author to a given commit """
+        commit = run('cd ' + self.source_path + ' && git show ' +
+                          str(single_commit) + " --format=%h__%ct__%an | "
+                          + "head -1 | perl -pe 's/\e\[?.*?[\@-~]//g' ", quiet=True)
+        return commit
 
     def count_sloc(self, path):
         """ use cloc to get the static lines of code for any given file or directory """
@@ -150,7 +158,7 @@ class Container(object):
                 print '\nNo files changed (?)'
         # save results
         if self.covered_lines != 0:
-            self.average = round( (self.covered_lines/self.edited_lines)*100), 3)
+            self.average = round( ((self.covered_lines/self.edited_lines)*100), 2)
 
     def collect(self, author_name, timestamp):
         """ create a Collector to collect all info and a XMLHandler to parse them """

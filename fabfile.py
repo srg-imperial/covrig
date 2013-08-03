@@ -1,6 +1,7 @@
 from fabric.api import *
 
 # Analytics modules
+from Analyzer import *
 from _Memcached import *
 from _Redis import *
 from _Zeromq import *
@@ -37,17 +38,33 @@ class Analytics(object):
         # commits
         self.commits = _commits
  
+    @classmethod
+    def run_last(cls, _pclass, _image, _commits):
+        """ process the last n commits """
+        r = _pclass(_image, 'root', 'root')
+        r.spawn()
+        clist = r.get_commit_list(_commits)
+        r.halt()
+        return cls(_pclass, _image, clist)
+
+    @classmethod
+    def run_custom(cls, _pclass, _image, _commits):
+        """ process a custom range of commits, given as tuple """
+        r = _pclass(_image, 'root', 'root')
+        clist = []
+        r.spawn()
+        # attach timestamp and author to the commit
+        for c in _commits:
+            new = r.get_commit_custom(c)
+            clist.append(new)
+        r.halt()
+        return cls(_pclass, _image, clist)
+        
     def go(self):
         """ run all the tests for every version specified in a new container """
+        # self.commits format is ['commit.id__author.name__timestamp']
 
-        # get the list of commits SHA 
-        r = self.pclass(self.image, 'root', 'root')
-        r.spawn()
-        clist = r.get_commit_list(self.commits)
-        r.halt()
-
-        # clist is like ['73ae855__antirez__1373553520', '3fc7f32__antirez__1373553467']
-        for i in clist:            
+        for i in self.commits:            
             a = i.split('__')
             commit_id = a[0]
             timestamp = a[1]
@@ -69,20 +86,23 @@ class Analytics(object):
 def main():
     """ let's do something """
 
-    # Archetype:
-    # X = Analytics(Program, docker image, commits)
+    # Examples:
+
+    # Test the last N revisions
+    rl = Analytics.run_last(Redis, 'manlio/redis', 3)
+    #rl.go()
+
+    # Test a custom set of revisions
+    z = Analytics.run_custom(Zeromq, 'manlio/zeromq', ('7604dd2', 'ad14c56'))
+    #z.go()
+
+    # Use Analyzer() to get the list of all commits with 0 ELOCs
+    z = ZeroCoverage('plot/data/Redis/Redis.csv')
+    z.compute()
+    # ...and re-run them:
+    j = Analytics.run_custom(Redis, 'manlio/redis', z.zerocov)
+    j.go()
     
-    # Redis
-    r = Analytics(Redis, 'manlio/red-covered', 1)
-    r.go()
-
-    # Memcached
-    m = Analytics(Memcached, 'manlio/memcached-covered', 1)
-    m.go()
-
-    # Zeromq
-    z = Analytics(Zeromq, 'manlio/zeromq', 1)
-    z.go()
 
 
 if __name__== "__main__":
