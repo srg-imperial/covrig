@@ -29,16 +29,13 @@ class DataHandler(object):
             self.tsize = _collector.tsuite_size
     
     def extractData(self):
-        # compilation failed
+        # if the compilation failed or the test suite timed out,
+        # leave the ELOCs at 0
         if self.compileErr == True:
             self.exitStatus = 'compileError'
-        # test suite returned exit code 2 (at least something failed)            
-        elif self.maketestErr == 2:
-                self.exitStatus = 'SomeTestFailed'
-        # make test timed out
         elif self.maketestErr == 124:
             self.exitStatus = 'TimedOut'
-        # all other cases:
+        # in all other cases:
         else:
             # extract lines executed and total eloc
             self.summary = self.summary.split('%')
@@ -49,9 +46,13 @@ class DataHandler(object):
             # otherwise save whatever we got
             self.ocoverage = filter( lambda x: x in '0123456789.', self.summary[0] )
             self.eloc = filter( lambda x: x in '0123456789.', self.summary[1] )
-            # everything should be OK
-            self.exitStatus = 'OK'
-
+            # set exit status
+            if self.maketestErr == 2:
+                # test suite returned exit code 2 (at least something failed)            
+                self.exitStatus = 'SomeTestFailed'
+            else:
+                # everything should be OK
+                self.exitStatus = 'OK'
 
     def dumpCSV(self):
         """ dump the extracted data to a CSV file """
