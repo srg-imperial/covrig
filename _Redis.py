@@ -14,6 +14,8 @@ class Redis(Container):
         self.path = '/home/redis'
         self.source_path = '/home/redis/src'
         self.tsuite_path = ('/home/redis/tests',)
+        # set timeout (in seconds) for the test suite to run
+        self.timeout = 500
 
     def compile(self):
         """ compile redis """
@@ -29,6 +31,6 @@ class Redis(Container):
         if self.compileError == False: 
             with cd('/home/redis/src'):
                 with settings(warn_only=True):
-                    result = run('make test')
+                    result = run('timeout ' + str(self.timeout) + ' make test')
                     if result.failed:
                         self.maketestError = result.return_code

@@ -3,6 +3,7 @@ from fabric.api import *
 # Analytics modules
 from Container import Container
 
+
 class Memcached(Container):
     """ Memcached class """
 
@@ -13,6 +14,9 @@ class Memcached(Container):
         self.path = '/home/memcached'
         self.source_path = '/home/memcached'
         self.tsuite_path = ('/home/memcached/t','/home/memcached/testapp.c')
+        # set timeout (in seconds) for the test suite to run
+        self.timeout = 200
+
   
     def compile(self):
         """ compile Memcached """
@@ -29,6 +33,6 @@ class Memcached(Container):
         if self.compileError == False: 
             with cd('/home/memcached'):
                 with settings(warn_only=True):
-                    result = run('make test')
+                    result = run('timeout ' + str(self.timeout) + ' make test')
                     if result.failed:
                         self.maketestError = result.return_code
