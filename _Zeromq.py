@@ -19,7 +19,7 @@ class Zeromq(Container):
 
     def compile(self):
         """ compile Zeromq """
-        with cd('/home/zeromq3-x'):
+        with cd(self.path):
            with settings(warn_only=True):
                result = run(("sh autogen.sh && sh configure --without-documentation "
                              "--with-gcov=yes CFLAGS='-O0 -fprofile-arcs -ftest-coverage' "
@@ -31,18 +31,9 @@ class Zeromq(Container):
         """ run the test suite """
         # if compile failed, skip this step
         if self.compileError == False: 
-            with cd('/home/zeromq3-x'):
+            with cd(self.path):
                 with settings(warn_only=True):
                     result = run(("timeout " + str(self.timeout) + 
                                   " make check CFLAGS='-O0' CXXFLAGS='-O0'"))
                     if result.failed:
                         self.maketestError = result.return_code
-            # extra coverage steps
-            with settings(warn_only=True):            
-                with cd('/home/zeromq3-x/src'):
-                    # moving the gcov files to the right place
-                    run('mv .libs/*.gcda .')
-                    run('mv .libs/*.gcno .')
-                    # remove 'libzmq_la-' prefix from gcov files
-                    run("rename 's/libzmq_la-//' *.gcda")
-                    run("rename 's/libzmq_la-//' *.gcno")
