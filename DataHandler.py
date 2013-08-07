@@ -17,8 +17,9 @@ class DataHandler(object):
         self.eloc = '0'
         self.ocoverage = '0'
         self.tsize = '0'
+        self.add_lines = _collector.added_lines
         self.cov_lines = _collector.covered_lines
-        self.edi_lines = _collector.edited_lines
+        self.unc_lines = _collector.uncovered_lines
         self.average = _collector.average
 
         # make sure no fatal errors occurred
@@ -62,7 +63,7 @@ class DataHandler(object):
             with open('data/' + self.name + '/' + self.name + '.csv', 'a') as fp:
                 a = csv.writer(fp, delimiter=',')
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
-                          self.author_name, self.edi_lines, self.cov_lines, 
+                          self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
                           self.average, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
                 
@@ -71,7 +72,7 @@ class DataHandler(object):
             with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
-                          self.author_name, self.edi_lines, self.cov_lines, 
+                          self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
                           self.average, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
 
@@ -85,8 +86,11 @@ class Collector(object):
         # think positive
         self.compileError = False
         self.maketestError = False
-        self.edited_lines = 0
+        # if Collector::Collect() finds a compileError, we need default values
+        # otherwise DataHandler __init__ fais
+        self.added_lines = 0
         self.covered_lines = 0
+        self.uncovered_lines = 0
         self.average = 0
         
 

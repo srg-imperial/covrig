@@ -5,6 +5,7 @@ from Analyzer import *
 from _Memcached import *
 from _Redis import *
 from _Zeromq import *
+from _Lighttpd import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -73,35 +74,47 @@ class Analytics(object):
             c = self.pclass(self.image, 'root', 'root')
             c.spawn()
             c.checkout(commit_id)
+            c.tsize_compute()
             c.compile()    # long steps
             c.make_test()  #
+            c.prepare_coverage()
             c.overall_coverage()
             c.backup(commit_id)
             c.patch_coverage()
             c.collect(author_name, timestamp )
             c.halt()
-
+            
         
 
 def main():
     """ let's do something """
 
-    # Examples:
+    l = Analytics.run_custom(Lighttpd, 'manlio/lighttpd', ('f64ba1b',))
+    l.go()
+
+    m = Analytics.run_custom(Memcached, 'manlio/memcached', ('57a9856','0abe886'))
+    m.go()
+
+    z = Analytics.run_custom(Zeromq, 'manlio/zeromq', ('f5a9c32',))
+    z.go()
+
+
+    # -> Examples:
 
     # Test the last N revisions
-    rl = Analytics.run_last(Redis, 'manlio/redis', 3)
-    #rl.go()
+    # rl = Analytics.run_last(Redis, 'manlio/redis', 3)
+    # rl.go()
 
     # Test a custom set of revisions
-    z = Analytics.run_custom(Zeromq, 'manlio/zeromq', ('7604dd2', 'ad14c56'))
-    #z.go()
+    # z = Analytics.run_custom(Memcached, 'manlio/memcached', ('50d7188',))
+    # z.go()
 
     # Use Analyzer() to get the list of all commits with 0 ELOCs
-    z = ZeroCoverage('plot/data/Redis/Redis.csv')
-    z.compute()
+    # z = ZeroCoverage('plot/data/Redis/Redis.csv')
+    # z.compute()
     # ...and re-run them:
-    j = Analytics.run_custom(Redis, 'manlio/redis', z.zerocov)
-    j.go()
+    # j = Analytics.run_custom(Redis, 'manlio/redis', z.zerocov)
+    # j.go()
     
 
 

@@ -86,79 +86,117 @@ class Container(object):
             self.current_revision = revision
             # checkout revision
             run('git checkout ' + revision) 
-    
-    def backup(self, commit):
-        """ create a tar.gz with all the .gcda and .gcno files and save it to localhost """
+
+    def tsize_compute(self):
+        """ compute test suite as SLOCs """
+        self.tsize = self.count_sloc(self.tsuite_path)
+
+    def prepare_coverage(self):
+        """ prepare the environment to run gcov """
         if self.compileError == True:
             return
-        with cd(self.path):
-            cnid = 'coverage-' + commit
-            run('mkdir ' + cnid)
-            # find all the gcno/gcda files and copy them to ~/coverage-xxxxx/
-            run("find . -iname '*.gcno' | xargs -I '{}' cp {} " + cnid)
-            run("find . -iname '*.gcda' | xargs -I '{}' cp {} " + cnid)
+        # mv the test suite so that it doesn't pollute coverage info
+        for item in self.tsuite_path:
+            run('mv ' + item + ' /home/')
+        # move every gcda, gcno, c and cpp file to the mycoverage folder
+        with cd(self.source_path):
+            run('mkdir mycoverage')
+            run("find . -iname '*.gcno' | xargs -I '{}' cp {} mycoverage")
+            run("find . -iname '*.gcda' | xargs -I '{}' cp {} mycoverage")
+            run("find . -iname '*.c' | xargs -I '{}' cp {} mycoverage")
+            run("find . -iname '*.cpp' | xargs -I '{}' cp {} mycoverage")
+    
+    def backup(self, commit):
+        """ create a tar.bz2 with all the .gcda and .gcno files and save it to localhost """
+        if self.compileError == True:
+            return
+        with cd(self.source_path + '/mycoverage'):
             # save gcov/gcc/g++ info
-            with cd(cnid):
+            with settings(warn_only=True):
                 run('gcov -v | head -1 > build_info.txt')
                 run('echo >> build_info.txt')
                 run('gcc -v &>> build_info.txt')
-                # don't raise any error if g++ is not installed 
-                with settings(warn_only=True):
-                    run('echo >> build_info.txt')
-                    run('g++ -v &>> build_info.txt')
-            # create an archive
-            run('tar -cjf ' + cnid + '.tar.bz2 ' + cnid)
-            # scp to localhost/data (get <remote path> , <local path>)
-            get(cnid + '.tar.bz2', 'data/' + self.__class__.__name__ + '/' + cnid + '.tar.bz2')
+        with cd(self.source_path):
+            # bzip all the coverage files
+            run('cp -R mycoverage cov-' + commit)
+            run('tar -cjf coverage-' + commit + '.tar.bz2 cov-' + commit)
+            # scp to localhost/data
+            get('coverage-' + commit + '.tar.bz2', 'data/' + self.__class__.__name__ + 
+                '/' + 'coverage-' + commit + '.tar.bz2')
             
     def overall_coverage(self):
         """ collect overall coverage results """
         if self.compileError == True:
             return
-        with cd(self.source_path):
+        # run gcov to get overall coverage and ELOCs
+        with cd(self.source_path + '/mycoverage'):
             run('gcov * | tail -1 > coverage.txt', quiet=True) 
+        # mv the test suite back to its place
+        with cd('/home'):
+            with settings(warn_only=True):
+                for item in self.tsuite_path:
+                    i = item.split('/')
+                    run('mv ' + i[-1] + ' ' + self.path)
 
     def patch_coverage(self):
         """ compute the coverage for the current commit """
-        self.edited_lines = 0
+        self.added_lines = 0
         self.covered_lines = 0
+        self.uncovered_lines = 0
         self.average = 0
 
         if self.compileError == True:
             return
         # get a list of the changed files for the current commit
         with cd(self.path):
-            changed_files = run("git show --pretty='format:' --name-only | perl -pe 's/\e\[?.*?[\@-~]//g'")
+            changed_files = run("git show --pretty='format:' --name-only" + 
+                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
             # check didn't return an empty set
             if changed_files:
-                # for every changed file, get the line numbers
+                # for every changed file 
                 for f in changed_files.split('\r\n'):
-                    # we're interested only in c/cpp files
-                    extension = f.split('.')
-                    # if the file doesn't have any extension, exit
-                    if len(extension) < 2:
-                        return
-                    if extension[1] == 'c' or extension[1] == 'cpp':
-                        line_numbers = run("git blame --porcelain " + f + " | grep " + 
-                                           self.current_revision + " | awk '{print $2}'")
-                        # check every line with its .gcov equivalent
-                        for l in line_numbers.split('\r\n'):
-                            cov = run("cat " + f + ".gcov | grep ' " + l + ":' | awk '{print $1}'")
-                            # line is actual code, not covered
-                            if cov == '#####:':
-                                self.edited_lines += 1
-                            # line is actual code, thus has been covered :)
-                            elif cov != '-:':
-                                self.covered_lines += 1
-                                self.edited_lines += 1
-                    else:
-                        print extension[1] + ': we are not interested in this kind of file\n'
-            # no file changed
-            else:
-                print '\nNo files changed (?)'
-        # save results
-        if self.covered_lines != 0:
-            self.average = round( ((self.covered_lines/self.edited_lines)*100), 2)
+                    # get the filename
+                    filename = f.split('/')
+                    with cd(self.source_path + '/mycoverage'):
+                        # check *.c.gcov exists
+                        fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
+                        if fileExists == 'y':
+                            print 'Coverage information found\n'
+                            # get the changed lines numbers
+                            with cd(self.path):
+                                line_numbers = run("git blame --porcelain " + f + 
+                                                   " | grep " + self.current_revision 
+                                                   + " | awk '{print $2}'")
+                            # for every changed line
+                            for l in line_numbers.split('\r\n'):
+                                # increment added lines
+                                self.added_lines += 1
+                                # check if it has been covered
+                                cov = run("cat " + filename[-1] + ".gcov | grep ' " + 
+                                          l + ":' | awk '{print $1}'")
+                                # uncovered line
+                                if cov == '#####:':
+                                    self.uncovered_lines += 1
+                                # not(not executable), thus has been covered
+                                elif cov != '-:':
+                                    self.covered_lines += 1
+                        # no .gcov information found
+                        else:
+                            print 'No coverage information found for ' + filename[-1] + '\n'
+                            with cd(self.path):
+                                # check if the file exists, here or in /home/
+                                fileExists2 = run ('[ -f ' + f + ' ] && echo y || echo n')
+                                if fileExists2 == 'y':
+                                    self.added_lines += int(run("git blame --porcelain " + f + 
+                                                            " | grep " + self.current_revision 
+                                                            + " | awk '{print $2}' | wc -l"))
+                                else:
+                                    print 'No file found ' + f + '\n'
+                # save results
+                if self.covered_lines > 0:
+                    self.average = round( ((self.covered_lines / (self.covered_lines +
+                                                                  self.uncovered_lines)) 
+                                           * 100), 2)
 
     def collect(self, author_name, timestamp):
         """ create a Collector to collect all info and a XMLHandler to parse them """
@@ -169,20 +207,20 @@ class Container(object):
         c.revision = self.current_revision
         c.author_name = author_name
         c.timestamp = timestamp
-        # compute test suite size as SLOC. Note tsuite_path MUST be a tuple!
-        c.tsuite_size = self.count_sloc(self.tsuite_path)
+        c.tsuite_size = self.tsize
         # if compilation failed, halt
         if self.compileError == True:
             c.compileError = True
         # go on
         else:
             # fill patch coverage results
-            c.edited_lines = self.edited_lines
+            c.added_lines = self.added_lines
             c.covered_lines = self.covered_lines
+            c.uncovered_lines = self.uncovered_lines
             c.average = self.average 
             # fill overall coverage results and exit status
             with settings(warn_only=True):
-                c.summary = run('cat ' + self.source_path + '/coverage.txt')
+                c.summary = run('cat ' + self.source_path + '/mycoverage/coverage.txt')
             c.compileError = self.compileError
             c.maketestError = self.maketestError
 
