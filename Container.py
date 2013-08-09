@@ -34,7 +34,9 @@ class Container(object):
         """ set fabric env parameters """
         env.user = self.user
         env.password = self.pwd
-        env.host_string = self.ip
+        env.host_string = self.ip + ':22'
+	# in a perfect world, this would not be here
+	env.connection_attempts = 10
 
     def run_test(self):
         """ uname to check everything works """
