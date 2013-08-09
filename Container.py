@@ -91,6 +91,15 @@ class Container(object):
 
     def tsize_compute(self):
         """ compute test suite as SLOCs """
+        # rebuild the test suite with only files or dirs that 
+        # actually exists in the current revision
+        actual_tsuite = [ ]
+        for item in self.tsuite_path:
+            fileExists = run ('( [ -f ' + item + ' ] || [ -d ' + item + ' ] ) && echo y || echo n')
+            if fileExists == 'y':
+                actual_tsuite.append(item)
+                print 'Added ' + item + ' to the test suite\n'
+        self.tsuite_path = actual_tsuite 
         self.tsize = self.count_sloc(self.tsuite_path)
 
     def prepare_coverage(self):
