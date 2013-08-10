@@ -30,12 +30,9 @@ class DataHandler(object):
             self.tsize = _collector.tsuite_size
     
     def extractData(self):
-        # if the compilation failed or the test suite timed out,
-        # leave the ELOCs at 0
+        # if the compilation failed, leave the ELOCs at 0
         if self.compileErr == True:
             self.exitStatus = 'compileError'
-        elif self.maketestErr == 124:
-            self.exitStatus = 'TimedOut'
         # in all other cases:
         else:
             # extract lines executed and total eloc
@@ -51,6 +48,9 @@ class DataHandler(object):
             if self.maketestErr == 2:
                 # test suite returned exit code 2 (at least something failed)            
                 self.exitStatus = 'SomeTestFailed'
+            elif self.maketestErr == 124:
+                # test suite timed out
+                self.exitStatus = 'TimedOut'
             else:
                 # everything should be OK
                 self.exitStatus = 'OK'
