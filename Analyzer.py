@@ -33,7 +33,7 @@ class ZeroCoverage(object):
     def __init__(self, _ifile):
         self.ifile = _ifile
 
-    def compute(self):
+    def zerocov(self):
         res = csv.reader(open(self.ifile), delimiter=',')
         self.zerocov = []
         counter = 0
@@ -50,6 +50,23 @@ class ZeroCoverage(object):
         # print
 
 
+    def lessThan(self, target):
+        res = csv.reader(open(self.ifile), delimiter=',')
+        self.lowcov = []
+        counter = 0
+        for value in res:
+            counter += 1
+            if float(value[2]) < target:
+                self.lowcov.append(value[0])
+
+        # uncomment for some stats
+        # print self.lowcov
+        # print len(self.lowcov)
+        # print counter
+        # print round((len(self.lowcov) / float(counter))*100,2)
+        # print
+
+
 
 def main():
     # just some debug cases:
@@ -63,14 +80,14 @@ def main():
     z = Sketch('plot/data/Zeromq/Zeromq.csv', 1, 'zeromq-coverage.png')
     z.plot()
 
-    rr = GetZeroCoverage('plot/data/Redis/Redis.csv')
-    rr.compute()
+    rr = ZeroCoverage('plot/data/Redis/Redis.csv')
+    rr.lessThan(30)
 
-    mm = GetZeroCoverage('plot/data/Memcached/Memcached.csv')
-    mm.compute()
+    mm = ZeroCoverage('plot/data/Memcached/Memcached.csv')
+    mm.lessThan(30)
 
     zz = ZeroCoverage('plot/data/Zeromq/Zeromq.csv')
-    zz.compute()
+    zz.lessThan(30)
 
 
 if __name__== "__main__":
