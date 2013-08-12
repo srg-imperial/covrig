@@ -6,6 +6,7 @@ from _Memcached import *
 from _Redis import *
 from _Zeromq import *
 from _Lighttpd import *
+from _Beanstalkd import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -89,14 +90,17 @@ class Analytics(object):
 def main():
     """ let's do something """
 
-    l = Analytics.run_custom(Lighttpd, 'manlio/lighttpd', ('f64ba1b',))
-    l.go()
+    b = Analytics.run_last(Beanstalkd, 'manlio/beanstalkd', 10)
+    b.go()
 
-    m = Analytics.run_custom(Memcached, 'manlio/memcached', ('57a9856','0abe886'))
-    m.go()
+    #l = Analytics.run_custom(Lighttpd, 'manlio/lighttpd', ('eb9f6aa',))
+    #l.go()
 
-    z = Analytics.run_custom(Zeromq, 'manlio/zeromq', ('f5a9c32',))
-    z.go()
+    #m = Analytics.run_custom(Memcached, 'manlio/memcached', ('57a9856',))
+    #m.go()
+
+    #z = Analytics.run_custom(Zeromq, 'manlio/zeromq', ('f5a9c32',))
+    #z.go()
 
 
     # -> Examples:
