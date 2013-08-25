@@ -7,6 +7,7 @@ from _Redis import *
 from _Zeromq import *
 from _Lighttpd import *
 from _Beanstalkd import *
+from _Git import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -90,8 +91,8 @@ class Analytics(object):
 def main():
     """ let's do something """
 
-    b = Analytics.run_last(Beanstalkd, 'manlio/beanstalkd', 10)
-    b.go()
+    g = Analytics.run_custom(Git, 'manlio/git', ('0d8beaa',))
+    g.go()
 
     #l = Analytics.run_custom(Lighttpd, 'manlio/lighttpd', ('eb9f6aa',))
     #l.go()
