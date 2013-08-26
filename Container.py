@@ -87,9 +87,10 @@ class Container(object):
             # set the revision for current execution (commit sha)
             self.current_revision = revision
             # checkout revision
-            result = run('git checkout ' + revision) 
-            if result.failed:
-                run('git stash && git checkout ' + revision)
+            with settings(warn_only=True):
+                result = run('git checkout ' + revision) 
+                if result.failed:
+                    run('git stash && git checkout ' + revision)
 
     def tsize_compute(self):
         """ compute test suite as SLOCs """
