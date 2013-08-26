@@ -17,7 +17,7 @@ class Beanstalkd(Container):
                             '/home/beanstalkd/testserv.c', '/home/beanstalkd/testutil.c',
                             '/home/beanstalkd/heap-test.c', '/home/beanstalkd/integ-test.c',
                             '/home/beanstalkd/job-test.c', '/home/beanstalkd/util-test.c',
-                            '/home/beanstalkd/tests')
+                            '/home/beanstalkd/tests', '/home/beanstalkd/sh-tests')
         # set timeout (in seconds) for the test suite to run
         self.timeout = 60
 
@@ -26,6 +26,10 @@ class Beanstalkd(Container):
         """ compile Beanstalkd """
         with cd(self.path):
            with settings(warn_only=True):
+               # the developers got rid of autotools starting at fa96ec4
+               # thus the first two steps are needed only for older commtis
+               run('./autogen.sh')
+               run('./configure')
                result = run("make CFLAGS='-O0 --coverage' LDFLAGS='--coverage'")
                if result.failed:
                    self.compileError = True
