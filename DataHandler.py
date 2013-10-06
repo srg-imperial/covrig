@@ -71,6 +71,11 @@ class DataHandler(object):
         else:
             with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
+                header = [ ["rev", "#eloc", "coverage", "testsize",
+                  "author", "#addedlines", "#covlines", "#notcovlines",
+                  "patchcoverage", "time", "exit"] ]
+                a.writerows(header)
+
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
                           self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
                           self.average, self.timestamp, self.exitStatus] ]
