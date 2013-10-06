@@ -186,13 +186,14 @@ class Container(object):
                                 # increment added lines
                                 self.added_lines += 1
                                 # check if it has been covered
-                                cov = run("cat " + filename[-1] + ".gcov | grep ' " + 
-                                          l + ":' | awk '{print $1}'")
+                                cov = run("cat " + filename[-1] + ".gcov | grep ':[ ]*" + 
+                                    l + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
+                                cov = cov.strip()
                                 # uncovered line
-                                if cov == '#####:':
+                                if cov == '#####':
                                     self.uncovered_lines += 1
                                 # not(not executable), thus has been covered
-                                elif cov != '-:':
+                                elif cov != '-':
                                     self.covered_lines += 1
                         # no .gcov information found
                         else:
