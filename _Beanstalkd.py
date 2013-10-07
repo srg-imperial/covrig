@@ -35,6 +35,7 @@ class Beanstalkd(Container):
                    self.compileError = True
 
     def make_test(self):
+        super(Beanstalkd, self).make_test()
         """ run the test suite """
         # if compile failed, skip this step
         if self.compileError == False: 

@@ -105,26 +105,11 @@ class Container(object):
         self.tsuite_path = actual_tsuite 
         self.tsize = self.count_sloc(self.tsuite_path)
 
-    def prepare_coverage(self):
-        """ prepare the environment to run gcov """
-        if self.compileError == True:
-            return
-        # mv the test suite so that it doesn't pollute coverage info
-        for item in self.tsuite_path:
-            run('mv ' + item + ' /home/')
-        # move every gcda, gcno, c and cpp file to the mycoverage folder
-        with cd(self.source_path):
-            run('mkdir mycoverage')
-            run("find . -iname '*.gcno' | xargs -I '{}' cp {} mycoverage")
-            run("find . -iname '*.gcda' | xargs -I '{}' cp {} mycoverage")
-            run("find . -iname '*.c' | xargs -I '{}' cp {} mycoverage")
-            run("find . -iname '*.cpp' | xargs -I '{}' cp {} mycoverage")
-    
     def backup(self, commit):
         """ create a tar.bz2 with all the .gcda and .gcno files and save it to localhost """
         if self.compileError == True:
             return
-        with cd(self.source_path + '/mycoverage'):
+        with cd(self.source_path):
             # save gcov/gcc/g++ info
             with settings(warn_only=True):
                 run('gcov -v | head -1 > build_info.txt')
@@ -132,25 +117,44 @@ class Container(object):
                 run('gcc -v &>> build_info.txt')
         with cd(self.source_path):
             # bzip all the coverage files
-            run('cp -R mycoverage cov-' + commit)
-            run('tar -cjf coverage-' + commit + '.tar.bz2 cov-' + commit)
+            run('cp -R . ../cov-' + commit)
+            run('tar -cjf coverage-' + commit + '.tar.bz2 ../cov-' + commit)
             # scp to localhost/data
             get('coverage-' + commit + '.tar.bz2', 'data/' + self.__class__.__name__ + 
                 '/' + 'coverage-' + commit + '.tar.bz2')
-            
+    
+    def stash_tests(self, pop = False):
+        if pop:
+            with cd('/home'):
+                with settings(warn_only=True):
+                    for item in self.tsuite_path:
+                        i = item.split('/')
+                        run('mv ' + i[-1] + ' ' + item)
+        else:
+            for item in self.tsuite_path:
+                run('mv ' + item + ' /home/')
+
+    def rec_initial_coverage(self):
+        self.stash_tests()
+        with cd(self.source_path):
+            run('lcov -c -i -d . -o base.info')
+        self.stash_tests(True)
+
+    def make_test(self):
+      self.rec_initial_coverage()
+
     def overall_coverage(self):
         """ collect overall coverage results """
         if self.compileError == True:
             return
+        self.stash_tests()
         # run gcov to get overall coverage and ELOCs
-        with cd(self.source_path + '/mycoverage'):
-            run('gcov * | tail -1 > coverage.txt', quiet=True) 
-        # mv the test suite back to its place
-        with cd('/home'):
-            with settings(warn_only=True):
-                for item in self.tsuite_path:
-                    i = item.split('/')
-                    run('mv ' + i[-1] + ' ' + self.path)
+        with cd(self.source_path):
+            run('lcov -c -d . -o test.info', quiet=True)
+            run("lcov -a base.info -a test.info -o total.info |tail -3|head -1| sed -e 's/[^0-9]*//' -e 's/([0-9]*//' > coverage.txt");
+            run('gcov *.c *.cpp *.cc *.h *.hpp', quiet=True)
+
+        self.stash_tests(True)
 
     def patch_coverage(self):
         """ compute the coverage for the current commit """
@@ -171,7 +175,7 @@ class Container(object):
                 for f in changed_files.split('\r\n'):
                     # get the filename
                     filename = f.split('/')
-                    with cd(self.source_path + '/mycoverage'):
+                    with cd(self.source_path):
                         # check *.c.gcov exists
                         fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
                         if fileExists == 'y':
@@ -197,14 +201,17 @@ class Container(object):
                                     self.covered_lines += 1
                         # no .gcov information found
                         else:
+                            # most likely the file was not compiled into any of the programs
+                            # executed by the test suite. Alternatives include: program crashed or has no permissions
                             print 'No coverage information found for ' + filename[-1] + '\n'
                             with cd(self.path):
                                 # check if the file exists, here or in /home/
                                 fileExists2 = run ('[ -f ' + f + ' ] && echo y || echo n')
                                 if fileExists2 == 'y':
-                                    self.added_lines += int(run("git blame --porcelain " + f + 
-                                                            " | grep " + self.current_revision 
-                                                            + " | awk '{print $2}' | wc -l"))
+                                    line_numbers = run("git blame --porcelain " + f +
+                                                   " | grep " + self.current_revision
+                                                   + " | awk '{print $2}'")
+                                    self.added_lines += len(line_numbers.split('\r\n'))
                                 else:
                                     print 'No file found ' + f + '\n'
                 # save results
@@ -235,7 +242,7 @@ class Container(object):
             c.average = self.average 
             # fill overall coverage results and exit status
             with settings(warn_only=True):
-                c.summary = run('cat ' + self.source_path + '/mycoverage/coverage.txt')
+                c.summary = run('cat ' + self.source_path + '/coverage.txt')
             c.compileError = self.compileError
             c.maketestError = self.maketestError
 

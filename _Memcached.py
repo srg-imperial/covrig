@@ -31,6 +31,7 @@ class Memcached(Container):
                    self.compileError = True
 
     def make_test(self):
+        super(Memcached, self).make_test()
         """ run the test suite """
         # if compile failed, skip this step
         if self.compileError == False: 

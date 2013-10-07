@@ -27,6 +27,7 @@ class Git(Container):
 
     def make_test(self):
         """ run the test suite """
+        super(Git, self).make_test()
         # if compile failed, skip this step
         if self.compileError == False: 
             with cd(self.path):

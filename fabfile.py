@@ -79,7 +79,6 @@ class Analytics(object):
             c.tsize_compute()
             c.compile()    # long steps
             c.make_test()  #
-            c.prepare_coverage()
             c.overall_coverage()
             c.backup(commit_id)
             c.patch_coverage()
