@@ -67,6 +67,9 @@ class Analytics(object):
         """ run all the tests for every version specified in a new container """
         # self.commits format is ['commit.id__author.name__timestamp']
 
+        # check oldest commit first. this makes it easier to check patch coverage in subsequent versions
+        prev_uncovered = []
+        self.commits.reverse()
         for i in self.commits:            
             a = i.split('__')
             commit_id = a[0]
@@ -82,8 +85,15 @@ class Analytics(object):
             c.overall_coverage()
             c.backup(commit_id)
             c.patch_coverage()
+            for (files, lines) in prev_uncovered:
+              c.prev_patch_coverage(files, lines)
+            if (len(prev_uncovered) == 3):
+                del prev_uncovered[0]
+            prev_uncovered.append((c.changed_files, c.uncovered_lines_list));
+
             c.collect(author_name, timestamp )
             c.halt()
+
             
         
 

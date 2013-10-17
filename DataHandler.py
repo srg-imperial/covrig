@@ -21,6 +21,7 @@ class DataHandler(object):
         self.cov_lines = _collector.covered_lines
         self.unc_lines = _collector.uncovered_lines
         self.average = _collector.average
+        self.prev_covered = _collector.prev_covered
 
         # make sure no fatal errors occurred
         if self.compileErr == False:
@@ -64,7 +65,7 @@ class DataHandler(object):
                 a = csv.writer(fp, delimiter=',')
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
                           self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
-                          self.average, self.timestamp, self.exitStatus] ]
+                          self.average, self.prev_covered, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
                 
         # otherwise create it 
@@ -73,12 +74,12 @@ class DataHandler(object):
                 a = csv.writer(fp, delimiter=',')
                 header = [ ["rev", "#eloc", "coverage", "testsize",
                   "author", "#addedlines", "#covlines", "#notcovlines",
-                  "patchcoverage", "time", "exit"] ]
+                  "patchcoverage", "#covlinesprevpatches", "time", "exit"] ]
                 a.writerows(header)
 
                 data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
                           self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
-                          self.average, self.timestamp, self.exitStatus] ]
+                          self.average, self.prev_covered, self.timestamp, self.exitStatus] ]
                 a.writerows(data)
 
 
@@ -97,5 +98,6 @@ class Collector(object):
         self.covered_lines = 0
         self.uncovered_lines = 0
         self.average = 0
+        self.prev_covered = 0
         
 

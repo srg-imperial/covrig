@@ -8,6 +8,11 @@ from DataHandler import *
 class Container(object):
     """ Class used to spawn a new container with sshd listening """
 
+    class LineType:
+        NotCovered = 1
+        NotExecutable = 2
+        Covered = 3
+
     def __init__(self, _image, _user, _pwd):
         self.image = _image
         self.user = _user
@@ -15,6 +20,10 @@ class Container(object):
         # no errors yet :)
         self.compileError = False
         self.maketestError = False
+        """ how many lines from previous patches are covered now """
+        self.changed_files = []
+        self.uncovered_lines_list = []
+        self.prev_covered = 0
 
     # The following are methods used to spawn a new container
     #
@@ -141,7 +150,9 @@ class Container(object):
         self.stash_tests(True)
 
     def make_test(self):
-      self.rec_initial_coverage()
+        if self.compileError:
+            return
+        self.rec_initial_coverage()
 
     def overall_coverage(self):
         """ collect overall coverage results """
@@ -155,6 +166,21 @@ class Container(object):
             run('gcov *.c *.cpp *.cc *.h *.hpp', quiet=True)
 
         self.stash_tests(True)
+
+    def is_covered(self, filepath, line):
+        filename = filepath.split('/')
+        with cd(self.source_path):
+            fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
+            if fileExists == 'y':
+              cov = run("cat " + filename[-1] + ".gcov | grep ':[ ]*" +
+                  line + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
+              cov = cov.strip()
+              if cov == '#####':
+                return self.LineType.NotCovered
+              elif cov == '-':
+                return self.LineType.NotExecutable
+              else:
+                return self.LineType.Covered
 
     def patch_coverage(self):
         """ compute the coverage for the current commit """
@@ -171,9 +197,12 @@ class Container(object):
                                 " | perl -pe 's/\e\[?.*?[\@-~]//g'")
             # check didn't return an empty set
             if changed_files:
+                self.changed_files = [i for i in changed_files.split('\r\n') if i]
+                self.uncovered_lines_list = []
                 # for every changed file 
-                for f in changed_files.split('\r\n'):
+                for f in self.changed_files:
                     # get the filename
+                    self.uncovered_lines_list.append([])
                     filename = f.split('/')
                     with cd(self.source_path):
                         # check *.c.gcov exists
@@ -196,6 +225,7 @@ class Container(object):
                                 # uncovered line
                                 if cov == '#####':
                                     self.uncovered_lines += 1
+                                    self.uncovered_lines_list[-1].append(l)
                                 # not(not executable), thus has been covered
                                 elif cov != '-':
                                     self.covered_lines += 1
@@ -212,6 +242,10 @@ class Container(object):
                                                    " | grep " + self.current_revision
                                                    + " | awk '{print $2}'")
                                     self.added_lines += len(line_numbers.split('\r\n'))
+                                    # the line below would yield too many false positives. need to find a way to
+                                    # distinguish between executable lines contained in never-executed
+                                    # files and non-executable lines
+                                    # self.uncovered_lines_list.append(line_numbers.split('\r\n'))
                                 else:
                                     print 'No file found ' + f + '\n'
                 # save results
@@ -220,6 +254,33 @@ class Container(object):
                                                                   self.uncovered_lines)) 
                                            * 100), 2)
 
+    def prev_patch_coverage(self, prev_files, prev_lines):
+        if self.compileError:
+          return
+        assert len(prev_files) == len(prev_lines)
+        with cd(self.path):
+            changed_files = run("git show --pretty='format:' --name-only" +
+                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+        prev_files_same = []
+        prev_lines_same = []
+        for i, f in enumerate(prev_files):
+            if f not in changed_files:
+                prev_files_same.append(f)
+                prev_lines_same.append(prev_lines[i])
+        
+        """ ignore files that are modified """
+        prev_files = prev_files_same;
+        prev_lines = prev_lines_same;
+
+        covered = 0
+        for i, f in enumerate(prev_files):
+            covered += len(prev_lines[i])
+            prev_lines[i][:] = [ l for l in prev_lines[i] if self.is_covered(f, l) != self.LineType.Covered ]
+            covered -= len(prev_lines[i])
+        
+        self.prev_covered += covered
+        return covered
+                
     def collect(self, author_name, timestamp):
         """ create a Collector to collect all info and a XMLHandler to parse them """
         c = Collector()
@@ -245,8 +306,11 @@ class Container(object):
                 c.summary = run('cat ' + self.source_path + '/coverage.txt')
             c.compileError = self.compileError
             c.maketestError = self.maketestError
+            c.prev_covered  = self.prev_covered
 
         # pass the Collector() obj to the Data Handler to store results in CSV format
         x = DataHandler(c)
         x.extractData()
         x.dumpCSV()
+        print "Files modified in the revision: " + str(self.changed_files) + '\n'
+        print "Lines modified and uncovered in the revision: " + str(self.uncovered_lines_list) + '\n'
