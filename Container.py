@@ -163,7 +163,7 @@ class Container(object):
         with cd(self.source_path):
             run('lcov -c -d . -o test.info', quiet=True)
             run("lcov -a base.info -a test.info -o total.info |tail -3|head -1| sed -e 's/[^0-9]*//' -e 's/([0-9]*//' > coverage.txt");
-            run('gcov *.c *.cpp *.cc *.h *.hpp', quiet=True)
+            run('find -name "*.gcda"|xargs gcov', quiet=True)
 
         self.stash_tests(True)
 
@@ -175,7 +175,7 @@ class Container(object):
               cov = run("cat " + filename[-1] + ".gcov | grep ':[ ]*" +
                   line + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
               cov = cov.strip()
-              if cov == '#####':
+              if cov == '#####' or cov == '=====':
                 return self.LineType.NotCovered
               elif cov == '-':
                 return self.LineType.NotExecutable
