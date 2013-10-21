@@ -11,9 +11,9 @@ class Zeromq(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        self.path = '/home/zeromq3-x'
-        self.source_path = '/home/zeromq3-x/src'
-        self.tsuite_path = ('/home/zeromq3-x/tests',)
+        self.path = '/home/zeromq4-x'
+        self.source_path = '/home/zeromq4-x/src'
+        self.tsuite_path = ('/home/zeromq4-x/tests',)
         # set timeout (in seconds) for the test suite to run
         self.timeout = 120
 
