@@ -65,12 +65,15 @@ class Analytics(object):
         
     def go(self):
         """ run all the tests for every version specified in a new container """
-        # self.commits format is ['commit.id__author.name__timestamp']
 
+        # list of uncovered files (and corresponding lines) i revisions ago
+        # init to dummy values for uniformity later on
+        prev_uncovered_list = [ (["foo.c"], [[]]) ] * 10
+        
         # check oldest commit first. this makes it easier to check patch coverage in subsequent versions
-        prev_uncovered = []
         self.commits.reverse()
         for i in self.commits:            
+            # self.commits format is ['commit.id__author.name__timestamp']
             a = i.split('__')
             commit_id = a[0]
             timestamp = a[1]
@@ -83,13 +86,14 @@ class Analytics(object):
             c.compile()    # long steps
             c.make_test()  #
             c.overall_coverage()
-            c.backup(commit_id)
+            #c.backup(commit_id)
             c.patch_coverage()
-            for (files, lines) in prev_uncovered:
-              c.prev_patch_coverage(files, lines)
-            if (len(prev_uncovered) == 3):
-                del prev_uncovered[0]
-            prev_uncovered.append((c.changed_files, c.uncovered_lines_list));
+            for i, (files, lines) in enumerate(prev_uncovered_list):
+                c.prev_patch_coverage(i, files, lines)
+                prev_uncovered_list[i] = (files, lines)
+            
+            prev_uncovered_list.insert(0, (c.changed_files, c.uncovered_lines_list));
+            prev_uncovered_list.pop()
 
             c.collect(author_name, timestamp )
             c.halt()

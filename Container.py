@@ -23,7 +23,7 @@ class Container(object):
         """ how many lines from previous patches are covered now """
         self.changed_files = []
         self.uncovered_lines_list = []
-        self.prev_covered = 0
+        self.prev_covered = []
 
     # The following are methods used to spawn a new container
     #
@@ -254,17 +254,17 @@ class Container(object):
                                                                   self.uncovered_lines)) 
                                            * 100), 2)
 
-    def prev_patch_coverage(self, prev_files, prev_lines):
+    def prev_patch_coverage(self, backcnt, prev_files, prev_lines):
         if self.compileError:
           return
         assert len(prev_files) == len(prev_lines)
-        with cd(self.path):
-            changed_files = run("git show --pretty='format:' --name-only" +
-                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+        #with cd(self.path):
+        #    changed_files = run("git show --pretty='format:' --name-only" +
+        #                        " | perl -pe 's/\e\[?.*?[\@-~]//g'")
         prev_files_same = []
         prev_lines_same = []
         for i, f in enumerate(prev_files):
-            if f not in changed_files:
+            if f not in self.changed_files:
                 prev_files_same.append(f)
                 prev_lines_same.append(prev_lines[i])
         
@@ -277,8 +277,12 @@ class Container(object):
             covered += len(prev_lines[i])
             prev_lines[i][:] = [ l for l in prev_lines[i] if self.is_covered(f, l) != self.LineType.Covered ]
             covered -= len(prev_lines[i])
-        
-        self.prev_covered += covered
+
+        assert(len(self.prev_covered) >= backcnt)
+        if (len(self.prev_covered) == backcnt):
+          self.prev_covered.append(covered)
+        else:
+          self.prev_covered[backcnt] += covered;
         return covered
                 
     def collect(self, author_name, timestamp):

@@ -23,6 +23,12 @@ class DataHandler(object):
         self.average = _collector.average
         self.prev_covered = _collector.prev_covered
 
+        # prev_covered[i] contains the #lines covered from the revision current~i
+        for i, _ in enumerate(self.prev_covered):
+          if (i > 0):
+            self.prev_covered[i] += self.prev_covered[i-1];
+        # prev_covered[i] contains the #lines covered from revision current~1 to current~i
+
         # make sure no fatal errors occurred
         if self.compileErr == False:
             # input is in this form: Lines executed:65.38% of 15576
@@ -58,29 +64,27 @@ class DataHandler(object):
 
     def dumpCSV(self):
         """ dump the extracted data to a CSV file """
+        data = [self.rev, self.eloc, self.ocoverage, self.tsize, 
+                self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
+                self.average]
+        data += self.prev_covered
+        data += [self.timestamp, self.exitStatus]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
         if isfile('data/' + self.name + '/' + self.name + '.csv'):
             with open('data/' + self.name + '/' + self.name + '.csv', 'a') as fp:
                 a = csv.writer(fp, delimiter=',')
-                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
-                          self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
-                          self.average, self.prev_covered, self.timestamp, self.exitStatus] ]
-                a.writerows(data)
+                a.writerow(data)
                 
         # otherwise create it 
         else:
             with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
-                header = [ ["rev", "#eloc", "coverage", "testsize",
+                header = ["rev", "#eloc", "coverage", "testsize",
                   "author", "#addedlines", "#covlines", "#notcovlines",
-                  "patchcoverage", "#covlinesprevpatches", "time", "exit"] ]
-                a.writerows(header)
-
-                data = [ [self.rev, self.eloc, self.ocoverage, self.tsize, 
-                          self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
-                          self.average, self.prev_covered, self.timestamp, self.exitStatus] ]
-                a.writerows(data)
+                  "patchcoverage", "#covlinesprevpatches*", "time", "exit"]
+                a.writerow(header)
+                a.writerow(data)
 
 
 
@@ -98,6 +102,6 @@ class Collector(object):
         self.covered_lines = 0
         self.uncovered_lines = 0
         self.average = 0
-        self.prev_covered = 0
+        self.prev_covered = [ 0 ] * 10
         
 
