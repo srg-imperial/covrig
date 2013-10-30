@@ -51,15 +51,15 @@ class Analytics(object):
         return cls(_pclass, _image, clist)
 
     @classmethod
-    def run_custom(cls, _pclass, _image, _commits):
+    def run_custom(cls, _pclass, _image, _commits, _count):
         """ process a custom range of commits, given as tuple """
         r = _pclass(_image, 'root', 'root')
         clist = []
         r.spawn()
         # attach timestamp and author to the commit
         for c in _commits:
-            new = r.get_commit_custom(c)
-            clist.append(new)
+            new = r.get_commit_custom(c, _count)
+            clist += new
         r.halt()
         return cls(_pclass, _image, clist)
         
@@ -67,12 +67,11 @@ class Analytics(object):
         """ run all the tests for every version specified in a new container """
 
         # list of uncovered files (and corresponding lines) i revisions ago
-        # init to dummy values for uniformity later on
-        prev_uncovered_list = [ (["foo.c"], [[]]) ] * 10
-        
+        prev_uncovered_list = [ ([], []) ] * 10
+
         # check oldest commit first. this makes it easier to check patch coverage in subsequent versions
         self.commits.reverse()
-        for i in self.commits:            
+        for i in self.commits: 
             # self.commits format is ['commit.id__author.name__timestamp']
             a = i.split('__')
             commit_id = a[0]
@@ -81,47 +80,41 @@ class Analytics(object):
 
             c = self.pclass(self.image, 'root', 'root')
             c.spawn()
-            c.checkout(commit_id)
-            c.tsize_compute()
-            c.compile()    # long steps
-            c.make_test()  #
-            c.overall_coverage()
-            #c.backup(commit_id)
-            c.patch_coverage()
-            for i, (files, lines) in enumerate(prev_uncovered_list):
-                c.prev_patch_coverage(i, files, lines)
-                prev_uncovered_list[i] = (files, lines)
-            
-            prev_uncovered_list.insert(0, (c.changed_files, c.uncovered_lines_list));
-            prev_uncovered_list.pop()
+            try:
+              c.checkout(commit_id)
+              c.tsize_compute()
+              c.compile()    # long steps
+              c.make_test()  #
+              c.overall_coverage()
+              c.backup(commit_id)
+              c.patch_coverage()
+              for i, (files, lines) in enumerate(prev_uncovered_list):
+                prev_uncovered_list[i] = c.prev_patch_coverage(i, files, lines)
 
-            c.collect(author_name, timestamp )
-            c.halt()
+              print (c.changed_files, c.uncovered_lines_list)
+              prev_uncovered_list.insert(0, (c.changed_files, c.uncovered_lines_list));
+              prev_uncovered_list.pop()
 
-            
+              c.collect(author_name, timestamp )
+            finally:
+              c.halt()
         
 
 def main():
-    """ let's do something """
+    # exact revisions for reproducibility across containers
+    l = Analytics.run_custom(Lighttpd, 'lighttpd2', ('0d40b25',), 275)
+    l.go()
 
-    g = Analytics.run_custom(Git, 'manlio/git', ('0d8beaa',))
-    g.go()
+    m = Analytics.run_custom(Memcached, 'memcached', ('87e2f36',), 289)
+    m.go()
+    
+    z = Analytics.run_custom(Zeromq, 'zeromq4', ('573d7b0',), 1100)
+    z.go()
 
-    #l = Analytics.run_custom(Lighttpd, 'manlio/lighttpd', ('eb9f6aa',))
-    #l.go()
-
-    #m = Analytics.run_custom(Memcached, 'manlio/memcached', ('57a9856',))
-    #m.go()
-
-    #z = Analytics.run_custom(Zeromq, 'manlio/zeromq', ('f5a9c32',))
-    #z.go()
-
-
-    # -> Examples:
 
     # Test the last N revisions
-    # rl = Analytics.run_last(Redis, 'manlio/redis', 3)
-    # rl.go()
+    #rl = Analytics.run_last(Redis, 'baseline-redis', 1200)
+    #rl.go()
 
     # Test a custom set of revisions
     # z = Analytics.run_custom(Memcached, 'manlio/memcached', ('50d7188',))

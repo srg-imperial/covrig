@@ -76,12 +76,14 @@ class Container(object):
                           + "perl -pe 's/\e\[?.*?[\@-~]//g' ")
         return commit_list.splitlines()
 
-    def get_commit_custom(self, single_commit):
+    def get_commit_custom(self, single_commit, lookbehind):
         """ attach timestamp and author to a given commit """
-        commit = run('cd ' + self.source_path + ' && git show ' +
-                          str(single_commit) + " --format=%h__%ct__%an | "
-                          + "head -1 | perl -pe 's/\e\[?.*?[\@-~]//g' ", quiet=True)
-        return commit
+        current_commit = run('cd ' + self.source_path + ' && git rev-parse HEAD')
+        run('cd ' + self.source_path + ' && git checkout ' + single_commit)
+        commit_list = self.get_commit_list(lookbehind);
+
+        run('cd ' + self.source_path + ' && git checkout ' + current_commit)
+        return commit_list
 
     def count_sloc(self, path):
         """ use cloc to get the static lines of code for any given file or directory """
@@ -126,8 +128,8 @@ class Container(object):
                 run('gcc -v &>> build_info.txt')
         with cd(self.source_path):
             # bzip all the coverage files
-            run('cp -R . ../cov-' + commit)
-            run('tar -cjf coverage-' + commit + '.tar.bz2 ../cov-' + commit)
+            run("find . -name '*.gcov' > gcovlist")
+            run('tar -cjf coverage-' + commit + '.tar.bz2 -T gcovlist')
             # scp to localhost/data
             get('coverage-' + commit + '.tar.bz2', 'data/' + self.__class__.__name__ + 
                 '/' + 'coverage-' + commit + '.tar.bz2')
@@ -181,6 +183,8 @@ class Container(object):
                 return self.LineType.NotExecutable
               else:
                 return self.LineType.Covered
+            else:
+              return self.LineType.NotExecutable
 
     def patch_coverage(self):
         """ compute the coverage for the current commit """
@@ -189,23 +193,20 @@ class Container(object):
         self.uncovered_lines = 0
         self.average = 0
 
-        if self.compileError == True:
-            return
         # get a list of the changed files for the current commit
         with cd(self.path):
             changed_files = run("git show --pretty='format:' --name-only" + 
                                 " | perl -pe 's/\e\[?.*?[\@-~]//g'")
-            # check didn't return an empty set
             if changed_files:
                 self.changed_files = [i for i in changed_files.split('\r\n') if i]
-                self.uncovered_lines_list = []
                 # for every changed file 
                 for f in self.changed_files:
                     # get the filename
                     self.uncovered_lines_list.append([])
-                    filename = f.split('/')
-                    with cd(self.source_path):
+                    if self.compileError == False:
+                      with cd(self.source_path):
                         # check *.c.gcov exists
+                        filename = f.split('/')
                         fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
                         if fileExists == 'y':
                             print 'Coverage information found\n'
@@ -255,12 +256,8 @@ class Container(object):
                                            * 100), 2)
 
     def prev_patch_coverage(self, backcnt, prev_files, prev_lines):
-        if self.compileError:
-          return
         assert len(prev_files) == len(prev_lines)
-        #with cd(self.path):
-        #    changed_files = run("git show --pretty='format:' --name-only" +
-        #                        " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+        
         prev_files_same = []
         prev_lines_same = []
         for i, f in enumerate(prev_files):
@@ -271,6 +268,8 @@ class Container(object):
         """ ignore files that are modified """
         prev_files = prev_files_same;
         prev_lines = prev_lines_same;
+        if self.compileError:
+          return (prev_files, prev_lines)
 
         covered = 0
         for i, f in enumerate(prev_files):
@@ -283,7 +282,7 @@ class Container(object):
           self.prev_covered.append(covered)
         else:
           self.prev_covered[backcnt] += covered;
-        return covered
+        return (prev_files, prev_lines)
                 
     def collect(self, author_name, timestamp):
         """ create a Collector to collect all info and a XMLHandler to parse them """
