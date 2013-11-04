@@ -17,7 +17,8 @@ class Beanstalkd(Container):
                             '/home/beanstalkd/testserv.c', '/home/beanstalkd/testutil.c',
                             '/home/beanstalkd/heap-test.c', '/home/beanstalkd/integ-test.c',
                             '/home/beanstalkd/job-test.c', '/home/beanstalkd/util-test.c',
-                            '/home/beanstalkd/tests', '/home/beanstalkd/sh-tests')
+                            '/home/beanstalkd/tests', '/home/beanstalkd/sh-tests',
+                            '/home/beanstalkd/ct')
         # set timeout (in seconds) for the test suite to run
         self.timeout = 60
 
@@ -28,9 +29,10 @@ class Beanstalkd(Container):
            with settings(warn_only=True):
                # the developers got rid of autotools starting at fa96ec4
                # thus the first two steps are needed only for older commtis
-               run('./autogen.sh')
-               run('./configure')
-               result = run("make CFLAGS='-O0 --coverage' LDFLAGS='--coverage'")
+               run('rm -rf ct && cp -r /home/ct.git/ct .')
+               run('./autogen.sh && ./configure')
+               run("sed -i 's#tests/cutcheck: tests/cutcheck.o $(objects) $(tests:.c=.o)#tests/cutcheck: tests/cutcheck.o $(objects) $(tests:.c=.o); cc $(CFLAGS) tests/cutcheck.o $(objects) $(tests:.c=.o) -lcut -o tests/cutcheck#' Makefile");
+               result = run("make CFLAGS='-O0 --coverage -Wl,--no-as-needed -levent -lrt' LDFLAGS='--coverage -Wl,--no-as-needed -levent -lrt'")
                if result.failed:
                    self.compileError = True
 
@@ -41,7 +43,7 @@ class Beanstalkd(Container):
         if self.compileError == False: 
             with cd(self.path):
                 with settings(warn_only=True):
-                    result = run("make check CFLAGS='-O0 --coverage' LDFLAGS='--coverage'")
+                    result = run("make check CFLAGS='-O0 --coverage -Wl,--no-as-needed -levent -lrt' LDFLAGS='--coverage -Wl,--no-as-needed -levent -lrt'")
                     if result.failed:
                         self.maketestError = result.return_code
                     
