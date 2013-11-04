@@ -1,7 +1,7 @@
 import csv
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
+#import matplotlib as mpl
+#mpl.use('Agg')
+#import matplotlib.pyplot as plt
 
 
 class Sketch(object):
@@ -70,7 +70,7 @@ class ZeroCoverage(object):
 
 def main():
     # just some debug cases:
-
+    """
     r = Sketch('plot/data/Redis/Redis.csv', 1, 'redis-coverage.png')
     r.plot()
     
@@ -79,7 +79,7 @@ def main():
 
     z = Sketch('plot/data/Zeromq/Zeromq.csv', 1, 'zeromq-coverage.png')
     z.plot()
-
+    """
     rr = ZeroCoverage('plot/data/Redis/Redis.csv')
     rr.lessThan(30)
 
