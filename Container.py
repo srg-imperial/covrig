@@ -89,7 +89,10 @@ class Container(object):
         """ use cloc to get the static lines of code for any given file or directory """
         lines = 0
         for p in path:
-            lines += int(run("cloc " + p + " | tail -2 | awk '{print $5}'"))
+            try:
+              lines += int(run("cloc " + p + " | tail -2 | awk '{print $5}'"))
+            except ValueError:
+              lines += int(run("wc -l " + p + "/*|tail -1|awk '{ print $1 }'"))
         return str(lines)
             
     def checkout(self, revision):
