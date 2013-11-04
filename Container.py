@@ -112,11 +112,12 @@ class Container(object):
         # actually exists in the current revision
         actual_tsuite = [ ]
         for item in self.tsuite_path:
-            fileExists = run ('( [ -f ' + item + ' ] || [ -d ' + item + ' ] ) && echo y || echo n')
+            fileExists = run ('ls -U ' + item + ' >/dev/null 2>&1 && echo y || echo n')
             if fileExists == 'y':
                 actual_tsuite.append(item)
                 print 'Added ' + item + ' to the test suite\n'
         self.tsuite_path = actual_tsuite 
+        #XXX count_sloc will fail if a wildcard path contains no files recognized by cloc
         self.tsize = self.count_sloc(self.tsuite_path)
 
     def backup(self, commit):
@@ -143,7 +144,10 @@ class Container(object):
                 with settings(warn_only=True):
                     for item in self.tsuite_path:
                         i = item.split('/')
-                        run('mv ' + i[-1] + ' ' + item)
+                        ent = i[-1]
+                        i[-1] = ""
+                        p = "/".join(i)
+                        run('mv ' + ent + ' ' + p)
         else:
             for item in self.tsuite_path:
                 run('mv ' + item + ' /home/')
