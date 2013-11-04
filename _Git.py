@@ -13,15 +13,15 @@ class Git(Container):
         # set variables
         self.path = '/home/git'
         self.source_path = '/home/git'
-        self.tsuite_path = ('/home/git/t',)
+        self.tsuite_path = ('/home/git/t', '/home/git/test-*')
         # set timeout (in seconds) for the test suite to run
         self.timeout = 7200
 
     def compile(self):
-        """ compile Zeromq """
+        """ compile Git """
         with cd(self.path):
            with settings(warn_only=True):
-               result = run(('make configure && ./configure'))
+               result = run(('make configure && ./configure && make -j4 coverage-compile'))
                if result.failed:
                    self.compileError = True
 
@@ -33,6 +33,6 @@ class Git(Container):
             with cd(self.path):
                 with settings(warn_only=True):
                     result = run(("timeout " + str(self.timeout) + 
-                                  " make -j4 coverage"))
+                                  " make coverage"))
                     if result.failed:
                         self.maketestError = result.return_code
