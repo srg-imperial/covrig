@@ -193,7 +193,7 @@ class Container(object):
             else:
               return self.LineType.NotExecutable
 
-    def patch_coverage(self):
+    def patch_coverage(self, prev_revision):
         """ compute the coverage for the current commit """
         self.added_lines = 0
         self.covered_lines = 0
@@ -202,7 +202,8 @@ class Container(object):
 
         # get a list of the changed files for the current commit
         with cd(self.path):
-            changed_files = run("git show --pretty='format:' --name-only" + 
+            changed_files = run("git diff --pretty='format:' --name-only " +
+                                prev_revision + " " + self.current_revision +
                                 " | perl -pe 's/\e\[?.*?[\@-~]//g'")
             if changed_files:
                 self.changed_files = [i for i in changed_files.split('\r\n') if i]
@@ -219,9 +220,7 @@ class Container(object):
                             print 'Coverage information found\n'
                             # get the changed lines numbers
                             with cd(self.path):
-                                line_numbers = run("git blame --porcelain " + f + 
-                                                   " | grep " + self.current_revision 
-                                                   + " | awk '{print $2}'")
+                                line_numbers = run("/root/measure-cov.sh " + prev_revision + " " + self.current_revision + " " + f)
                             # for every changed line
                             for l in line_numbers.split('\r\n'):
                                 # increment added lines
@@ -231,7 +230,7 @@ class Container(object):
                                     l + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
                                 cov = cov.strip()
                                 # uncovered line
-                                if cov == '#####':
+                                if cov == '#####' or cov == '=====':
                                     self.uncovered_lines += 1
                                     self.uncovered_lines_list[-1].append(l)
                                 # not(not executable), thus has been covered
@@ -246,9 +245,7 @@ class Container(object):
                                 # check if the file exists, here or in /home/
                                 fileExists2 = run ('[ -f ' + f + ' ] && echo y || echo n')
                                 if fileExists2 == 'y':
-                                    line_numbers = run("git blame --porcelain " + f +
-                                                   " | grep " + self.current_revision
-                                                   + " | awk '{print $2}'")
+                                    line_numbers = run("/root/measure-cov.sh " + prev_revision + " " + self.current_revision + " " + f)
                                     self.added_lines += len(line_numbers.split('\r\n'))
                                     # the line below would yield too many false positives. need to find a way to
                                     # distinguish between executable lines contained in never-executed

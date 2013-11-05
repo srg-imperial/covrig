@@ -58,7 +58,7 @@ class Analytics(object):
         r.spawn()
         # attach timestamp and author to the commit
         for c in _commits:
-            new = r.get_commit_custom(c, _count)
+            new = r.get_commit_custom(c, _count+1)
             clist += new
         r.halt()
         return cls(_pclass, _image, clist)
@@ -70,6 +70,8 @@ class Analytics(object):
         prev_uncovered_list = [ ([], []) ] * 10
 
         # check oldest commit first. this makes it easier to check patch coverage in subsequent versions
+        prev_commit_id = self.commits[-1].split('__')[0]
+        del self.commits[-1]
         self.commits.reverse()
         for i in self.commits: 
             # self.commits format is ['commit.id__author.name__timestamp']
@@ -87,7 +89,7 @@ class Analytics(object):
               c.make_test()  #
               c.overall_coverage()
               c.backup(commit_id)
-              c.patch_coverage()
+              c.patch_coverage(prev_commit_id)
               for i, (files, lines) in enumerate(prev_uncovered_list):
                 prev_uncovered_list[i] = c.prev_patch_coverage(i, files, lines)
 
@@ -98,27 +100,27 @@ class Analytics(object):
               c.collect(author_name, timestamp )
             finally:
               c.halt()
+            prev_commit_id = commit_id
         
 
 def main():
     # exact revisions for reproducibility across containers
-    l = Analytics.run_custom(Lighttpd, 'lighttpd2', ('0d40b25',), 275)
+    l = Analytics.run_custom(Lighttpd, 'baseline', ('0d40b25',), 275)
     l.go()
 
-    m = Analytics.run_custom(Memcached, 'memcached', ('87e2f36',), 289)
+    m = Analytics.run_custom(Memcached, 'baseline', ('87e2f36',), 289)
     m.go()
     
-    z = Analytics.run_custom(Zeromq, 'zeromq4', ('573d7b0',), 1100)
+    z = Analytics.run_custom(Zeromq, 'baseline', ('573d7b0',), 1100)
     z.go()
 
+    rl = Analytics.run_custom(Redis, 'baseline', ('347ab78',), 1200)
+    rl.go()
 
-    # Test the last N revisions
-    #rl = Analytics.run_last(Redis, 'baseline-redis', 1200)
+    #rl = Analytics.run_custom(Beanstalkd, 'beanstalkd', ('157d88bf9435a23b71a1940a9afb617e52a2b9e9',), 600)
+    #rl = Analytics.run_custom(Git, 'git', ('aa2706463f',), 50)
+    
     #rl.go()
-
-    # Test a custom set of revisions
-    # z = Analytics.run_custom(Memcached, 'manlio/memcached', ('50d7188',))
-    # z.go()
 
     # Use Analyzer() to get the list of all commits with 0 ELOCs
     # z = ZeroCoverage('plot/data/Redis/Redis.csv')
