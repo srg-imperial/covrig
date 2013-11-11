@@ -1,5 +1,6 @@
 from __future__ import division
 from fabric.api import *
+import fnmatch
 
 # Analytics modules
 from DataHandler import *
@@ -22,9 +23,17 @@ class Container(object):
         self.maketestError = False
         """ how many lines from previous patches are covered now """
         self.changed_files = []
+        self.echanged_files = []
         self.uncovered_lines_list = []
         self.prev_covered = []
+        self.hunkheads = []
+        self.ehunkheads = []
 
+        #split the test suite into directories and files
+        self.tsuite_dir = []
+        self.tsuite_file = []
+
+        self.changed_test_files = []
     # The following are methods used to spawn a new container
     #
 
@@ -94,7 +103,15 @@ class Container(object):
             except ValueError:
               lines += int(run("wc -l " + p + "/*|tail -1|awk '{ print $1 }'"))
         return str(lines)
-            
+
+    def count_hunks(self, prev_revision):
+      with cd(self.path):
+        changed = run("git diff -b -U0 " +
+                       prev_revision + " " + self.current_revision +
+                       " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+        if changed:
+          self.hunkheads = [i for i in changed.split('\r\n') if i.startswith( '@@' )]
+
     def checkout(self, revision):
         """ checkout the revision we want """
         with cd(self.path):
@@ -116,6 +133,11 @@ class Container(object):
             if fileExists == 'y':
                 actual_tsuite.append(item)
                 print 'Added ' + item + ' to the test suite\n'
+                isdir = run ('[ -d "' + item + '" ] && echo y || echo n')
+                if isdir == 'y':
+                  self.tsuite_dir.append(item)
+                else:
+                  self.tsuite_file.append(item)
         self.tsuite_path = actual_tsuite 
         #XXX count_sloc will fail if a wildcard path contains no files recognized by cloc
         self.tsize = self.count_sloc(self.tsuite_path)
@@ -212,15 +234,33 @@ class Container(object):
                     # get the filename
                     self.uncovered_lines_list.append([])
                     if self.compileError == False:
+                      #check whether it's a test file
+                      with cd(self.path):
+                        fileExists = run('[ -f ' + f + ' ] && echo y || echo n')
+                        if fileExists == 'y':
+                          realp = run('realpath ' + f)
+                          for tf in self.tsuite_file:
+                            if fnmatch.fnmatch(realp, tf):
+                              self.changed_test_files.append(f)
+                          for td in self.tsuite_dir:
+                            if realp.startswith(td):
+                              self.changed_test_files.append(f)
+                      self.changed_test_files = list(set(self.changed_test_files))
                       with cd(self.source_path):
                         # check *.c.gcov exists
                         filename = f.split('/')
                         fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
                         if fileExists == 'y':
                             print 'Coverage information found\n'
+                            self.echanged_files.append(f)
                             # get the changed lines numbers
                             with cd(self.path):
                                 line_numbers = run("/root/measure-cov.sh " + prev_revision + " " + self.current_revision + " " + f)
+                                file_diff = run("git diff -b -U0 " +
+                                                prev_revision + " " + self.current_revision +
+                                                " -- " + f +
+                                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+                                self.ehunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
                             # for every changed line
                             for l in line_numbers.split('\r\n'):
                                 # increment added lines
@@ -239,25 +279,40 @@ class Container(object):
                         # no .gcov information found
                         else:
                             # most likely the file was not compiled into any of the programs
-                            # executed by the test suite. Alternatives include: program crashed or has no permissions
+                            # executed by the test suite. Alternatives include: file was removed, program crashed or has no permissions
                             print 'No coverage information found for ' + filename[-1] + '\n'
+
                             with cd(self.path):
-                                # check if the file exists, here or in /home/
-                                fileExists2 = run ('[ -f ' + f + ' ] && echo y || echo n')
-                                if fileExists2 == 'y':
-                                    line_numbers = run("/root/measure-cov.sh " + prev_revision + " " + self.current_revision + " " + f)
-                                    self.added_lines += len(line_numbers.split('\r\n'))
-                                    # the line below would yield too many false positives. need to find a way to
-                                    # distinguish between executable lines contained in never-executed
-                                    # files and non-executable lines
-                                    # self.uncovered_lines_list.append(line_numbers.split('\r\n'))
-                                else:
-                                    print 'No file found ' + f + '\n'
+                              fileExists = run ('[ -f ' + f + ' ] && echo y || echo n')
+                              if fileExists == 'y':
+                                line_numbers = run("/root/measure-cov.sh " + prev_revision + " " + self.current_revision + " " + f)
+                                lines = line_numbers.split('\r\n')
+                                self.added_lines += len(lines)
+                                file_diff = run("git diff -b -U0 " +
+                                                prev_revision + " " + self.current_revision +
+                                                " -- " + f +
+                                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+                                # check if the file was compiled (but not executed)
+                                with cd(self.source_path):
+                                  executableinfo = run ( "sed -n '/SF:.*" + filename[-1] + "/,/end_of_record/p' base.info")
+                                  if executableinfo:
+                                    self.echanged_files.append(f)
+                                    self.ehunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
+                                    for l in lines:
+                                      with settings(warn_only=True):
+                                        if run ( "sed -n '/SF:.*" + filename[-1] + "/,/end_of_record/p' base.info |grep DA:" + l):
+                                          self.uncovered_lines += 1
+                                          self.uncovered_lines_list[-1].append(l)
+                                  else:
+                                    self.hunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
+                              else:
+                                print 'No file found ' + f + '\n'
                 # save results
                 if self.covered_lines > 0:
                     self.average = round( ((self.covered_lines / (self.covered_lines +
                                                                   self.uncovered_lines)) 
                                            * 100), 2)
+                self.count_hunks(prev_revision)
 
     def prev_patch_coverage(self, backcnt, prev_files, prev_lines):
         assert len(prev_files) == len(prev_lines)
@@ -314,6 +369,11 @@ class Container(object):
             c.compileError = self.compileError
             c.maketestError = self.maketestError
             c.prev_covered  = self.prev_covered
+            c.hunks = len(self.hunkheads)
+            c.ehunks = len(self.ehunkheads)
+            c.changed_files = len(self.changed_files)
+            c.echanged_files = len(self.echanged_files)
+            c.changed_test_files = len(self.changed_test_files)
 
         # pass the Collector() obj to the Data Handler to store results in CSV format
         x = DataHandler(c)

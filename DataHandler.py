@@ -17,6 +17,11 @@ class DataHandler(object):
         self.eloc = '0'
         self.ocoverage = '0'
         self.tsize = '0'
+        self.hunks = '0'
+        self.ehunks = '0'
+        self.changed_files = '0'
+        self.echanged_files = '0'
+        self.changed_test_files = '0'
         self.add_lines = _collector.added_lines
         self.cov_lines = _collector.covered_lines
         self.unc_lines = _collector.uncovered_lines
@@ -35,6 +40,11 @@ class DataHandler(object):
             self.summary = _collector.summary
             # extract test suite size as sloc
             self.tsize = _collector.tsuite_size
+            self.hunks = _collector.hunks
+            self.ehunks = _collector.ehunks
+            self.changed_files = _collector.changed_files
+            self.echanged_files = _collector.echanged_files
+            self.changed_test_files = _collector.changed_test_files
     
     def extractData(self):
         # if the compilation failed, leave the ELOCs at 0
@@ -68,7 +78,8 @@ class DataHandler(object):
                 self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
                 self.average]
         data += self.prev_covered
-        data += [self.timestamp, self.exitStatus]
+        data += [self.timestamp, self.exitStatus, self.hunks, self.ehunks,
+            self.changed_files, self.echanged_files, self.changed_test_files]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
         if isfile('data/' + self.name + '/' + self.name + '.csv'):
@@ -82,7 +93,8 @@ class DataHandler(object):
                 a = csv.writer(fp, delimiter=',')
                 header = ["rev", "#eloc", "coverage", "testsize",
                   "author", "#addedlines", "#covlines", "#notcovlines",
-                  "patchcoverage", "#covlinesprevpatches*", "time", "exit"]
+                  "patchcoverage", "#covlinesprevpatches*", "time", "exit",
+                  "hunks", "ehunks", "changed_files", "echanged_files", "changed_test_files"]
                 a.writerow(header)
                 a.writerow(data)
 
@@ -101,6 +113,7 @@ class Collector(object):
         self.added_lines = 0
         self.covered_lines = 0
         self.uncovered_lines = 0
+        self.average = 0
         self.average = 0
         self.prev_covered = [ 0 ] * 10
         
