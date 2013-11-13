@@ -34,6 +34,7 @@ class Container(object):
         self.tsuite_file = []
 
         self.changed_test_files = []
+        self.merge = False;
     # The following are methods used to spawn a new container
     #
 
@@ -122,6 +123,7 @@ class Container(object):
                 result = run('git checkout ' + revision) 
                 if result.failed:
                     run('git stash && git checkout ' + revision)
+            self.is_merge(revision)
 
     def tsize_compute(self):
         """ compute test suite as SLOCs """
@@ -215,6 +217,12 @@ class Container(object):
             else:
               return self.LineType.NotExecutable
 
+    def is_merge(self, commit):
+      with cd(self.path):
+        mergestatus = run("git show " + commit + "|head -2|tail -1")
+        self.merge = mergestatus.startswith("Merge:")
+        return self.merge
+
     def patch_coverage(self, prev_revision):
         """ compute the coverage for the current commit """
         self.added_lines = 0
@@ -224,7 +232,7 @@ class Container(object):
 
         # get a list of the changed files for the current commit
         with cd(self.path):
-            changed_files = run("git diff --pretty='format:' --name-only " +
+            changed_files = run("git diff -b --pretty='format:' --name-only " +
                                 prev_revision + " " + self.current_revision +
                                 " | perl -pe 's/\e\[?.*?[\@-~]//g'")
             if changed_files:
@@ -353,6 +361,7 @@ class Container(object):
         c.author_name = author_name
         c.timestamp = timestamp
         c.tsuite_size = self.tsize
+        c.merge = self.merge
         # if compilation failed, halt
         if self.compileError == True:
             c.compileError = True

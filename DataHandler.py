@@ -27,6 +27,7 @@ class DataHandler(object):
         self.unc_lines = _collector.uncovered_lines
         self.average = _collector.average
         self.prev_covered = _collector.prev_covered
+        self.merge = _collector.merge
 
         # prev_covered[i] contains the #lines covered from the revision current~i
         for i, _ in enumerate(self.prev_covered):
@@ -79,7 +80,8 @@ class DataHandler(object):
                 self.average]
         data += self.prev_covered
         data += [self.timestamp, self.exitStatus, self.hunks, self.ehunks,
-            self.changed_files, self.echanged_files, self.changed_test_files]
+            self.changed_files, self.echanged_files, self.changed_test_files,
+            self.merge]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
         if isfile('data/' + self.name + '/' + self.name + '.csv'):
@@ -94,7 +96,7 @@ class DataHandler(object):
                 header = ["rev", "#eloc", "coverage", "testsize",
                   "author", "#addedlines", "#covlines", "#notcovlines",
                   "patchcoverage", "#covlinesprevpatches*", "time", "exit",
-                  "hunks", "ehunks", "changed_files", "echanged_files", "changed_test_files"]
+                  "hunks", "ehunks", "changed_files", "echanged_files", "changed_test_files", "merge"]
                 a.writerow(header)
                 a.writerow(data)
 
