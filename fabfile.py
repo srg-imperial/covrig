@@ -100,7 +100,8 @@ class Analytics(object):
               c.collect(author_name, timestamp )
             finally:
               c.halt()
-            prev_commit_id = commit_id
+            if c.compileError == False:
+              prev_commit_id = commit_id
         
 
 def main():
