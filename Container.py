@@ -251,7 +251,7 @@ class Container(object):
                             if fnmatch.fnmatch(realp, tf):
                               self.changed_test_files.append(f)
                           for td in self.tsuite_dir:
-                            if realp.startswith(td):
+                            if realp.startswith(td + "/"):
                               self.changed_test_files.append(f)
                       self.changed_test_files = list(set(self.changed_test_files))
                       with cd(self.source_path):
