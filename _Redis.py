@@ -15,7 +15,7 @@ class Redis(Container):
         self.source_path = '/home/redis/src'
         self.tsuite_path = ('/home/redis/tests',)
         # set timeout (in seconds) for the test suite to run
-        self.timeout = 45
+        self.timeout = 90
 
     def compile(self):
         """ compile redis """
