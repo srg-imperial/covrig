@@ -19,6 +19,8 @@ class DataHandler(object):
         self.tsize = '0'
         self.hunks = '0'
         self.ehunks = '0'
+        self.hunks3 = '0'
+        self.ehunks3 = '0'
         self.changed_files = '0'
         self.echanged_files = '0'
         self.changed_test_files = '0'
@@ -43,6 +45,8 @@ class DataHandler(object):
             self.tsize = _collector.tsuite_size
             self.hunks = _collector.hunks
             self.ehunks = _collector.ehunks
+            self.hunks3 = _collector.hunks3
+            self.ehunks3 = _collector.ehunks3
             self.changed_files = _collector.changed_files
             self.echanged_files = _collector.echanged_files
             self.changed_test_files = _collector.changed_test_files
@@ -81,7 +85,7 @@ class DataHandler(object):
         data += self.prev_covered
         data += [self.timestamp, self.exitStatus, self.hunks, self.ehunks,
             self.changed_files, self.echanged_files, self.changed_test_files,
-            self.merge]
+            self.hunks3, self.ehunks3, self.merge]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
         if isfile('data/' + self.name + '/' + self.name + '.csv'):
@@ -96,7 +100,8 @@ class DataHandler(object):
                 header = ["rev", "#eloc", "coverage", "testsize",
                   "author", "#addedlines", "#covlines", "#notcovlines",
                   "patchcoverage", "#covlinesprevpatches*", "time", "exit",
-                  "hunks", "ehunks", "changed_files", "echanged_files", "changed_test_files", "merge"]
+                  "hunks", "ehunks", "changed_files", "echanged_files",
+                  "changed_test_files", "hunks3", "ehunks3", "merge"]
                 a.writerow(header)
                 a.writerow(data)
 

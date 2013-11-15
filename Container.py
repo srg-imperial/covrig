@@ -28,6 +28,8 @@ class Container(object):
         self.prev_covered = []
         self.hunkheads = []
         self.ehunkheads = []
+        self.hunkheads3 = []
+        self.ehunkheads3 = []
 
         #split the test suite into directories and files
         self.tsuite_dir = []
@@ -82,7 +84,7 @@ class Container(object):
         """ get the list of the commits to be analyzed """
         # get the log list; the perl one-liner is to get rid of the damn colored output
         commit_list = run('cd ' + self.source_path + ' && git log -' + 
-                          str(commits_no) + " --format=%h__%ct__%an | "
+                          str(commits_no) + " --first-parent --format=%h__%ct__%an | "
                           + "perl -pe 's/\e\[?.*?[\@-~]//g' ")
         return commit_list.splitlines()
 
@@ -112,6 +114,10 @@ class Container(object):
                        " | perl -pe 's/\e\[?.*?[\@-~]//g'")
         if changed:
           self.hunkheads = [i for i in changed.split('\r\n') if i.startswith( '@@' )]
+          changed = run("git diff -b " +
+                         prev_revision + " " + self.current_revision +
+                         " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+          self.hunkheads3 = [i for i in changed.split('\r\n') if i.startswith( '@@' )]
 
     def checkout(self, revision):
         """ checkout the revision we want """
@@ -269,6 +275,11 @@ class Container(object):
                                                 " -- " + f +
                                                 " | perl -pe 's/\e\[?.*?[\@-~]//g'")
                                 self.ehunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
+                                file_diff3 = run("git diff -b " +
+                                                prev_revision + " " + self.current_revision +
+                                                " -- " + f +
+                                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+                                self.ehunkheads3 += [i for i in file_diff3.split('\r\n') if i.startswith('@@')]
                             # for every changed line
                             for l in line_numbers.split('\r\n'):
                                 # increment added lines
@@ -306,13 +317,16 @@ class Container(object):
                                   if executableinfo:
                                     self.echanged_files.append(f)
                                     self.ehunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
+                                    file_diff3 = run("git diff -b " +
+                                                    prev_revision + " " + self.current_revision +
+                                                    " -- " + f +
+                                                    " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+                                    self.ehunkheads3 += [i for i in file_diff3.split('\r\n') if i.startswith('@@')]
                                     for l in lines:
                                       with settings(warn_only=True):
                                         if run ( "sed -n '/SF:.*" + filename[-1] + "/,/end_of_record/p' base.info |grep DA:" + l):
                                           self.uncovered_lines += 1
                                           self.uncovered_lines_list[-1].append(l)
-                                  else:
-                                    self.hunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
                               else:
                                 print 'No file found ' + f + '\n'
                 # save results
@@ -380,6 +394,8 @@ class Container(object):
             c.prev_covered  = self.prev_covered
             c.hunks = len(self.hunkheads)
             c.ehunks = len(self.ehunkheads)
+            c.hunks3 = len(self.hunkheads3)
+            c.ehunks3 = len(self.ehunkheads3)
             c.changed_files = len(self.changed_files)
             c.echanged_files = len(self.echanged_files)
             c.changed_test_files = len(self.changed_test_files)
