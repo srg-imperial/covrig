@@ -1,5 +1,16 @@
 #!/bin/bash
 
+die () {
+    echo >&2 "$@"
+    exit 1
+}
+[ $# -eq 2 ] || [ $# -eq 1 ] || die "Usage: $0 filename [count]"
+
+if [ $# -eq 2 ]; then
+  tail -$2 $1 >process.partial 2>/dev/null || die "Invalid arguments"
+  set -- "process.partial"
+fi
+
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 
 echo -n "+++Compile errors: "
