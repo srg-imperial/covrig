@@ -32,6 +32,8 @@ class Redis(Container):
         if self.compileError == False: 
             with cd('/home/redis/src'):
                 with settings(warn_only=True):
+                  for i in range(5):
                     result = run('timeout ' + str(self.timeout) + ' make test')
                     if result.failed:
                         self.maketestError = result.return_code
+                    run('killall redis')

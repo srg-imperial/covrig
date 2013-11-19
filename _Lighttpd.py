@@ -36,6 +36,7 @@ class Lighttpd(Container):
         if self.compileError == False: 
             with cd(self.path):
                 with settings(warn_only=True):
+                  for i in range(2):
                     result = run(('timeout ' + str(self.timeout) +
                                  " make check CFLAGS='-fprofile-arcs -ftest-coverage -O0 " +
                                  "-lm -std=c99' LDFLAGS='-fprofile-arcs -ftest-coverage'"))

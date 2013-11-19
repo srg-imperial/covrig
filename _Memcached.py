@@ -37,6 +37,8 @@ class Memcached(Container):
         if self.compileError == False: 
             with cd(self.source_path):
                 with settings(warn_only=True):
+                  for i in range(5):
                     result = run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'') 
                     if result.failed:
                         self.maketestError = result.return_code
+                    run('killall memcached')

@@ -34,6 +34,7 @@ class Zeromq(Container):
         if self.compileError == False: 
             with cd(self.path):
                 with settings(warn_only=True):
+                  for i in range(5):
                     result = run(("timeout " + str(self.timeout) + 
                                   " make check CFLAGS='-O0' CXXFLAGS='-O0'"))
                     if result.failed:
