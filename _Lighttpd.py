@@ -22,6 +22,12 @@ class Lighttpd(Container):
         """ compile Lighttpd """
         with cd(self.path):
            with settings(warn_only=True):
+               result = run('git rev-list 772e66b91c0c371f5777d50703b3629caa770e6e | grep $(git rev-parse HEAD)')
+               if result.succeeded:
+                 run ('apt-get -y remove libev4 libev-dev')
+                 #run('wget http://dist.schmorp.de/libev/Attic/libev-3.9.tar.gz')
+                 with cd('/root/libev-3.9'):
+                   run ('sh configure && make install && ldconfig')
                result = run(('sh autogen.sh && ' +
                              'sh configure --with-lua --with-openssl --with-zlib --with-bzip2 &&' +
                              " make -j3 CFLAGS='-fprofile-arcs -ftest-coverage -O0 -lm -std=c99' "

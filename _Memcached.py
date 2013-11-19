@@ -24,6 +24,10 @@ class Memcached(Container):
         """ compile Memcached """
         with cd(self.source_path):
            with settings(warn_only=True):
+               # prior to acb84f05e0a8dc67a572dc647071002f9e64499d libevent1 is required
+               result = run ('git rev-list acb84f05e0a8dc67a572dc647071002f9e64499d | grep $(git rev-parse HEAD)')
+               if result.succeeded:
+                 run ('apt-get -y install libevent1-dev')
                result = run(('su regular -c ./autogen.sh && su regular -c ./configure && ' + 
                              'su regular -c \'make clean\' && ' + 
                              'su regular -c \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'))
