@@ -37,6 +37,9 @@ class Container(object):
 
         self.changed_test_files = []
         self.merge = False;
+
+        self._gcovNameCache = set()
+        self._gcovNoNameCache = set()
     # The following are methods used to spawn a new container
     #
 
@@ -201,27 +204,35 @@ class Container(object):
         # run gcov to get overall coverage and ELOCs
         with cd(self.source_path):
             run('lcov -c -d . -o test.info', quiet=True)
-            run("lcov -a base.info -a test.info -o total.info |tail -3|head -1| sed -e 's/[^0-9]*//' -e 's/([0-9]*//' > coverage.txt");
+            run("lcov -a base.info -a test.info -o total.info |tail -3|head -1 |sed 's/.*(//' > coverage.txt");
             run('find -name "*.gcda"|xargs gcov', quiet=True)
 
         self.stash_tests(True)
 
     def is_covered(self, filepath, line):
-        filename = filepath.split('/')
-        with cd(self.source_path):
-            fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
-            if fileExists == 'y':
-              cov = run("cat " + filename[-1] + ".gcov | grep ':[ ]*" +
-                  line + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
-              cov = cov.strip()
-              if cov == '#####' or cov == '=====':
-                return self.LineType.NotCovered
-              elif cov == '-':
-                return self.LineType.NotExecutable
-              else:
-                return self.LineType.Covered
+      filename = filepath.split('/')
+      with cd(self.source_path):
+          if (filename[-1] in self._gcovNameCache):
+            fileExists = 'y'
+          else:
+            if (filename[-1] in self._gcovNoNameCache):
+              fileExists = 'n'
             else:
+              fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
+              if fileExists == 'y': self._gcovNameCache.add(filename[-1])
+              else: self._gcovNoNameCache.add(filename[-1])
+          if fileExists == 'y':
+            cov = run("cat " + filename[-1] + ".gcov | grep ':[ ]*" +
+                line + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
+            cov = cov.strip()
+            if cov == '#####' or cov == '=====':
+              return self.LineType.NotCovered
+            elif cov == '-':
               return self.LineType.NotExecutable
+            else:
+              return self.LineType.Covered
+          else:
+            return self.LineType.NotExecutable
 
     def is_merge(self, commit):
       with cd(self.path):

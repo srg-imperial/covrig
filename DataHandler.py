@@ -15,7 +15,7 @@ class DataHandler(object):
         self.compileErr = _collector.compileError
         self.maketestErr = _collector.maketestError
         self.eloc = '0'
-        self.ocoverage = '0'
+        self.coveredeloc = '0'
         self.tsize = '0'
         self.hunks = '0'
         self.ehunks = '0'
@@ -58,13 +58,13 @@ class DataHandler(object):
         # in all other cases:
         else:
             # extract lines executed and total eloc
-            self.summary = self.summary.split('%')
+            self.summary = self.summary.split('of')
             # in case we didn't collect any data return immediately
             if len(self.summary) < 2:
                 self.exitStatus = 'NoCoverageLines'
                 return
             # otherwise save whatever we got
-            self.ocoverage = filter( lambda x: x in '0123456789.', self.summary[0] )
+            self.coveredeloc = filter( lambda x: x in '0123456789.', self.summary[0] )
             self.eloc = filter( lambda x: x in '0123456789.', self.summary[1] )
             # set exit status
             if self.maketestErr == 2:
@@ -79,7 +79,7 @@ class DataHandler(object):
 
     def dumpCSV(self):
         """ dump the extracted data to a CSV file """
-        data = [self.rev, self.eloc, self.ocoverage, self.tsize, 
+        data = [self.rev, self.eloc, self.coveredeloc, self.tsize, 
                 self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
                 self.average]
         data += self.prev_covered
