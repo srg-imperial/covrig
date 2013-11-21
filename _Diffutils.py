@@ -21,7 +21,7 @@ class Diffutils(Container):
         """ compile Diffutils """
         with cd(self.path):
            with settings(warn_only=True):
-               run("sed -i 's/\(^perl[ \t]*\).*$/\1-/' bootstrap.conf")
+               run("sed -i 's/\(^perl[ \\t]*\).*$/\\1-/' bootstrap.conf")
                run("sed -i 's@git://git.sv.gnu.org/gnulib.git@/home/gnulib@' .git/config")
                run("sed -i 's@git://git.sv.gnu.org/gnulib.git@/home/gnulib@' .gitmodules")
 
