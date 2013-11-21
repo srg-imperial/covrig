@@ -31,12 +31,14 @@ class Container(object):
         self.hunkheads3 = []
         self.ehunkheads3 = []
 
+        self.tsize = 0
         #split the test suite into directories and files
         self.tsuite_dir = []
         self.tsuite_file = []
 
         self.changed_test_files = []
-        self.merge = False;
+        self.merge = False
+        self.emptyCommit = False
 
         self._gcovNameCache = set()
         self._gcovNoNameCache = set()
@@ -122,7 +124,7 @@ class Container(object):
                          " | perl -pe 's/\e\[?.*?[\@-~]//g'")
           self.hunkheads3 = [i for i in changed.split('\r\n') if i.startswith( '@@' )]
 
-    def checkout(self, revision):
+    def checkout(self, prev_revision, revision):
         """ checkout the revision we want """
         with cd(self.path):
             # set the revision for current execution (commit sha)
@@ -133,6 +135,14 @@ class Container(object):
                 if result.failed:
                     run('git stash && git checkout ' + revision)
             self.is_merge(revision)
+            diffcmd = "git diff -b --pretty='format:' --name-only " + prev_revision + " " + self.current_revision + " -- ";
+            if hasattr(self, 'limit_changes_to'):
+              for path in self.limit_changes_to:
+                diffcmd += path + " "
+            diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
+            result = run (diffcmd)
+            if not result:
+              self.emptyCommit = True
 
     def tsize_compute(self):
         """ compute test suite as SLOCs """
@@ -155,7 +165,7 @@ class Container(object):
 
     def backup(self, commit):
         """ create a tar.bz2 with all the .gcda and .gcno files and save it to localhost """
-        if self.compileError == True:
+        if self.compileError or self.emptyCommit:
             return
         with cd(self.source_path):
             # save gcov/gcc/g++ info
@@ -192,18 +202,22 @@ class Container(object):
         self.stash_tests(True)
 
     def make_test(self):
-        if self.compileError:
+        if self.compileError or self.emptyCommit:
             return
         self.rec_initial_coverage()
 
     def overall_coverage(self):
         """ collect overall coverage results """
-        if self.compileError == True:
+        if self.compileError or self.emptyCommit:
             return
         self.stash_tests()
         # run gcov to get overall coverage and ELOCs
         with cd(self.source_path):
             run('lcov -c -d . -o test.info', quiet=True)
+            if hasattr(self, 'ignore_coverage_from'):
+              for pattern in self.ignore_coverage_from:
+                run("lcov -r base.info " + pattern + " -o b.info && mv b.info base.info")
+                run("lcov -r test.info " + pattern + " -o t.info && mv t.info test.info")
             run("lcov -a base.info -a test.info -o total.info |tail -3|head -1 |sed 's/.*(//' > coverage.txt");
             run('find -name "*.gcda"|xargs gcov', quiet=True)
 
@@ -247,11 +261,17 @@ class Container(object):
         self.uncovered_lines = 0
         self.average = 0
 
+        if self.compileError or self.emptyCommit:
+          return
         # get a list of the changed files for the current commit
         with cd(self.path):
-            changed_files = run("git diff -b --pretty='format:' --name-only " +
-                                prev_revision + " " + self.current_revision +
-                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+            diffcmd = "git diff -b --pretty='format:' --name-only " + prev_revision + " " + self.current_revision + " -- ";
+            if hasattr(self, 'limit_changes_to'):
+              for path in self.limit_changes_to:
+                diffcmd += path + " "
+            diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
+            
+            changed_files = run(diffcmd)
             if changed_files:
                 self.changed_files = [i for i in changed_files.split('\r\n') if i]
                 # for every changed file 
@@ -360,7 +380,7 @@ class Container(object):
         """ ignore files that are modified """
         prev_files = prev_files_same;
         prev_lines = prev_lines_same;
-        if self.compileError:
+        if self.compileError or self.emptyCommit:
           return (prev_files, prev_lines)
 
         covered = 0
@@ -388,9 +408,11 @@ class Container(object):
         c.tsuite_size = self.tsize
         c.merge = self.merge
         # if compilation failed, halt
-        if self.compileError == True:
+        if self.compileError:
             c.compileError = True
         # go on
+        elif self.emptyCommit:
+            c.emptyCommit = True
         else:
             # fill patch coverage results
             c.added_lines = self.added_lines

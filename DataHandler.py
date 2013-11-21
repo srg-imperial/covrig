@@ -13,6 +13,7 @@ class DataHandler(object):
         self.author_name = _collector.author_name
         self.timestamp = _collector.timestamp
         self.compileErr = _collector.compileError
+        self.emptyCommit = _collector.emptyCommit
         self.maketestErr = _collector.maketestError
         self.eloc = '0'
         self.coveredeloc = '0'
@@ -38,7 +39,7 @@ class DataHandler(object):
         # prev_covered[i] contains the #lines covered from revision current~1 to current~i
 
         # make sure no fatal errors occurred
-        if self.compileErr == False:
+        if self.compileErr == False and self.emptyCommit == False:
             # input is in this form: Lines executed:65.38% of 15576
             self.summary = _collector.summary
             # extract test suite size as sloc
@@ -50,12 +51,14 @@ class DataHandler(object):
             self.changed_files = _collector.changed_files
             self.echanged_files = _collector.echanged_files
             self.changed_test_files = _collector.changed_test_files
-    
+   
     def extractData(self):
         # if the compilation failed, leave the ELOCs at 0
         if self.compileErr == True:
             self.exitStatus = 'compileError'
         # in all other cases:
+        elif self.emptyCommit:
+            self.exitStatus = 'EmptyCommit';
         else:
             # extract lines executed and total eloc
             self.summary = self.summary.split('of')
@@ -115,6 +118,7 @@ class Collector(object):
         # think positive
         self.compileError = False
         self.maketestError = False
+        self.emptyCommit = False
         # if Collector::Collect() finds a compileError, we need default values
         # otherwise DataHandler __init__ fais
         self.added_lines = 0

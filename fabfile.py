@@ -83,13 +83,14 @@ class Analytics(object):
             c = self.pclass(self.image, 'root', 'root')
             c.spawn()
             try:
-              c.checkout(commit_id)
-              c.tsize_compute()
-              c.compile()    # long steps
-              c.make_test()  #
-              c.overall_coverage()
-              c.backup(commit_id)
-              c.patch_coverage(prev_commit_id)
+              c.checkout(prev_commit_id, commit_id)
+              if not c.emptyCommit:
+                c.tsize_compute()
+                c.compile()    # long steps
+                c.make_test()  #
+                c.overall_coverage()
+                c.backup(commit_id)
+                c.patch_coverage(prev_commit_id)
               for i, (files, lines) in enumerate(prev_uncovered_list):
                 prev_uncovered_list[i] = c.prev_patch_coverage(i, files, lines)
 
