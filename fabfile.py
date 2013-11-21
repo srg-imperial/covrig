@@ -1,13 +1,15 @@
 from fabric.api import *
 
 # Analytics modules
-from Analyzer import *
 from _Memcached import *
 from _Redis import *
 from _Zeromq import *
 from _Lighttpd import *
 from _Beanstalkd import *
 from _Git import *
+from _Diffutils import *
+from _Binutils import *
+from _Findutils import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
