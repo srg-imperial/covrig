@@ -175,31 +175,16 @@ class Container(object):
                 run('gcc -v &>> build_info.txt')
         with cd(self.source_path):
             # bzip all the coverage files
-            run("find . -name '*.gcov' > gcovlist")
-            run('tar -cjf coverage-' + commit + '.tar.bz2 -T gcovlist')
+            run("find . -name '*.gcov' -or -name '*.info' > backuplist")
+            run("echo ./build_info.txt >> backuplist")
+            run('tar -cjf coverage-' + commit + '.tar.bz2 -T backuplist')
             # scp to localhost/data
             get('coverage-' + commit + '.tar.bz2', 'data/' + self.__class__.__name__ + 
                 '/' + 'coverage-' + commit + '.tar.bz2')
     
-    def stash_tests(self, pop = False):
-        if pop:
-            with cd('/home'):
-                with settings(warn_only=True):
-                    for item in self.tsuite_path:
-                        i = item.split('/')
-                        ent = i[-1]
-                        i[-1] = ""
-                        p = "/".join(i)
-                        run('mv ' + ent + ' ' + p)
-        else:
-            for item in self.tsuite_path:
-                run('mv ' + item + ' /home/')
-
     def rec_initial_coverage(self):
-        self.stash_tests()
         with cd(self.source_path):
             run('lcov -c -i -d . -o base.info')
-        self.stash_tests(True)
 
     def make_test(self):
         if self.compileError or self.emptyCommit:
@@ -210,18 +195,21 @@ class Container(object):
         """ collect overall coverage results """
         if self.compileError or self.emptyCommit:
             return
-        self.stash_tests()
         # run gcov to get overall coverage and ELOCs
         with cd(self.source_path):
             run('lcov -c -d . -o test.info', quiet=True)
+            # remove explicitly ignored files
             if hasattr(self, 'ignore_coverage_from'):
-              for pattern in self.ignore_coverage_from:
-                run("lcov -r base.info " + pattern + " -o b.info && mv b.info base.info")
-                run("lcov -r test.info " + pattern + " -o t.info && mv t.info test.info")
+              ignore = ' '.join(["'%s'" % p for p in self.ignore_coverage_from])
+              run('lcov -r test.info %s -o test.info' % ignore)
+              run('lcov -r base.info %s -o base.info' % ignore)
+            # remove all test files
+            tests = ' '.join(["'%s'" % p for p in self.tsuite_path])
+            run('lcov -r base.info %s -o base.info' % tests)
+            run('lcov -r test.info %s -o test.info' % tests)
+
             run("lcov -a base.info -a test.info -o total.info |tail -3|head -1 |sed 's/.*(//' > coverage.txt");
             run('find -name "*.gcda"|xargs gcov', quiet=True)
-
-        self.stash_tests(True)
 
     def is_covered(self, filepath, line):
       filename = filepath.split('/')

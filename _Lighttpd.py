@@ -14,6 +14,7 @@ class Lighttpd(Container):
         self.path = '/home/lighttpd2'
         self.source_path = '/home/lighttpd2/src'
         self.tsuite_path = ('/home/lighttpd2/tests', '/home/lighttpd2/src/unittests')
+        self.ignore_coverage_from = ('/usr/include/*', '/home/lighttpd2/src/unittests/*')
         # set timeout (in seconds) for the test suite to run
         self.timeout = 200
 
