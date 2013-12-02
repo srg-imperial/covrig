@@ -12,7 +12,28 @@ if [ $# -eq 2 ]; then
 fi
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-IGNOREREVS="#|compileError|EmptyCommit"
+INITIAL_DIR="$(pwd)"
+IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
+
+FIRSTREV=$(grep -v '#' $1|head -1|awk 'BEGIN { FS="," } ; { print $1}')
+LASTREV=$(tail -1 $1|awk 'BEGIN { FS="," } ; { print $1}')
+FIRSTREVDATE="Unknown"
+LASTREVDATE="Unknown"
+
+#find the dates using brute force
+for DIR in repos/*; do
+  cd $DIR
+  if git rev-parse $FIRSTREV &>/dev/null && git rev-parse $LASTREV &>/dev/null; then
+    FIRSTREVDATE=$(git show --pretty=%ci $FIRSTREV|head -1)
+    LASTREVDATE=$(git show --pretty=%ci $LASTREV|head -1)
+    break
+  fi
+  cd ../..
+done
+
+echo "Looking at revisions $FIRSTREV - $LASTREV ($FIRSTREVDATE - $LASTREVDATE)"
+
+cd "$INITIAL_DIR"
 
 echo -n "+++Empty revisions: "
 grep EmptyCommit $1|wc -l
@@ -65,6 +86,18 @@ echo
 
 echo -n "+++Revisions affecting only test files: "
 egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($24 == $26 && $26 > 0) print 1 }'|wc -l
+echo
+
+echo -n "+++Revisions affecting only executable files: "
+egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($24 == $25 && $25 > 0) print 1 }'|wc -l
+echo
+
+echo -n "+++Revisions affecting executable or test files: "
+egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($25 > 0 || $26 > 0) print 1 }'|wc -l
+echo
+
+echo -n "+++Revisions adding executable code or affecting test files: "
+egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 > 0 || $8 > 0 || $26 > 0) print 1 }'|wc -l
 echo
 
 echo -n "+++Revisions affecting only test files without increasing coverage: "
