@@ -11,12 +11,16 @@ class Findutils(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        self.path = '/home/findutils'
-        self.source_path = '/home/findutils'
-        self.tsuite_path = ('/home/findutils/t', '/home/findutils/test-*')
+        if (self.offline):
+          self.path = local("realpath 'repos/binutils'", capture=True)
+        else:            
+          self.path = '/home/findutils'
+          self.source_path = '/home/findutils'
+          # set timeout (in seconds) for the test suite to run
+          self.timeout = 120
+        
+        self.tsuite_path = ('t', 'test-*')
         self.ignore_for_coverage = ('/home/findutils/gl')
-        # set timeout (in seconds) for the test suite to run
-        self.timeout = 120
 
     def compile(self):
         """ compile Findutils """
@@ -36,7 +40,7 @@ class Findutils(Container):
 
     def make_test(self):
         """ run the test suite """
-        super(Git, self).make_test()
+        super(Findutils, self).make_test()
         # if compile failed, skip this step
         if self.compileError == False: 
             with settings(warn_only=True):

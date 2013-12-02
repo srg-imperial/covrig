@@ -18,9 +18,12 @@ class Container(object):
         self.image = _image
         self.user = _user
         self.pwd = _pwd
+
+        self.offline = _image == "offline"
         # no errors yet :)
         self.compileError = False
         self.maketestError = False
+        self.emptyCommit = False
         """ how many lines from previous patches are covered now """
         self.changed_files = []
         self.echanged_files = []
@@ -38,10 +41,19 @@ class Container(object):
 
         self.changed_test_files = []
         self.merge = False
-        self.emptyCommit = False
+        self.total_eloc = 0
+        self.covered_eloc = 0
 
         self._gcovNameCache = set()
         self._gcovNoNameCache = set()
+
+        if (self.offline):
+          self.initialpath = local("realpath .", capture=True)
+          self.difflinessh = "%s/deps/measure-cov.sh" % self.initialpath
+        else:
+          self.difflinessh = "/root/measure-cov.sh"
+
+
     # The following are methods used to spawn a new container
     #
 
@@ -64,85 +76,90 @@ class Container(object):
 	# in a perfect world, this would not be here
 	env.connection_attempts = 10
 
+
     def run_test(self):
         """ uname to check everything works """
         run('uname -on')
+    
+
+    def omnicd(self, path):
+      if self.offline:
+        return lcd(path)
+      else:
+        return cd(path)
+
+
+    def omnirun(self, cmd, **kwargs):
+      print "running %s" % cmd
+      if (self.offline):
+        return local(cmd, capture=True, **kwargs)
+      else:
+        return run(cmd, **kwargs)
+
 
     def spawn(self):
+      if not self.offline:
         """ call all the methods needed to spawn a container """
         self.sshd_up()
         self.set_ip()
         self.fabric_setup()
-        # create a ~/data/program-name directory where data will be collected
-        local('mkdir -p data/' + self.__class__.__name__)
+      # create a ~/data/program-name directory where data will be collected
+      local('mkdir -p data/' + self.__class__.__name__)
+
 
     def halt(self):
+      if not self.offline:
         """ shutdown the current container """
         print '\n\nHalting the current container...\n\n'
         local('docker stop ' + self.cnt_id)
         local('docker rm ' + self.cnt_id)
 
-    # The following are methods used to perform actions common to several containers
-    #
 
-    def get_commit_list(self, commits_no):
-        """ get the list of the commits to be analyzed """
-        # get the log list; the perl one-liner is to get rid of the damn colored output
-        commit_list = run('cd ' + self.source_path + ' && git log -' + 
-                          str(commits_no) + " --first-parent --format=%h__%ct__%an | "
-                          + "perl -pe 's/\e\[?.*?[\@-~]//g' ")
-        return commit_list.splitlines()
+    def get_commits(self, n, ending_at=''):
+      """ attach timestamp and author to a given commit """
+      commitlist = self.omnirun('cd %s && git rev-list -n %d --first-parent --format=%%h__%%ct__%%an %s|grep -v commit' % (self.path, n , ending_at))
+      return commitlist.splitlines()
 
-    def get_commit_custom(self, single_commit, lookbehind):
-        """ attach timestamp and author to a given commit """
-        current_commit = run('cd ' + self.source_path + ' && git rev-parse HEAD')
-        run('cd ' + self.source_path + ' && git checkout ' + single_commit)
-        commit_list = self.get_commit_list(lookbehind);
-
-        run('cd ' + self.source_path + ' && git checkout ' + current_commit)
-        return commit_list
 
     def count_sloc(self, path):
         """ use cloc to get the static lines of code for any given file or directory """
         lines = 0
         for p in path:
             try:
-              lines += int(run("cloc " + p + " | tail -2 | awk '{print $5}'"))
+              lines += int(self.omnirun("cloc " + p + " | tail -2 | awk '{print $5}'"))
             except ValueError:
-              lines += int(run("wc -l " + p + "/*|tail -1|awk '{ print $1 }'"))
+              lines += int(self.omnirun("wc -l " + p + "/*|tail -1|awk '{ print $1 }'"))
         return str(lines)
 
+
     def count_hunks(self, prev_revision):
-      with cd(self.path):
-        changed = run("git diff -b -U0 " +
-                       prev_revision + " " + self.current_revision +
-                       " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+      with self.omnicd(self.path):
+        changed = self.omnirun("git diff -b -U0 " +
+                          prev_revision + " " + self.revision +
+                          " | perl -pe 's/\e\[?.*?[\@-~]//g'")
         if changed:
-          self.hunkheads = [i for i in changed.split('\r\n') if i.startswith( '@@' )]
-          changed = run("git diff -b " +
-                         prev_revision + " " + self.current_revision +
-                         " | perl -pe 's/\e\[?.*?[\@-~]//g'")
-          self.hunkheads3 = [i for i in changed.split('\r\n') if i.startswith( '@@' )]
+          self.hunkheads = [i for i in changed.splitlines() if i.startswith( '@@' )]
+          changed = self.omnirun("git diff -b " +
+                            prev_revision + " " + self.revision +
+                            " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+          self.hunkheads3 = [i for i in changed.splitlines() if i.startswith( '@@' )]
 
     def checkout(self, prev_revision, revision):
         """ checkout the revision we want """
-        with cd(self.path):
-            # set the revision for current execution (commit sha)
-            self.current_revision = revision
-            # checkout revision
-            with settings(warn_only=True):
-                result = run('git checkout ' + revision) 
-                if result.failed:
-                    run('git stash && git checkout ' + revision)
-            self.is_merge(revision)
-            diffcmd = "git diff -b --pretty='format:' --name-only " + prev_revision + " " + self.current_revision + " -- ";
-            if hasattr(self, 'limit_changes_to'):
-              for path in self.limit_changes_to:
-                diffcmd += path + " "
-            diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
-            result = run (diffcmd)
-            if not result:
-              self.emptyCommit = True
+        # set the revision for current execution (commit sha)
+        self.revision = revision
+        with self.omnicd(self.path):
+          print 'path is ' + self.path
+          result = self.omnirun('git checkout ' + revision) 
+          self.is_merge(revision)
+          diffcmd = "git diff -b --pretty='format:' --name-only " + prev_revision + " " + self.revision + " -- ";
+          if hasattr(self, 'limit_changes_to'):
+            for path in self.limit_changes_to:
+              diffcmd += path + " "
+          diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
+          result = self.omnirun (diffcmd)
+          if not result:
+            self.emptyCommit = True
 
     def tsize_compute(self):
         """ compute test suite as SLOCs """
@@ -150,11 +167,12 @@ class Container(object):
         # actually exists in the current revision
         actual_tsuite = [ ]
         for item in self.tsuite_path:
-            fileExists = run ('ls -U ' + item + ' >/dev/null 2>&1 && echo y || echo n')
+            item = "%s/%s" % (self.path, item)
+            fileExists = self.omnirun('ls -U ' + item + ' >/dev/null 2>&1 && echo y || echo n')
             if fileExists == 'y':
                 actual_tsuite.append(item)
                 print 'Added ' + item + ' to the test suite\n'
-                isdir = run ('[ -d "' + item + '" ] && echo y || echo n')
+                isdir = self.omnirun ('[ -d "' + item + '" ] && echo y || echo n')
                 if isdir == 'y':
                   self.tsuite_dir.append(item)
                 else:
@@ -164,83 +182,105 @@ class Container(object):
         self.tsize = self.count_sloc(self.tsuite_path)
 
     def backup(self, commit):
-        """ create a tar.bz2 with all the .gcda and .gcno files and save it to localhost """
-        if self.compileError or self.emptyCommit:
-            return
-        with cd(self.source_path):
-            # save gcov/gcc/g++ info
-            with settings(warn_only=True):
-                run('gcov -v | head -1 > build_info.txt')
-                run('echo >> build_info.txt')
-                run('gcc -v &>> build_info.txt')
-        with cd(self.source_path):
-            # bzip all the coverage files
-            run("find . -name '*.gcov' -or -name '*.info' > backuplist")
-            run("echo ./build_info.txt >> backuplist")
-            run('tar -cjf coverage-' + commit + '.tar.bz2 -T backuplist')
-            # scp to localhost/data
-            get('coverage-' + commit + '.tar.bz2', 'data/' + self.__class__.__name__ + 
-                '/' + 'coverage-' + commit + '.tar.bz2')
+      assert not self.offline
+        
+      """ create a tar.bz2 with .gcov and lcov .info files and save it to localhost """
+      if self.compileError or self.emptyCommit:
+          return
+      with self.omnicd(self.source_path):
+          # save gcov/gcc/g++ info
+          with settings(warn_only=True):
+              run('gcov -v | head -1 > build_info.txt')
+              run('echo >> build_info.txt')
+              run('gcc -v &>> build_info.txt')
+      with self.omnicd(self.source_path):
+          # bzip all the coverage files
+          run("find . -name '*.gcov' -or -name '*.info' > backuplist")
+          run("echo ./build_info.txt >> backuplist")
+          run('tar -cjf coverage-' + commit + '.tar.bz2 -T backuplist')
+          # scp to localhost/data
+          get('coverage-' + commit + '.tar.bz2', 'data/' + self.__class__.__name__ + 
+              '/' + 'coverage-' + commit + '.tar.bz2')
     
     def rec_initial_coverage(self):
-        with cd(self.source_path):
-            run('lcov -c -i -d . -o base.info')
+      assert not self.offline
+      with self.omnicd(self.source_path):
+        run('lcov -c -i -d . -o base.info')
 
     def make_test(self):
-        if self.compileError or self.emptyCommit:
-            return
-        self.rec_initial_coverage()
+      assert not self.offline  
+      if self.compileError or self.emptyCommit:
+        return
+      self.rec_initial_coverage()
+
 
     def overall_coverage(self):
-        """ collect overall coverage results """
-        if self.compileError or self.emptyCommit:
-            return
-        # run gcov to get overall coverage and ELOCs
-        with cd(self.source_path):
-            run('lcov -c -d . -o test.info', quiet=True)
-            # remove explicitly ignored files
-            if hasattr(self, 'ignore_coverage_from'):
-              ignore = ' '.join(["'%s'" % p for p in self.ignore_coverage_from])
-              run('lcov -r test.info %s -o test.info' % ignore)
-              run('lcov -r base.info %s -o base.info' % ignore)
-            # remove all test files
-            tests = ' '.join(["'%s'" % p for p in self.tsuite_path])
-            run('lcov -r base.info %s -o base.info' % tests)
-            run('lcov -r test.info %s -o test.info' % tests)
+      """ collect overall coverage results """
+      if self.compileError or self.emptyCommit:
+        return
 
-            run("lcov -a base.info -a test.info -o total.info |tail -3|head -1 |sed 's/.*(//' > coverage.txt");
-            run('find -name "*.gcda"|xargs gcov', quiet=True)
+      if self.offline:
+        covdatadir = '%s/data/%s' % (self.initialpath, self.__class__.__name__)
+        with self.omnicd(covdatadir), settings(warn_only=True):
+          res = local('rm -rf tmp && mkdir tmp && tar xjf coverage-%s.tar.bz2 -C tmp' % self.revision)
+          if res.failed:
+            return
+          covdatadir += "/tmp"
+      else:
+        covdatadir = self.source_path
+        with self.omnicd(covdatadir), settings(warn_only=True):
+          res = self.omnirun('lcov -c -d . -o test.info')
+          if res.failed:
+            return
+          run("lcov -a base.info -a test.info -o total.info")
+          run('find -name "*.gcda"|xargs gcov', quiet=True)
+
+      with self.omnicd(covdatadir), settings(warn_only=True):
+        ignore = ' '.join(["'%s'" % p for p in self.tsuite_path])
+        self.omnirun('lcov -r total.info %s -o total.info' % ignore)
+        if hasattr(self, 'ignore_coverage_from'):
+          ignore = ' '.join(["'%s'" % p for p in self.ignore_coverage_from])
+          self.omnirun('lcov -r total.info %s -o total.info' % ignore)
+        lines = self.omnirun("lcov --summary total.info 2>&1|tail -3|head -1|sed 's/.*(//' |egrep -o '[0-9]+'")
+        lines = lines.splitlines()
+        if len(lines) == 2:
+          self.covered_eloc = lines[0]
+          self.total_eloc = lines[1]
+
+    def has_coverage_information(self, filepath):
+      if self.offline:
+        covdatadir = '%s/data/%s/tmp' % (self.initialpath, self.__class__.__name__)
+      else:
+        covdatadir = self.source_path
+
+      print covdatadir
+      with self.omnicd(covdatadir):
+        result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info" % filepath);
+      return bool(result)
+
 
     def is_covered(self, filepath, line):
-      filename = filepath.split('/')
-      with cd(self.source_path):
-          if (filename[-1] in self._gcovNameCache):
-            fileExists = 'y'
-          else:
-            if (filename[-1] in self._gcovNoNameCache):
-              fileExists = 'n'
-            else:
-              fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
-              if fileExists == 'y': self._gcovNameCache.add(filename[-1])
-              else: self._gcovNoNameCache.add(filename[-1])
-          if fileExists == 'y':
-            cov = run("cat " + filename[-1] + ".gcov | grep ':[ ]*" +
-                line + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
-            cov = cov.strip()
-            if cov == '#####' or cov == '=====':
-              return self.LineType.NotCovered
-            elif cov == '-':
-              return self.LineType.NotExecutable
-            else:
-              return self.LineType.Covered
-          else:
-            return self.LineType.NotExecutable
+      if self.offline:
+        covdatadir = '%s/data/%s/tmp' % (self.initialpath, self.__class__.__name__)
+      else:
+        covdatadir = self.source_path
+
+      with self.omnicd(covdatadir), settings(warn_only=True):
+        result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info |grep '^DA:%d,'" % (filepath, line))
+        if not result:
+          return self.LineType.NotExecutable
+        elif result.endswith(",0"):
+          return self.LineType.NotCovered
+        else:
+          return self.LineType.Covered
+
 
     def is_merge(self, commit):
-      with cd(self.path):
-        mergestatus = run("git show " + commit + "|head -2|tail -1")
+      with self.omnicd(self.path):
+        mergestatus = self.omnirun("git show " + commit + "|head -2|tail -1")
         self.merge = mergestatus.startswith("Merge:")
         return self.merge
+
 
     def patch_coverage(self, prev_revision):
         """ compute the coverage for the current commit """
@@ -249,29 +289,30 @@ class Container(object):
         self.uncovered_lines = 0
         self.average = 0
 
-        if self.compileError or self.emptyCommit:
+        if self.compileError or self.emptyCommit or self.covered_eloc == 0:
           return
         # get a list of the changed files for the current commit
-        with cd(self.path):
-            diffcmd = "git diff -b --pretty='format:' --name-only " + prev_revision + " " + self.current_revision + " -- ";
+        with self.omnicd(self.path):
+            diffcmd = "git diff -b --pretty='format:' --name-only " + prev_revision + " " + self.revision + " -- ";
             if hasattr(self, 'limit_changes_to'):
               for path in self.limit_changes_to:
                 diffcmd += path + " "
             diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
             
-            changed_files = run(diffcmd)
+            changed_files = self.omnirun(diffcmd)
             if changed_files:
-                self.changed_files = [i for i in changed_files.split('\r\n') if i]
+                self.changed_files = [i for i in changed_files.splitlines() if i]
+                print self.changed_files
                 # for every changed file 
                 for f in self.changed_files:
                     # get the filename
                     self.uncovered_lines_list.append([])
                     if self.compileError == False:
                       #check whether it's a test file
-                      with cd(self.path):
-                        fileExists = run('[ -f ' + f + ' ] && echo y || echo n')
+                      with self.omnicd(self.path):
+                        fileExists = self.omnirun('[ -f ' + f + ' ] && echo y || echo n')
                         if fileExists == 'y':
-                          realp = run('realpath ' + f)
+                          realp = self.omnirun('realpath ' + f)
                           for tf in self.tsuite_file:
                             if fnmatch.fnmatch(realp, tf):
                               self.changed_test_files.append(f)
@@ -279,75 +320,46 @@ class Container(object):
                             if realp.startswith(td + "/"):
                               self.changed_test_files.append(f)
                       self.changed_test_files = list(set(self.changed_test_files))
-                      with cd(self.source_path):
-                        # check *.c.gcov exists
-                        filename = f.split('/')
-                        fileExists = run ('[ -f ' + filename[-1] + '.gcov ] && echo y || echo n')
-                        if fileExists == 'y':
-                            print 'Coverage information found\n'
-                            self.echanged_files.append(f)
-                            # get the changed lines numbers
-                            with cd(self.path):
-                                line_numbers = run("/root/measure-cov.sh " + prev_revision + " " + self.current_revision + " " + f)
-                                file_diff = run("git diff -b -U0 " +
-                                                prev_revision + " " + self.current_revision +
-                                                " -- " + f +
-                                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
-                                self.ehunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
-                                file_diff3 = run("git diff -b " +
-                                                prev_revision + " " + self.current_revision +
-                                                " -- " + f +
-                                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
-                                self.ehunkheads3 += [i for i in file_diff3.split('\r\n') if i.startswith('@@')]
-                            # for every changed line
-                            for l in line_numbers.split('\r\n'):
-                                # increment added lines
-                                self.added_lines += 1
-                                # check if it has been covered
-                                cov = run("cat " + filename[-1] + ".gcov | grep ':[ ]*" + 
-                                    l + ":' | awk 'BEGIN { FS = \":\" } ; {print $1}'")
-                                cov = cov.strip()
-                                # uncovered line
-                                if cov == '#####' or cov == '=====':
-                                    self.uncovered_lines += 1
-                                    self.uncovered_lines_list[-1].append(l)
-                                # not(not executable), thus has been covered
-                                elif cov != '-':
-                                    self.covered_lines += 1
-                        # no .gcov information found
-                        else:
-                            # most likely the file was not compiled into any of the programs
-                            # executed by the test suite. Alternatives include: file was removed, program crashed or has no permissions
-                            print 'No coverage information found for ' + filename[-1] + '\n'
+                      if self.has_coverage_information(f):
+                          print 'Coverage information found\n'
+                          self.echanged_files.append(f)
+                          # get the changed lines numbers
+                          with self.omnicd(self.path):
+                              file_diff = self.omnirun("git diff -b -U0 " +
+                                              prev_revision + " " + self.revision +
+                                              " -- " + f +
+                                              " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+                              self.ehunkheads += [i for i in file_diff.splitlines() if i.startswith('@@')]
+                              file_diff3 = self.omnirun("git diff -b " +
+                                              prev_revision + " " + self.revision +
+                                              " -- " + f +
+                                              " | perl -pe 's/\e\[?.*?[\@-~]//g'")
+                              self.ehunkheads3 += [i for i in file_diff3.splitlines() if i.startswith('@@')]
+                          line_numbers = self.omnirun("%s %s %s %s" % (self.difflinessh, prev_revision, self.revision, f))
+                          # for every changed line
+                          for l in line_numbers.splitlines():
+                              # increment added lines
+                              self.added_lines += 1
+                              covstatus = self.is_covered(f, int(l))
+                              if covstatus == self.LineType.NotCovered:
+                                  self.uncovered_lines += 1
+                                  self.uncovered_lines_list[-1].append(int(l))
+                              elif covstatus == self.LineType.Covered:
+                                  self.covered_lines += 1
+                      else:
+                          # no coverage information found
+                          # most likely the file was not compiled into any of the programs
+                          # executed by the test suite. Alternatives include: file was removed, program crashed or has no permissions
+                          print 'No coverage information found for ' + f + '\n'
 
-                            with cd(self.path):
-                              fileExists = run ('[ -f ' + f + ' ] && echo y || echo n')
-                              if fileExists == 'y':
-                                line_numbers = run("/root/measure-cov.sh " + prev_revision + " " + self.current_revision + " " + f)
-                                lines = line_numbers.split('\r\n')
-                                self.added_lines += len(lines)
-                                file_diff = run("git diff -b -U0 " +
-                                                prev_revision + " " + self.current_revision +
-                                                " -- " + f +
-                                                " | perl -pe 's/\e\[?.*?[\@-~]//g'")
-                                # check if the file was compiled (but not executed)
-                                with cd(self.source_path):
-                                  executableinfo = run ( "sed -n '/SF:.*" + filename[-1] + "/,/end_of_record/p' base.info")
-                                  if executableinfo:
-                                    self.echanged_files.append(f)
-                                    self.ehunkheads += [i for i in file_diff.split('\r\n') if i.startswith('@@')]
-                                    file_diff3 = run("git diff -b " +
-                                                    prev_revision + " " + self.current_revision +
-                                                    " -- " + f +
-                                                    " | perl -pe 's/\e\[?.*?[\@-~]//g'")
-                                    self.ehunkheads3 += [i for i in file_diff3.split('\r\n') if i.startswith('@@')]
-                                    for l in lines:
-                                      with settings(warn_only=True):
-                                        if run ( "sed -n '/SF:.*" + filename[-1] + "/,/end_of_record/p' base.info |grep DA:" + l):
-                                          self.uncovered_lines += 1
-                                          self.uncovered_lines_list[-1].append(l)
-                              else:
-                                print 'No file found ' + f + '\n'
+                          with self.omnicd(self.path):
+                            fileExists = self.omnirun ('[ -f ' + f + ' ] && echo y || echo n')
+                            if fileExists == 'y':
+                              line_numbers = self.omnirun("%s %s %s %s" % (self.difflinessh, prev_revision, self.revision, f))
+                              lines = line_numbers.splitlines()
+                              self.added_lines += len(lines)
+                            else:
+                              print 'No file found ' + f + '\n'
                 # save results
                 if self.covered_lines > 0:
                     self.average = round( ((self.covered_lines / (self.covered_lines +
@@ -368,7 +380,7 @@ class Container(object):
         """ ignore files that are modified """
         prev_files = prev_files_same;
         prev_lines = prev_lines_same;
-        if self.compileError or self.emptyCommit:
+        if self.compileError or self.emptyCommit or self.covered_eloc == 0:
           return (prev_files, prev_lines)
 
         covered = 0
@@ -389,8 +401,11 @@ class Container(object):
         c = Collector()
         # the class name which is actually running this method, as a string
         c.name = self.__class__.__name__
+        c.outputfile = c.name
+        if self.offline:
+          c.outputfile += "Offline"
         # fill in some info about the test
-        c.revision = self.current_revision
+        c.revision = self.revision
         c.author_name = author_name
         c.timestamp = timestamp
         c.tsuite_size = self.tsize
@@ -408,8 +423,8 @@ class Container(object):
             c.uncovered_lines = self.uncovered_lines
             c.average = self.average 
             # fill overall coverage results and exit status
-            with settings(warn_only=True):
-                c.summary = run('cat ' + self.source_path + '/coverage.txt')
+            c.covered_eloc = self.covered_eloc
+            c.total_eloc = self.total_eloc
             c.compileError = self.compileError
             c.maketestError = self.maketestError
             c.prev_covered  = self.prev_covered

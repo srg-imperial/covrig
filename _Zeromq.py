@@ -11,11 +11,15 @@ class Zeromq(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        self.path = '/home/zeromq4-x'
-        self.source_path = '/home/zeromq4-x/src'
-        self.tsuite_path = ('/home/zeromq4-x/tests',)
-        # set timeout (in seconds) for the test suite to run
-        self.timeout = 120
+        if (self.offline):
+          self.path = local("realpath 'repos/zeromq4-x'", capture=True)
+        else:
+          self.path = '/home/zeromq4-x'
+          self.source_path = '/home/zeromq4-x/src'
+          # set timeout (in seconds) for the test suite to run
+          self.timeout = 120
+
+        self.tsuite_path = ('tests',)
 
     def compile(self):
         """ compile Zeromq """

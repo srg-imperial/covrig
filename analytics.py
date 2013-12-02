@@ -1,4 +1,6 @@
 from fabric.api import *
+import argparse
+import subprocess
 
 # Analytics modules
 from _Memcached import *
@@ -44,25 +46,33 @@ class Analytics(object):
         self.commits = _commits
  
     @classmethod
-    def run_last(cls, _pclass, _image, _commits):
+    def run_last(cls, _pclass, _image, _commit):
         """ process the last n commits """
         r = _pclass(_image, 'root', 'root')
         r.spawn()
-        clist = r.get_commit_list(_commits)
+        clist = r.get_commits(_commit)
         r.halt()
         return cls(_pclass, _image, clist)
 
     @classmethod
-    def run_custom(cls, _pclass, _image, _commits, _count):
+    def run_custom(cls, _pclass, _image, _commit, _count, _startaftercommit=None):
         """ process a custom range of commits, given as tuple """
         r = _pclass(_image, 'root', 'root')
         clist = []
         r.spawn()
         # attach timestamp and author to the commit
-        for c in _commits:
-            new = r.get_commit_custom(c, _count+1)
-            clist += new
+        clist = r.get_commits(_count+1, _commit)
         r.halt()
+
+        if _startaftercommit:
+          #keep the whole list by default
+          startindex = len(clist)
+          for index,c in enumerate(clist):
+            if c.startswith("%s__" % _startaftercommit):
+              startindex = index
+              break
+          print "Retaining %d revisions" % startindex
+          clist = clist[:startindex]
         return cls(_pclass, _image, clist)
         
     def go(self):
@@ -77,6 +87,7 @@ class Analytics(object):
         self.commits.reverse()
         for i in self.commits: 
             # self.commits format is ['commit.id__author.name__timestamp']
+            print i
             a = i.split('__')
             commit_id = a[0]
             timestamp = a[1]
@@ -88,10 +99,12 @@ class Analytics(object):
               c.checkout(prev_commit_id, commit_id)
               if not c.emptyCommit:
                 c.tsize_compute()
-                c.compile()    # long steps
-                c.make_test()  #
+                if not c.offline:
+                  c.compile()    # long steps
+                  c.make_test()  #
                 c.overall_coverage()
-                c.backup(commit_id)
+                if not c.offline:
+                  c.backup(commit_id)
                 c.patch_coverage(prev_commit_id)
               for i, (files, lines) in enumerate(prev_uncovered_list):
                 prev_uncovered_list[i] = c.prev_patch_coverage(i, files, lines)
@@ -108,32 +121,38 @@ class Analytics(object):
         
 
 def main():
-    # exact revisions for reproducibility across containers
-    l = Analytics.run_custom(Lighttpd, 'baseline', ('0d40b25',), 275)
-    l.go()
+  parser = argparse.ArgumentParser(prog='Analytics')
+  parser.add_argument('--offline', action="store_const", const=True, default=False,
+      help="process the revisions reusing previous coverage information")
+  parser.add_argument('--resume', action="store_const", const=True, default=False,
+      help="resume processing from the last revision found in data file (e.g. /data/<program>/<program>.csv")
+  parser.add_argument('program', help="program to analyse")
+  parser.add_argument('revisions', type=int, nargs='?', default=0, help="number of revisions to process")
+  args = parser.parse_args()
 
-    m = Analytics.run_custom(Memcached, 'baseline', ('87e2f36',), 289)
-    m.go()
-    
-    z = Analytics.run_custom(Zeromq, 'baseline', ('573d7b0',), 1100)
-    z.go()
+  image = "offline" if args.offline else "baseline"
 
-    rl = Analytics.run_custom(Redis, 'baseline', ('347ab78',), 1200)
-    rl.go()
-
-    #rl = Analytics.run_custom(Beanstalkd, 'beanstalkd', ('157d88bf9435a23b71a1940a9afb617e52a2b9e9',), 600)
-    #rl = Analytics.run_custom(Git, 'git', ('aa2706463f',), 50)
-    
-    #rl.go()
-
-    # Use Analyzer() to get the list of all commits with 0 ELOCs
-    # z = ZeroCoverage('plot/data/Redis/Redis.csv')
-    # z.compute()
-    # ...and re-run them:
-    # j = Analytics.run_custom(Redis, 'manlio/redis', z.zerocov)
-    # j.go()
-    
-
+  benchmarks = {
+      "lighttpd" : { "class": Lighttpd, "revision": "0d40b25", "n": 400 },
+      "memcached": { "class": Memcached, "revision": "87e2f36", "n": 409 },
+      "zeromq"   : { "class": Zeromq, "revision": "573d7b0", "n": 500 },
+      "redis"    : { "class": Redis, "revision": "347ab78", "n": 500 },
+      "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 5000 },
+      "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
+      }
+  b = benchmarks[args.program]
+  if b:
+    lastrev = None
+    if args.resume:
+      output = "data/%s/%s.csv" % (b["class"].__name__, b["class"].__name__)
+      lastrecord = subprocess.check_output(["tail", "-1", output])
+      lastrecord = lastrecord.split(',')
+      if len(lastrecord):
+        lastrev = lastrecord[0]
+    container = Analytics.run_custom(b["class"], image, b["revision"], args.revisions if args.revisions else b["n"], lastrev)
+    container.go()
+  else:
+    print "Unrecognized program name %s" % args.program
 
 if __name__== "__main__":
     main()

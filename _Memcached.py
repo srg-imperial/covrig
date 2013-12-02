@@ -8,17 +8,20 @@ class Memcached(Container):
     """ Memcached class """
 
     # note that since sometimes memcached doesn't like us to be root,
-    # a user account 'manlio' is needed to run the following
+    # a user account 'regular' is needed to run the following
 
     def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
         
         # set variables
-        self.path = '/home/memcached'
-        self.source_path = '/home/memcached'
-        self.tsuite_path = ('/home/memcached/t','/home/memcached/testapp.c')
-        # set timeout (in seconds) for the test suite to run
-        self.timeout = 200
+        if (self.offline):
+          self.path = local("realpath 'repos/memcached'", capture=True)
+        else:
+          self.path = '/home/memcached'
+          self.source_path = '/home/memcached'
+          # set timeout (in seconds) for the test suite to run
+          self.timeout = 200
+        self.tsuite_path = ('t', 'testapp.c')
   
     def compile(self):
         """ compile Memcached """

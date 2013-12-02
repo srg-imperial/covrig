@@ -11,20 +11,24 @@ class Binutils(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        self.path = '/home/binutils'
-        self.source_path = '/home/binutils/binutils'
-        self.tsuite_path = ('/home/binutils/binutils/testsuite', )
+        if (self.offline):
+          self.path = local("realpath 'repos/binutils'", capture=True)
+        else:
+          self.path = '/home/binutils'
+          self.source_path = '/home/binutils/binutils'
+          # set timeout (in seconds) for the test suite to run
+          self.timeout = 60
+
+        self.tsuite_path = ('binutils/testsuite', )
         self.limit_changes_to = ('binutils', )
-        # self.ignore_coverage_from = ('include/*', )
-        # set timeout (in seconds) for the test suite to run
-        self.timeout = 60
+        self.ignore_coverage_from = ('include/*' ,)
 
     def compile(self):
         """ compile Binutils """
         with cd(self.path):
            with settings(warn_only=True):
                result = run('./configure && ' + 
-                   ' make -j2 CFLAGS=\"-O0 -coverage\" LDFLAGS=\"-coverage\"')
+                   ' make -j2 CFLAGS=\"-O0 -coverage -Wno-error\" LDFLAGS=\"-coverage\"')
                if result.failed:
                    self.compileError = True
 

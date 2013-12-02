@@ -1,5 +1,5 @@
 #!/bin/bash
-#script to output the added lines of code in a certain revision
+#output all the lines modified or added in $2 compared to $1
 
 declare -r git_new_file_regex="\+\+\+ b/(.*)"
 declare -r new_hunk_regex="@@.*\+([0-9]+),([0-9]+) @@"
@@ -12,9 +12,9 @@ die () {
 
 [ "$#" -eq 3 ] || die "Usage $0 <rev1> <rev2> <file>"
 
-if [ ! -f rdiff.tmp ]; then
+#if [ ! -f rdiff.tmp ]; then
   git diff -b -U0 $1 $2 > rdiff.tmp
-fi
+#fi
 
 bIFS=$IFS
 IFS=$'\n'

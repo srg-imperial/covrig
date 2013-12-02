@@ -11,12 +11,16 @@ class Lighttpd(Container):
         Container.__init__(self, _image, _user, _pwd)
         
         # set variables
-        self.path = '/home/lighttpd2'
-        self.source_path = '/home/lighttpd2/src'
-        self.tsuite_path = ('/home/lighttpd2/tests', '/home/lighttpd2/src/unittests')
+        if (self.offline):
+          self.path = local("realpath 'repos/lighttpd2'", capture=True)
+        else:
+          self.path = '/home/lighttpd2'
+          self.source_path = '/home/lighttpd2/src'
+          # set timeout (in seconds) for the test suite to run
+          self.timeout = 200
+        
+        self.tsuite_path = ('tests', 'src/unittests')
         self.ignore_coverage_from = ('/usr/include/*', '/home/lighttpd2/src/unittests/*')
-        # set timeout (in seconds) for the test suite to run
-        self.timeout = 200
 
   
     def compile(self):

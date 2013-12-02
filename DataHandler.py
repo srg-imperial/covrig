@@ -9,14 +9,15 @@ class DataHandler(object):
     def __init__(self, _collector):
         # extract information from the collector obj
         self.name = _collector.name
+        self.outputfile = _collector.outputfile
         self.rev = _collector.revision
         self.author_name = _collector.author_name
         self.timestamp = _collector.timestamp
         self.compileErr = _collector.compileError
         self.emptyCommit = _collector.emptyCommit
         self.maketestErr = _collector.maketestError
-        self.eloc = '0'
-        self.coveredeloc = '0'
+        self.total_eloc = '0'
+        self.covered_eloc = '0'
         self.tsize = '0'
         self.hunks = '0'
         self.ehunks = '0'
@@ -40,8 +41,8 @@ class DataHandler(object):
 
         # make sure no fatal errors occurred
         if self.compileErr == False and self.emptyCommit == False:
-            # input is in this form: Lines executed:65.38% of 15576
-            self.summary = _collector.summary
+            self.total_eloc = _collector.total_eloc
+            self.covered_eloc = _collector.covered_eloc
             # extract test suite size as sloc
             self.tsize = _collector.tsuite_size
             self.hunks = _collector.hunks
@@ -56,19 +57,14 @@ class DataHandler(object):
         # if the compilation failed, leave the ELOCs at 0
         if self.compileErr == True:
             self.exitStatus = 'compileError'
-        # in all other cases:
         elif self.emptyCommit:
             self.exitStatus = 'EmptyCommit';
         else:
-            # extract lines executed and total eloc
-            self.summary = self.summary.split('of')
             # in case we didn't collect any data return immediately
-            if len(self.summary) < 2:
-                self.exitStatus = 'NoCoverageLines'
+            if self.covered_eloc == 0:
+                self.exitStatus = 'NoCoverage'
                 return
             # otherwise save whatever we got
-            self.coveredeloc = filter( lambda x: x in '0123456789.', self.summary[0] )
-            self.eloc = filter( lambda x: x in '0123456789.', self.summary[1] )
             # set exit status
             if self.maketestErr == 2:
                 # test suite returned exit code 2 (at least something failed)            
@@ -82,7 +78,7 @@ class DataHandler(object):
 
     def dumpCSV(self):
         """ dump the extracted data to a CSV file """
-        data = [self.rev, self.eloc, self.coveredeloc, self.tsize, 
+        data = [self.rev, self.total_eloc, self.covered_eloc, self.tsize, 
                 self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
                 self.average]
         data += self.prev_covered
@@ -91,14 +87,14 @@ class DataHandler(object):
             self.hunks3, self.ehunks3, self.merge]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
-        if isfile('data/' + self.name + '/' + self.name + '.csv'):
-            with open('data/' + self.name + '/' + self.name + '.csv', 'a') as fp:
+        if isfile('data/' + self.name + '/' + self.outputfile + '.csv'):
+            with open('data/' + self.name + '/' + self.outputfile + '.csv', 'a') as fp:
                 a = csv.writer(fp, delimiter=',')
                 a.writerow(data)
                 
         # otherwise create it 
         else:
-            with open('data/' + self.name + '/' + self.name + '.csv', 'w') as fp:
+            with open('data/' + self.name + '/' + self.outputfile + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
                 header = ["rev", "#eloc", "coverage", "testsize",
                   "author", "#addedlines", "#covlines", "#notcovlines",

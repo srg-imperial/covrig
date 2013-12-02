@@ -11,11 +11,16 @@ class Redis(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        self.path = '/home/redis'
-        self.source_path = '/home/redis/src'
-        self.tsuite_path = ('/home/redis/tests',)
-        # set timeout (in seconds) for the test suite to run
-        self.timeout = 90
+        if (self.offline):
+          self.path = local("realpath 'repos/redis'", capture=True)
+        else:
+          self.path = '/home/redis'
+          self.source_path = '/home/redis/src'
+          # set timeout (in seconds) for the test suite to run
+          self.timeout = 90
+
+        self.tsuite_path = ('tests',)
+        self.ignore_coverage_from = ('/usr/include/*', )
 
     def compile(self):
         """ compile redis """
