@@ -16,16 +16,11 @@ die () {
   git diff -b -U0 $1 $2 > rdiff.tmp
 #fi
 
-bIFS=$IFS
-IFS=$'\n'
-DIFF=( $( cat rdiff.tmp ) )
-IFS=$bIFS
-
 TOTAL_NEW=0
 TOTAL_NEW_UNCOVERED=0
 FFOUND=0
 
-for line in "${DIFF[@]}"; do
+while read line; do
   SLINE=0
   if [[ $line =~ $git_new_file_regex ]]; then
     F=${BASH_REMATCH[1]}
@@ -56,5 +51,5 @@ for line in "${DIFF[@]}"; do
       done
     fi
   fi
-done
+done < rdiff.tmp
 
