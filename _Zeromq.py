@@ -25,6 +25,10 @@ class Zeromq(Container):
         """ compile Zeromq """
         with cd(self.path):
            with settings(warn_only=True):
+               #check if revision needs a small fix
+               result = run('git rev-list --first-parent a563d49 ^c28af41 | grep $(git rev-parse HEAD) || git rev-list --first-parent dc9749f ^e1cc2d4 | grep $(git rev-parse HEAD)')
+               if result.succeeded:
+                 run("sed -i '20s/^$/#include <unistd.h>/' tests/test_connect_delay.cpp")
                result = run(("sh autogen.sh && sh configure --without-documentation "
                              "--with-gcov=yes CFLAGS='-O0 -fprofile-arcs -ftest-coverage' "
                              "CXXFLAGS='-O0 -fprofile-arcs -ftest-coverage' && make -j4 " ))
