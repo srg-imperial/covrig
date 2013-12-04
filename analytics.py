@@ -55,7 +55,7 @@ class Analytics(object):
         return cls(_pclass, _image, clist)
 
     @classmethod
-    def run_custom(cls, _pclass, _image, _commit, _count, _startaftercommit=None):
+    def run_custom(cls, _pclass, _image, _commit, _count, _startaftercommit=None, _maxcommits=0):
         """ process a custom range of commits, given as tuple """
         r = _pclass(_image, 'root', 'root')
         clist = []
@@ -73,6 +73,9 @@ class Analytics(object):
               break
           print "Retaining %d revisions" % startindex
           clist = clist[:startindex]
+        if _maxcommits:
+          clist = clist[-_maxcommits:]
+        print "Will analyse %d commits" % len(clist)
         return cls(_pclass, _image, clist)
         
     def go(self):
@@ -122,10 +125,11 @@ class Analytics(object):
 
 def main():
   parser = argparse.ArgumentParser(prog='Analytics')
-  parser.add_argument('--offline', action="store_const", const=True, default=False,
+  parser.add_argument('--offline', action="store_true",
       help="process the revisions reusing previous coverage information")
-  parser.add_argument('--resume', action="store_const", const=True, default=False,
-      help="resume processing from the last revision found in data file (e.g. /data/<program>/<program>.csv")
+  parser.add_argument('--resume', action="store_true",
+      help="resume processing from the last revision found in data file (e.g. data/<program>/<program>.csv)")
+  parser.add_argument('--limit', type=int, help="limit to n number of revisions")
   parser.add_argument('program', help="program to analyse")
   parser.add_argument('revisions', type=int, nargs='?', default=0, help="number of revisions to process")
   args = parser.parse_args()
@@ -137,7 +141,7 @@ def main():
       "memcached": { "class": Memcached, "revision": "87e2f36", "n": 409 },
       "zeromq"   : { "class": Zeromq, "revision": "573d7b0", "n": 500 },
       "redis"    : { "class": Redis, "revision": "347ab78", "n": 500 },
-      "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 5000 },
+      "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 6000 },
       "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
       }
   b = benchmarks[args.program]
@@ -149,7 +153,7 @@ def main():
       lastrecord = lastrecord.split(',')
       if len(lastrecord):
         lastrev = lastrecord[0]
-    container = Analytics.run_custom(b["class"], image, b["revision"], args.revisions if args.revisions else b["n"], lastrev)
+    container = Analytics.run_custom(b["class"], image, b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
     container.go()
   else:
     print "Unrecognized program name %s" % args.program
