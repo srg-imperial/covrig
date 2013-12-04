@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+INITIAL_DIR="$(pwd)"
+
 die () {
     echo >&2 "$@"
     exit 1
@@ -7,12 +10,11 @@ die () {
 [ $# -eq 2 ] || [ $# -eq 1 ] || die "Usage: $0 filename [count]"
 
 if [ $# -eq 2 ]; then
-  tail -$2 $1 >process.partial 2>/dev/null || die "Invalid arguments"
+  ACTUAL_LINES=$($SCRIPT_DIR/internal/goodtobad.sh "$1" "$2")
+  tail -$ACTUAL_LINES "$1" >process.partial 2>/dev/null || die "Invalid arguments"
   set -- "process.partial"
 fi
 
-SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-INITIAL_DIR="$(pwd)"
 IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
 
 FIRSTREV=$(grep -v '#' $1|head -1|awk 'BEGIN { FS="," } ; { print $1}')
@@ -150,34 +152,34 @@ echo
 
 for (( B=10; B<20; B++ )); do
   echo -n "Covered lines from previous $(($B-9)) patches: "
-  grep -v '#' $1|awk "BEGIN { FS=\",\" } ; { print \$$B }"|paste -sd+ |bc
+  egrep -v "$IGNOREREVS" $1|awk "BEGIN { FS=\",\" } ; { print \$$B }"|paste -sd+ |bc
 done
 echo
 
 echo -n "+++Revisions contribuiting to latent patch coverage@1: "
-grep -v '#' $1|awk 'BEGIN { FS="," } ; { print $10 }'|grep -v '^0$'|wc -l
+egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $10 }'|grep -v '^0$'|wc -l
 egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $10 }'|grep -v '^0$'|sort -n | $SCRIPT_DIR/statistics.pl
 echo
 
 echo -n "+++Revisions contribuiting to latent patch coverage@10: "
-grep -v '#' $1|awk 'BEGIN { FS="," } ; { print $19 }'|grep -v '^0$'|wc -l
+egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $19 }'|grep -v '^0$'|wc -l
 egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $19 }'|grep -v '^0$'|sort -n | $SCRIPT_DIR/statistics.pl
 echo
 
 echo -n "+++Contribuition of revisions containing only test files to latent patch coverage@10: "
-REVS=$( grep -v '#' $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $24-$26 == 0) print $19 }'|wc -l )
-LCOV=$( grep -v '#' $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $24-$26 == 0) print $19 }'|paste -sd+|bc )
+REVS=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $24-$26 == 0) print $19 }'|wc -l )
+LCOV=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $24-$26 == 0) print $19 }'|paste -sd+|bc )
 echo "$REVS revisions = $LCOV lines"
 
 echo -n "+++Contribuition of revisions containing some test files to latent patch coverage@10: "
-REVS=$( grep -v '#' $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 > 0 && $24 > $26) print $19 }'|wc -l )
-LCOV=$( grep -v '#' $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 > 0 && $24 > $26) print $19 }'|paste -sd+|bc )
+REVS=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 > 0 && $24 > $26) print $19 }'|wc -l )
+LCOV=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 > 0 && $24 > $26) print $19 }'|paste -sd+|bc )
 echo "$REVS revisions = $LCOV lines"
 
 echo -n "+++Contribuition of revisions containing no test files to latent patch coverage@10: "
-REVS=$( grep -v '#' $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 == 0) print $19 }'|wc -l )
-LCOV=$( grep -v '#' $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 == 0) print $19 }'|paste -sd+|bc )
-ACTUAL=$( grep -v '#' $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 == 0) print $1 }' |tr '\r\n' ' ')
+REVS=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 == 0) print $19 }'|wc -l )
+LCOV=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 == 0) print $19 }'|paste -sd+|bc )
+ACTUAL=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 == 0) print $1 }' |tr '\r\n' ' ')
 echo "$REVS revisions = $LCOV lines ($ACTUAL)"
 
 rm -f tmp process.partial
