@@ -427,7 +427,8 @@ class Container(object):
             c.total_eloc = self.total_eloc
             c.compileError = self.compileError
             c.maketestError = self.maketestError
-            c.prev_covered  = self.prev_covered
+            if self.covered_eloc:
+              c.prev_covered  = self.prev_covered
             c.hunks = len(self.hunkheads)
             c.ehunks = len(self.ehunkheads)
             c.hunks3 = len(self.hunkheads3)
