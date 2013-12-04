@@ -19,12 +19,12 @@ while (( "$#" )); do
   shift
 done
 
-
+IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
 INPUT=$1
 OUTPUT=$2
 
 echo "0 0 0" >pcov
-grep -v '#' $INPUT |awk 'BEGIN { FS="," } ; { if ($7+$8 > 0) print NR,$7,$7+$8; }' >>pcov2
+egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS="," } ; { if ($7+$8 > 0) print NR,$7,$7+$8; }' >>pcov2
 if [[ $SORT -eq 1 ]]; then
   sort -n -k 2 pcov2 >> pcov
 else

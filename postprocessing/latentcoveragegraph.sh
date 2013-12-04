@@ -14,17 +14,18 @@ while (( "$#" )); do
   shift
 done
 
+IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
 INPUT=$1
 OUTPUT=$2
 
 >"$INPUT.pp"
-COV=$(cat $1 |awk 'BEGIN { FS="," } ; { print $7 }'|grep -v '#'|paste -sd+ |bc)
-NCOV=$(cat $1 |awk 'BEGIN { FS="," } ; { print $8 }'|grep -v '#'|paste -sd+ |bc)
+COV=$(cat $1 |awk 'BEGIN { FS="," } ; { print $7 }'|egrep -v "$IGNOREREVS"|paste -sd+ |bc)
+NCOV=$(cat $1 |awk 'BEGIN { FS="," } ; { print $8 }'|egrep -v "$IGNOREREVS"|paste -sd+ |bc)
 ALL=$((COV+NCOV))
 
 for (( B=10; B<20; B++ )); do
   echo -n "$(($B-9)) " >> "$INPUT.pp"
-  ABSLCOV=$(grep -v '#' $1|awk "BEGIN { FS=\",\" } ; { print \$$B }"|paste -sd+ |bc)
+  ABSLCOV=$(egrep -v "$IGNOREREVS" $1|awk "BEGIN { FS=\",\" } ; { print \$$B }"|paste -sd+ |bc)
   if [[ $RELATIVE -eq 1 ]]; then
     ABSLCOV=$(echo "scale = 2
                     $ABSLCOV*100/$ALL"|bc)
