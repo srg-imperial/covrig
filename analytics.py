@@ -140,7 +140,7 @@ def main():
       "lighttpd" : { "class": Lighttpd, "revision": "0d40b25", "n": 400 },
       "memcached": { "class": Memcached, "revision": "87e2f36", "n": 409 },
       "zeromq"   : { "class": Zeromq, "revision": "573d7b0", "n": 500 },
-      "redis"    : { "class": Redis, "revision": "347ab78", "n": 500 },
+      "redis"    : { "class": Redis, "revision": "347ab78", "n": 1000 },
       "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 6000 },
       "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
       }
