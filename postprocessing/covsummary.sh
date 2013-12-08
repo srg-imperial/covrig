@@ -84,6 +84,8 @@ if [[ $LATEX -eq 1 ]]; then
 
   UNCOVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $8 }'|paste -sd+ |bc)
   echo "\\newcommand{\\${VARPREFIX}UncovLines}[0]{$UNCOVLINES\\xspace}"
+  
+  echo "\\newcommand{\\${VARPREFIX}Eloc}[0]{$((UNCOVLINES+COVLINES))\\xspace}"
 
   TRANSIENTCOMPILEERRORS=$(grep compileError $1|wc -l)
   echo "\\newcommand{\\${VARPREFIX}TransientCompErrs}[0]{$TRANSIENTCOMPILEERRORS\\xspace}"
