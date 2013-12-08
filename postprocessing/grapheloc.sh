@@ -9,10 +9,18 @@ IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
 
 INPUT=$1
 OUTPUT=$2
+GRAPHTYPE=${3:-"standalone"}
 
-egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS="," } ; { if ($2 > 0) print NR,$2; }' >elocs
+mkdir -p tmp
+#OUTPUT should be graphs/...
+DATAFILE="tmp/${OUTPUT:7}"
+
+egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS="," } ; { if ($2 > 0) print NR,$2; }' >$DATAFILE
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-"$SCRIPT_DIR/internal/lineplot.sh" elocs "$OUTPUT" "Revision" "ELOC" 'set size 0.8,0.8'
-
-rm -f elocs
+if [[ $GRAPHTYPE == "standalone" ]]; then
+  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "ELOC" 'set size 0.8,0.8' $GRAPHTYPE
+else
+  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "ELOC" '' $GRAPHTYPE
+fi
+#rm -f $DATAFILE

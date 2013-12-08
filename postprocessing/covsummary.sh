@@ -168,31 +168,31 @@ else
   echo
   
   echo -n "+++Revisions affecting only test files without increasing coverage: "
-  >tmp
+  >tmp/summary
   for R in $(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($24 == $26) { print $1 } }')
   do
     grep -B1 $R $1|awk 'BEGIN { FS="," } ; { print $3 }' | { read -r first; read -r second
       if [[ $first == $second ]]; then
-        echo $R >> tmp
+        echo $R >> tmp/summary
       fi
     }
   done
-  cat tmp | wc -l
-  cat tmp
+  cat tmp/summary | wc -l
+  cat tmp/summary
   echo
   
   echo -n "+++Revisions affecting only test files decreasing coverage: "
-  >tmp
+  >tmp/summary
   for R in $(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($24 == $26) { print $1 } }')
   do
     grep -B1 $R $1|awk 'BEGIN { FS="," } ; { print $3 }' | { read -r first; read -r second
       if [[ $first -gt $second ]]; then
-        echo $R >> tmp
+        echo $R >> tmp/summary
       fi
     }
   done
-  cat tmp |wc -l
-  cat tmp
+  cat tmp/summary |wc -l
+  cat tmp/summary
   echo
   
   echo -n "+++Hunks: "
@@ -247,4 +247,4 @@ else
   ACTUAL=$( egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($19 > 0 && $26 == 0) print $1 }' |tr '\r\n' ' ')
   echo "$REVS revisions = $LCOV lines ($ACTUAL)"
 fi
-rm -f tmp process.partial
+rm -f tmp/summary process.partial
