@@ -12,6 +12,7 @@ from _Git import *
 from _Diffutils import *
 from _Binutils import *
 from _Findutils import *
+from _Squid import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -143,6 +144,7 @@ def main():
       "redis"    : { "class": Redis, "revision": "347ab78", "n": 1000 },
       "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 6000 },
       "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
+      "squid"    : { "class": Squid, "revision": "fa4c8a3": "n": 1000 },
       }
   b = benchmarks[args.program]
   if b:
