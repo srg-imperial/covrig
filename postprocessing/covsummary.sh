@@ -90,6 +90,68 @@ if [[ $LATEX -eq 1 ]]; then
   TRANSIENTCOMPILEERRORS=$(grep compileError $1|wc -l)
   echo "\\newcommand{\\${VARPREFIX}TransientCompErrs}[0]{$TRANSIENTCOMPILEERRORS\\xspace}"
 
+  echo
+
+  PATCHAVG=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|egrep -o "[0-9.]+" )
+  PATCHMEDIAN=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|egrep -o "[0-9.]+" )
+  PATCHMODE=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|egrep -o "[0-9.]+" )
+  PATCHSTDEV=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|egrep -o "[0-9.]+" )
+  echo "\\newcommand{\\${VARPREFIX}PatchAverage}[0]{$PATCHAVG\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}PatchMedian}[0]{$PATCHMEDIAN\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}PatchMode}[0]{$PATCHMODE\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}PatchStdev}[0]{$PATCHSTDEV\\xspace}"
+  
+  echo
+
+  declare -a BUCKETS
+  BUCKETS[1]=0
+  BUCKETS[2]=10
+  BUCKETS[3]=100
+  BUCKETS[4]=100000
+
+  #LaTeX doesn't allow digits in command names
+  declare -a BUCKETNAMES
+  BUCKETNAMES[1]="Zero"
+  BUCKETNAMES[2]="Ten"
+  BUCKETNAMES[3]="Hundred"
+  BUCKETNAMES[4]="NA"
+  for BUCKETIDX in 0 1 2 3; do
+    if [[ $BUCKETIDX -eq 0 ]]; then
+      #special case. get overall stats
+      AWKSCRIPT="BEGIN { FS=\",\" } ; {
+                  if (\$7+\$8 > 0) {
+                    print \$7/(\$7+\$8)
+                  }
+                }"
+    else
+      AWKSCRIPT="BEGIN { FS=\",\" } ; {
+                  if (\$7+\$8 >  ${BUCKETS[$BUCKETIDX]} &&
+                      \$7+\$8 <= ${BUCKETS[$((BUCKETIDX+1))]}) {
+                    print \$7/(\$7+\$8)
+                  }
+                }"
+    fi
+    BUCKETENTRIES=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT" | wc -l);
+    if [[ $BUCKETENTRIES -gt 0 ]]; then
+      PATCHCOVAVG=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
+      PATCHCOVMEDIAN=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
+      PATCHCOVMODE=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
+      PATCHCOVSTDEV=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
+    else
+      PATCHCOVAVG="N/A"
+      PATCHCOVMEDIAN="N/A"
+      PATCHCOVMODE="N/A"
+      PATCHCOVSTDEV="N/A"
+    fi
+    echo "\\newcommand{\\${VARPREFIX}PatchCovEntries${BUCKETNAMES[$BUCKETIDX]}}[0]{$BUCKETENTRIES\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}PatchCovAverage${BUCKETNAMES[$BUCKETIDX]}}[0]{$PATCHCOVAVG\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}PatchCovMedian${BUCKETNAMES[$BUCKETIDX]}}[0]{$PATCHCOVMEDIAN\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}PatchCovMode${BUCKETNAMES[$BUCKETIDX]}}[0]{$PATCHCOVMODE\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}PatchCovStdev${BUCKETNAMES[$BUCKETIDX]}}[0]{$PATCHCOVSTDEV\\xspace}"
+  
+    echo
+  done
+
   LATENT1=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $10 }'|paste -sd+ |bc)
   LATENT5=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $14 }'|paste -sd+ |bc)
   LATENT10=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $19 }'|paste -sd+ |bc)
@@ -137,6 +199,10 @@ else
   egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $8 }'|sort -n | $SCRIPT_DIR/statistics.pl
   echo
   
+  echo "+++Patch coverage: "
+  egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { if ($7+$8 != 0) { print $7/($7+$8) } }'|sort -n | $SCRIPT_DIR/statistics.pl
+  echo
+
   echo -n "+++Affected files: "
   egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $24 }'|paste -sd+ |bc
   egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $24 }'|sort -n | $SCRIPT_DIR/statistics.pl

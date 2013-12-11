@@ -19,8 +19,9 @@ egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS="," } ; { if ($2 > 0) print NR,$2
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [[ $GRAPHTYPE == "standalone" ]]; then
-  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "ELOC" 'set size 0.8,0.8' $GRAPHTYPE
+  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "ELOC" "set size 0.8,0.8
+set title \"${OUTPUT:11}\"" $GRAPHTYPE
 else
-  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "ELOC" '' $GRAPHTYPE
+  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "ELOC" "set title \"${OUTPUT:11}\"" $GRAPHTYPE
 fi
 #rm -f $DATAFILE
