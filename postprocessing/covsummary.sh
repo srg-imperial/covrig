@@ -41,6 +41,12 @@ LASTREV=$(tail -1 $1|awk 'BEGIN { FS="," } ; { print $1}')
 FIRSTREVDATE="Unknown"
 LASTREVDATE="Unknown"
 
+SELECTCODEFILE="awk 'BEGIN { FS=\",\" } ; { if (\$25 > 0) print \$0 }'"
+SELECTTESTFILE="awk 'BEGIN { FS=\",\" } ; { if (\$26 > 0) print \$0 }'"
+SELECTACTUALCODE="awk 'BEGIN { FS=\",\" } ; { if (\$7 > 0 || \$8 > 0) print \$0 }'"
+SELECTACTUALCODEORTEST="awk 'BEGIN { FS=\",\" } ; { if (\$7 > 0 || \$8 > 0 || \$26 > 0) print \$0 }'"
+N2DIGITS='egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1'
+
 #find the dates using brute force
 for DIR in repos/*; do
   cd $DIR
@@ -53,6 +59,7 @@ for DIR in repos/*; do
 done
 
 cd "$INITIAL_DIR"
+mkdir -p tmp
 
 FRS=$(date -d "$FIRSTREVDATE" +%s)
 LRS=$(date -d "$LASTREVDATE" +%s)
@@ -61,7 +68,7 @@ if [[ $LATEX -eq 1 ]]; then
   if [[ "$VARPREFIX" == "program" ]]; then
     echo "%% Warning: --prefix not given for latex output"
   fi
-  ACTUALREVS=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 > 0 || $8 > 0 || $26 > 0) print 1 }'|wc -l)
+  ACTUALREVS=$(egrep -v "$IGNOREREVS" $1| eval $SELECTACTUALCODEORTEST |wc -l)
 
   echo "%% $VARPREFIX: $ACTUALREVS actual revisions ($FIRSTREV - $LASTREV)"
   
@@ -85,17 +92,27 @@ if [[ $LATEX -eq 1 ]]; then
   UNCOVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $8 }'|paste -sd+ |bc)
   echo "\\newcommand{\\${VARPREFIX}UncovLines}[0]{$UNCOVLINES\\xspace}"
   
-  echo "\\newcommand{\\${VARPREFIX}Eloc}[0]{$((UNCOVLINES+COVLINES))\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}PatchTotal}[0]{$((UNCOVLINES+COVLINES))\\xspace}"
 
-  TRANSIENTCOMPILEERRORS=$(grep compileError $1|wc -l)
+  TRANSIENTCOMPILEERRORS=$(egrep 'compileError|NoCoverage' $1|wc -l)
   echo "\\newcommand{\\${VARPREFIX}TransientCompErrs}[0]{$TRANSIENTCOMPILEERRORS\\xspace}"
+
+  TRANSIENTTESTERRORS=$(cat $1 | eval $SELECTACTUALCODEORTEST |egrep 'SomeTestFailed' |wc -l)
+  echo "\\newcommand{\\${VARPREFIX}TransientTestErrs}[0]{$TRANSIENTTESTERRORS\\xspace}"
+
+  TRANSIENTTESTTIMEOUTS=$(cat $1 | eval $SELECTACTUALCODEORTEST |egrep 'TimedOut' |wc -l)
+  echo "\\newcommand{\\${VARPREFIX}TransientTestTimeouts}[0]{$TRANSIENTTESTTIMEOUTS\\xspace}"
+
+  ALLOK=$(cat $1 | eval $SELECTACTUALCODEORTEST |egrep 'OK' |wc -l)
+  echo "\\newcommand{\\${VARPREFIX}OK}[0]{$ALLOK\\xspace}"
 
   echo
 
-  PATCHAVG=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|egrep -o "[0-9.]+" )
-  PATCHMEDIAN=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|egrep -o "[0-9.]+" )
-  PATCHMODE=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|egrep -o "[0-9.]+" )
-  PATCHSTDEV=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|egrep -o "[0-9.]+" )
+  grep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n > tmp/patchcnt
+  PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
+  PATCHMEDIAN=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
+  PATCHMODE=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
+  PATCHSTDEV=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
   echo "\\newcommand{\\${VARPREFIX}PatchAverage}[0]{$PATCHAVG\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}PatchMedian}[0]{$PATCHMEDIAN\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}PatchMode}[0]{$PATCHMODE\\xspace}"
@@ -133,10 +150,13 @@ if [[ $LATEX -eq 1 ]]; then
     fi
     BUCKETENTRIES=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT" | wc -l);
     if [[ $BUCKETENTRIES -gt 0 ]]; then
-      PATCHCOVAVG=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
-      PATCHCOVMEDIAN=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
-      PATCHCOVMODE=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
-      PATCHCOVSTDEV=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1)
+      PATCHCOVAVG=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS)
+      PATCHCOVAVG=$(printf "%.0f\\%%" $(echo "$PATCHCOVAVG * 100"|bc))
+      PATCHCOVMEDIAN=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS)
+      PATCHCOVMEDIAN=$(printf "%.0f\\%%" $(echo "$PATCHCOVMEDIAN * 100"|bc))
+      PATCHCOVMODE=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS)
+      PATCHCOVSTDEV=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS)
+      PATCHCOVSTDEV=$(printf "%.0fpp" $(echo "$PATCHCOVSTDEV * 100"|bc))
     else
       PATCHCOVAVG="N/A"
       PATCHCOVMEDIAN="N/A"
@@ -153,8 +173,11 @@ if [[ $LATEX -eq 1 ]]; then
   done
 
   LATENT1=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $10 }'|paste -sd+ |bc)
+  LATENT1=$(echo "scale=1; $LATENT1*100/($COVLINES+$UNCOVLINES)"|bc)"\\%"
   LATENT5=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $14 }'|paste -sd+ |bc)
+  LATENT5=$(echo "scale=1; $LATENT5*100/($COVLINES+$UNCOVLINES)"|bc)"\\%"
   LATENT10=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $19 }'|paste -sd+ |bc)
+  LATENT10=$(echo "scale=1; $LATENT10*100/($COVLINES+$UNCOVLINES)"|bc)"\\%"
 
   echo "\\newcommand{\\${VARPREFIX}LatentOne}[0]{$LATENT1\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}LatentFive}[0]{$LATENT5\\xspace}"
