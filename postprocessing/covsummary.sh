@@ -106,9 +106,24 @@ if [[ $LATEX -eq 1 ]]; then
   ALLOK=$(cat $1 | eval $SELECTACTUALCODEORTEST |egrep 'OK' |wc -l)
   echo "\\newcommand{\\${VARPREFIX}OK}[0]{$ALLOK\\xspace}"
 
+  MERGES=$(egrep -v "$IGNOREREVS" $1 |grep ',True'|wc -l)
+  echo "\\newcommand{\\${VARPREFIX}Merges}[0]{$MERGES\\xspace}"
   echo
 
-  grep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n > tmp/patchcnt
+  ONLYEXECUTABLE=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if (($7 > 0 || $8 > 0) && $26 == 0) print 1 }'|wc -l)
+  ONLYTEST=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 == 0 && $8 == 0 && $26 > 0) print 1 }'|wc -l)
+  TESTANDEXECUTABLE=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if (($7 > 0 || $8 > 0) && $26 > 0) print 1 }'|wc -l)
+  echo "\\newcommand{\\${VARPREFIX}OnlyTestRevs}[0]{$ONLYTEST\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}OnlyExecutableRevs}[0]{$ONLYEXECUTABLE\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}TestAndExecutableRevs}[0]{$TESTANDEXECUTABLE\\xspace}"
+
+  if [[ "X$ACTUAL_LINES" != "X" ]]; then
+    echo "\\newcommand{\\${VARPREFIX}AllRevs}[0]{$ACTUAL_LINES\\xspace}"
+  fi
+
+  echo
+
+  egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n > tmp/patchcnt
   PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
   PATCHMEDIAN=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
   PATCHMODE=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
