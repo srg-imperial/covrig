@@ -10,6 +10,7 @@ class DataHandler(object):
         # extract information from the collector obj
         self.name = _collector.name
         self.outputfile = _collector.outputfile
+        self.outputfolder = _collector.outputfolder
         self.rev = _collector.revision
         self.author_name = _collector.author_name
         self.timestamp = _collector.timestamp
@@ -87,14 +88,14 @@ class DataHandler(object):
             self.hunks3, self.ehunks3, self.merge]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
-        if isfile('data/' + self.name + '/' + self.outputfile + '.csv'):
-            with open('data/' + self.name + '/' + self.outputfile + '.csv', 'a') as fp:
+        if isfile('data/' + self.outputfolder + '/' + self.outputfile + '.csv'):
+            with open('data/' + self.outputfolder + '/' + self.outputfile + '.csv', 'a') as fp:
                 a = csv.writer(fp, delimiter=',')
                 a.writerow(data)
                 
         # otherwise create it 
         else:
-            with open('data/' + self.name + '/' + self.outputfile + '.csv', 'w') as fp:
+            with open('data/' + self.outputfolder + '/' + self.outputfile + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
                 header = ["rev", "#eloc", "coverage", "testsize",
                   "author", "#addedlines", "#covlines", "#notcovlines",

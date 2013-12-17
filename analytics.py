@@ -78,9 +78,11 @@ class Analytics(object):
         print "Will analyse %d commits" % len(clist)
         return cls(_pclass, _image, clist)
         
-    def go(self):
+    def go(self, outputfolder, outputfile):
         """ run all the tests for every version specified in a new container """
 
+        # create a data/program-name directory where data will be collected
+        local('mkdir -p data/' + outputfolder)
         # list of uncovered files (and corresponding lines) i revisions ago
         prev_uncovered_list = [ ([], []) ] * 10
 
@@ -97,6 +99,7 @@ class Analytics(object):
             author_name = a[2]
 
             c = self.pclass(self.image, 'root', 'root')
+            c.outputfolder = outputfolder
             c.spawn()
             try:
               c.checkout(prev_commit_id, commit_id)
@@ -116,7 +119,7 @@ class Analytics(object):
               prev_uncovered_list.insert(0, (c.changed_files, c.uncovered_lines_list));
               prev_uncovered_list.pop()
 
-              c.collect(author_name, timestamp )
+              c.collect(author_name, timestamp, outputfolder, outputfile)
             finally:
               c.halt()
             if c.compileError == False:
@@ -130,6 +133,7 @@ def main():
   parser.add_argument('--resume', action="store_true",
       help="resume processing from the last revision found in data file (e.g. data/<program>/<program>.csv)")
   parser.add_argument('--limit', type=int, help="limit to n number of revisions")
+  parser.add_argument('--output', help="output file name")
   parser.add_argument('program', help="program to analyse")
   parser.add_argument('revisions', type=int, nargs='?', default=0, help="number of revisions to process")
   args = parser.parse_args()
@@ -144,18 +148,23 @@ def main():
       "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 6000 },
       "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
       }
-  b = benchmarks[args.program]
-  if b:
+  try:
+    b = benchmarks[args.program]
+    outputfolder = args.output if args.output else b["class"].__name__
+    outputfile = b["class"].__name__
+    if args.offline:
+      outputfile += "Offline"
+
+    output = "data/%s/%s.csv" % (outputfolder, outputfile)
     lastrev = None
     if args.resume:
-      output = "data/%s/%s.csv" % (b["class"].__name__, b["class"].__name__)
       lastrecord = subprocess.check_output(["tail", "-1", output])
       lastrecord = lastrecord.split(',')
       if len(lastrecord):
         lastrev = lastrecord[0]
     container = Analytics.run_custom(b["class"], image, b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
-    container.go()
-  else:
+    container.go(outputfolder, outputfile)
+  except KeyError:
     print "Unrecognized program name %s" % args.program
 
 if __name__== "__main__":

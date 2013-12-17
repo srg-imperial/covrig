@@ -103,8 +103,6 @@ class Container(object):
         self.sshd_up()
         self.set_ip()
         self.fabric_setup()
-      # create a ~/data/program-name directory where data will be collected
-      local('mkdir -p data/' + self.__class__.__name__)
 
 
     def halt(self):
@@ -199,7 +197,7 @@ class Container(object):
           run("echo ./build_info.txt >> backuplist")
           run('tar -cjf coverage-' + commit + '.tar.bz2 -T backuplist')
           # scp to localhost/data
-          get('coverage-' + commit + '.tar.bz2', 'data/' + self.__class__.__name__ + 
+          get('coverage-' + commit + '.tar.bz2', 'data/' + self.outputfolder + 
               '/' + 'coverage-' + commit + '.tar.bz2')
     
     def rec_initial_coverage(self):
@@ -220,7 +218,7 @@ class Container(object):
         return
 
       if self.offline:
-        covdatadir = '%s/data/%s' % (self.initialpath, self.__class__.__name__)
+        covdatadir = '%s/data/%s' % (self.initialpath, self.outputfolder)
         with self.omnicd(covdatadir), settings(warn_only=True):
           res = local('rm -rf tmp && mkdir tmp && tar xjf coverage-%s.tar.bz2 -C tmp' % self.revision)
           if res.failed:
@@ -249,7 +247,7 @@ class Container(object):
 
     def has_coverage_information(self, filepath):
       if self.offline:
-        covdatadir = '%s/data/%s/tmp' % (self.initialpath, self.__class__.__name__)
+        covdatadir = '%s/data/%s/tmp' % (self.initialpath, self.outputfolder)
       else:
         covdatadir = self.source_path
 
@@ -261,7 +259,7 @@ class Container(object):
 
     def is_covered(self, filepath, line):
       if self.offline:
-        covdatadir = '%s/data/%s/tmp' % (self.initialpath, self.__class__.__name__)
+        covdatadir = '%s/data/%s/tmp' % (self.initialpath, self.outputfolder)
       else:
         covdatadir = self.source_path
 
@@ -396,14 +394,13 @@ class Container(object):
           self.prev_covered[backcnt] += covered;
         return (prev_files, prev_lines)
                 
-    def collect(self, author_name, timestamp):
+    def collect(self, author_name, timestamp, outputfolder, outputfile):
         """ create a Collector to collect all info and a XMLHandler to parse them """
         c = Collector()
         # the class name which is actually running this method, as a string
         c.name = self.__class__.__name__
-        c.outputfile = c.name
-        if self.offline:
-          c.outputfile += "Offline"
+        c.outputfile = outputfile
+        c.outputfolder = outputfolder
         # fill in some info about the test
         c.revision = self.revision
         c.author_name = author_name
