@@ -20,6 +20,7 @@ class Zeromq(Container):
           self.timeout = 120
 
         self.tsuite_path = ('tests',)
+        self.ignore_coverage_from = ('/usr/include/*', )
 
     def compile(self):
         """ compile Zeromq """
