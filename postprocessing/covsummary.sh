@@ -117,9 +117,10 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}OnlyExecutableRevs}[0]{$ONLYEXECUTABLE\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}TestAndExecutableRevs}[0]{$TESTANDEXECUTABLE\\xspace}"
 
-  if [[ "X$ACTUAL_LINES" != "X" ]]; then
-    echo "\\newcommand{\\${VARPREFIX}AllRevs}[0]{$ACTUAL_LINES\\xspace}"
+  if [[ "X$ACTUAL_LINES" == "X" ]]; then
+    ACTUAL_LINES=$(egrep -v "$IGNOREREVS" $1|wc -l)
   fi
+  echo "\\newcommand{\\${VARPREFIX}NoTestNoExecutableRevs}[0]{$(($ACTUAL_LINES-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))\\xspace}"
 
   echo
 
