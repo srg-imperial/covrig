@@ -1,12 +1,13 @@
 import csv
 #import matplotlib as mpl
-#mpl.use('Agg')
+# mpl.use('Agg')
 #import matplotlib.pyplot as plt
 
 
 class Sketch(object):
+
     """ Sketch a raw graph """
-    
+
     # fields are:
     # id, eloc, coverage, t_size, author, edited_lines, covered_lines,
     #   patch_coverage, timestamp, exitStatus
@@ -27,9 +28,10 @@ class Sketch(object):
         plt.clf()
 
 
-
 class ZeroCoverage(object):
+
     """ get a list with all the commits which have 0 ELOCs """
+
     def __init__(self, _ifile):
         self.ifile = _ifile
 
@@ -49,7 +51,6 @@ class ZeroCoverage(object):
         # print round((len(self.zerocov) / float(counter))*100,2)
         # print
 
-
     def lessThan(self, target):
         res = csv.reader(open(self.ifile), delimiter=',')
         self.lowcov = []
@@ -67,13 +68,12 @@ class ZeroCoverage(object):
         # print
 
 
-
 def main():
     # just some debug cases:
     """
     r = Sketch('plot/data/Redis/Redis.csv', 1, 'redis-coverage.png')
     r.plot()
-    
+
     m = Sketch('plot/data/Memcached/Memcached.csv', 1, 'memcached-coverage.png')
     m.plot()
 
@@ -90,5 +90,5 @@ def main():
     zz.lessThan(30)
 
 
-if __name__== "__main__":
+if __name__ == "__main__":
     main()

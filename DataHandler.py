@@ -3,9 +3,10 @@ from os.path import isfile
 
 
 class DataHandler(object):
+
     """ Create an XML file for collecting the results;
         an object of class Collector() is passed on init """
-    
+
     def __init__(self, _collector):
         # extract information from the collector obj
         self.name = _collector.name
@@ -34,14 +35,16 @@ class DataHandler(object):
         self.prev_covered = _collector.prev_covered
         self.merge = _collector.merge
 
-        # prev_covered[i] contains the #lines covered from the revision current~i
+        # prev_covered[i] contains the #lines covered from the revision
+        # current~i
         for i, _ in enumerate(self.prev_covered):
-          if (i > 0):
-            self.prev_covered[i] += self.prev_covered[i-1];
-        # prev_covered[i] contains the #lines covered from revision current~1 to current~i
+            if (i > 0):
+                self.prev_covered[i] += self.prev_covered[i - 1]
+        # prev_covered[i] contains the #lines covered from revision current~1
+        # to current~i
 
         # make sure no fatal errors occurred
-        if self.compileErr == False and self.emptyCommit == False:
+        if not self.compileErr and not self.emptyCommit:
             self.total_eloc = _collector.total_eloc
             self.covered_eloc = _collector.covered_eloc
             # extract test suite size as sloc
@@ -53,13 +56,13 @@ class DataHandler(object):
             self.changed_files = _collector.changed_files
             self.echanged_files = _collector.echanged_files
             self.changed_test_files = _collector.changed_test_files
-   
+
     def extractData(self):
         # if the compilation failed, leave the ELOCs at 0
-        if self.compileErr == True:
+        if self.compileErr:
             self.exitStatus = 'compileError'
         elif self.emptyCommit:
-            self.exitStatus = 'EmptyCommit';
+            self.exitStatus = 'EmptyCommit'
         else:
             # in case we didn't collect any data return immediately
             if self.covered_eloc == 0:
@@ -68,7 +71,7 @@ class DataHandler(object):
             # otherwise save whatever we got
             # set exit status
             if self.maketestErr == 2:
-                # test suite returned exit code 2 (at least something failed)            
+                # test suite returned exit code 2 (at least something failed)
                 self.exitStatus = 'SomeTestFailed'
             elif self.maketestErr == 124:
                 # test suite timed out
@@ -79,35 +82,35 @@ class DataHandler(object):
 
     def dumpCSV(self):
         """ dump the extracted data to a CSV file """
-        data = [self.rev, self.total_eloc, self.covered_eloc, self.tsize, 
+        data = [self.rev, self.total_eloc, self.covered_eloc, self.tsize,
                 self.author_name, self.add_lines, self.cov_lines, self.unc_lines,
                 self.average]
         data += self.prev_covered
         data += [self.timestamp, self.exitStatus, self.hunks, self.ehunks,
-            self.changed_files, self.echanged_files, self.changed_test_files,
-            self.hunks3, self.ehunks3, self.merge]
+                 self.changed_files, self.echanged_files, self.changed_test_files,
+                 self.hunks3, self.ehunks3, self.merge]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
         if isfile('data/' + self.outputfolder + '/' + self.outputfile + '.csv'):
             with open('data/' + self.outputfolder + '/' + self.outputfile + '.csv', 'a') as fp:
                 a = csv.writer(fp, delimiter=',')
                 a.writerow(data)
-                
-        # otherwise create it 
+
+        # otherwise create it
         else:
             with open('data/' + self.outputfolder + '/' + self.outputfile + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
                 header = ["rev", "#eloc", "coverage", "testsize",
-                  "author", "#addedlines", "#covlines", "#notcovlines",
-                  "patchcoverage", "#covlinesprevpatches*", "time", "exit",
-                  "hunks", "ehunks", "changed_files", "echanged_files",
-                  "changed_test_files", "hunks3", "ehunks3", "merge"]
+                          "author", "#addedlines", "#covlines", "#notcovlines",
+                          "patchcoverage", "#covlinesprevpatches*", "time", "exit",
+                          "hunks", "ehunks", "changed_files", "echanged_files",
+                          "changed_test_files", "hunks3", "ehunks3", "merge"]
                 a.writerow(header)
                 a.writerow(data)
 
 
-
 class Collector(object):
+
     """ little helper-object for store info extracted from a container """
     # (interesting) member variables are set by Container::collect()
 
@@ -123,6 +126,4 @@ class Collector(object):
         self.uncovered_lines = 0
         self.average = 0
         self.average = 0
-        self.prev_covered = [ 0 ] * 10
-        
-
+        self.prev_covered = [0] * 10
