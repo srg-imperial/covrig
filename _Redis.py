@@ -17,7 +17,7 @@ class Redis(Container):
           self.path = '/home/redis'
           self.source_path = '/home/redis/src'
           # set timeout (in seconds) for the test suite to run
-          self.timeout = 180
+          self.timeout = 600
 
         self.tsuite_path = ('tests',)
         self.ignore_coverage_from = ('/usr/include/*', )
@@ -26,7 +26,8 @@ class Redis(Container):
         """ compile redis """
         with cd('/home/redis'):
            with settings(warn_only=True):
-               result = run('make clean && make gcov')
+               run('chown -R regular:regular .')
+               result = run('su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0\'')
                if result.failed:
                    self.compileError = True
 
@@ -38,7 +39,7 @@ class Redis(Container):
             with cd('/home/redis/src'):
                 with settings(warn_only=True):
                   for i in range(5):
-                    result = run('timeout ' + str(self.timeout) + ' make test')
+                    result = run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'')
                     if result.failed:
                         self.maketestError = result.return_code
                     run('killall redis')
