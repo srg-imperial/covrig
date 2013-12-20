@@ -74,7 +74,7 @@ class Analytics(object):
           print "Retaining %d revisions" % startindex
           clist = clist[:startindex]
         if _maxcommits:
-          clist = clist[-_maxcommits:]
+          clist = clist[-(_maxcommits+1):]
         print "Will analyse %d commits" % len(clist)
         return cls(_pclass, _image, clist)
         
