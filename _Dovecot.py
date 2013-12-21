@@ -39,7 +39,7 @@ class Dovecot(Container):
         with cd(self.path):
            with settings(warn_only=True):
                result = run("sh autogen.sh && " +
-                            "sh configure CFLAGS='--coverage' LDFLAGS='--coverage' && " +
+                            "sh configure CFLAGS='--coverage -O0' LDFLAGS='--coverage' && " +
                             "make -j`grep -c '^processor' /proc/cpuinfo`")
                if result.failed:
                    self.compileError = True
