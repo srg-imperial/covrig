@@ -43,10 +43,19 @@ done
 rm -f tmp/nondet-*
 
 ACTUALREVS=$($SCRIPT_DIR/internal/goodtobad.sh $REVFILE $REVISIONS)
+TOTALALLOK=0
+TOTALALLFAILED=0
 
 for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUALCODEORTEST); do
   MAXDIFF=-1
+  ALLOK=1
+  ALLFAILED=1
   for ((i=0; i < $FOLDERCNT-1; i++ ));  do
+    if grep $R ${FOLDERS[i]}/*.csv|grep -q ",OK,"; then
+      ALLFAILED=0
+    else
+      ALLOK=0
+    fi
     for ((j=i+1; j < $FOLDERCNT; j++ ));  do
       if grep $R ${FOLDERS[i]}/*.csv|grep -q "$OK" && grep $R ${FOLDERS[j]}/*.csv | grep -q "$OK"; then
         if [ -f "${FOLDERS[$i]}/coverage-$R.tar.bz2" ] && [ -f "${FOLDERS[$j]}/coverage-$R.tar.bz2" ]; then
@@ -64,11 +73,19 @@ for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUA
           echo "${FOLDERS[$i]}/coverage-$R.tar.bz2" or "${FOLDERS[$j]}/coverage-$R.tar.bz2" not found
         fi
       fi
+
+      if grep $R ${FOLDERS[j]}/*.csv|grep -q ",OK,"; then
+        ALLFAILED=0
+      else
+        ALLOK=0
+      fi
     done
   done
   if [[ $MAXDIFF -ge 0 ]]; then
     echo $R $MAXDIFF >> "tmp/nondet-max"
   fi
+  ((TOTALALLOK += $ALLOK))
+  ((TOTALALLFAILED += $ALLFAILED))
 done
 
 echo -n "***Overall nondeterminism: "
@@ -76,3 +93,4 @@ awk '{print $2}'  tmp/nondet-max |paste -sd+ |bc
 
 awk '{print $2}'  tmp/nondet-max | $SCRIPT_DIR/statistics.pl
 
+echo "Revisions where all the tests failed: $TOTALALLFAILED ; where all tests were OK: $TOTALALLOK"
