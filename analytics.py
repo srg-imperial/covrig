@@ -1,5 +1,6 @@
 from fabric.api import *
 import argparse
+import docker
 import subprocess
 
 # Analytics modules
@@ -154,7 +155,8 @@ def main():
       "squid"    : { "class": Squid, "revision": "fa4c8a3", "n": 1000 },
       "git"      : { "class": Git, "revision": "d7aced9", "n": 500 },
       }
-  try:
+  
+  if args.program in benchmarks:
     b = benchmarks[args.program]
     outputfolder = args.output if args.output else b["class"].__name__
     outputfile = b["class"].__name__
@@ -172,7 +174,7 @@ def main():
                                      args.image if not args.offline else None,
                                      b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
     container.go(outputfolder, outputfile)
-  except KeyError:
+  else:
     print "Unrecognized program name %s" % args.program
 
 if __name__== "__main__":

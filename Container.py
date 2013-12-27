@@ -1,6 +1,8 @@
 from __future__ import division
 from fabric.api import *
+from docker import Client
 import fnmatch
+import docker
 
 # Analytics modules
 from DataHandler import *
@@ -15,6 +17,8 @@ class Container(object):
         Covered = 3
 
     def __init__(self, _image, _user, _pwd):
+        self.client = Client(base_url='unix://var/run/docker.sock')
+
         self.image = _image
         self.user = _user
         self.pwd = _pwd
@@ -61,14 +65,16 @@ class Container(object):
 
     def sshd_up(self):
         """ set up sshd """
-        self.cnt_id = local('docker run -d -p 22 ' + self.image + 
-                            ' /usr/sbin/sshd -D', capture=True)
+        print(self.image)
+        self.cnt_id = self.client.create_container(self.image,
+                                                   command='/usr/sbin/sshd -D',
+                                                   ports=[22])
+        self.client.start(self.cnt_id, port_bindings={22: 60001})
         
     def set_ip(self):
         """ set container ID """
-        self.ip = local("docker inspect " + self.cnt_id + 
-                        " | grep IPAddress | awk '{print $2}'", capture=True)
-        self.ip = self.ip.strip(',"')
+        state = self.client.inspect_container(self.cnt_id)
+        self.ip = state['NetworkSettings']['IPAddress']
 
     def fabric_setup(self):
         """ set fabric env parameters """
@@ -111,8 +117,8 @@ class Container(object):
       if not self.offline:
         """ shutdown the current container """
         print '\n\nHalting the current container...\n\n'
-        local('docker stop ' + self.cnt_id)
-        local('docker rm ' + self.cnt_id)
+        self.client.stop(self.cnt_id)
+        self.client.remove_container(self.cnt_id)
 
 
     def get_commits(self, n, ending_at=''):
