@@ -4,7 +4,7 @@ SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 INITIAL_DIR="$(pwd)"
 IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
 SELECTACTUALCODEORTEST="awk 'BEGIN { FS=\",\" } ; { if (\$7 > 0 || \$8 > 0 || \$26 > 0) print \$1 }'"
-MAXNONDET=100
+MAXNONDET=500
 REVISIONS=250
 
 die () {
@@ -16,10 +16,18 @@ die () {
 [ $# -gt 2 ] || die "Usage: $0 [--only-ok] csvfile outputfolder1 outputfolder2 ... outputfoldern"
 
 OK=""
+LATEX=0
+VARPREFIX="program"
 while (( "$#" )); do
   case $1 in
     -o|--only-ok) #only consider revisions where the testsuite terminates with an OK status
       OK=",OK,"
+    ;;
+    -l|--latex)
+      LATEX=1
+    ;;
+    -p=*|--prefix=*)
+      VARPREFIX="${1#*=}"
     ;;
     *)
       break;
@@ -65,7 +73,9 @@ for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUA
           tar xjf "${FOLDERS[$j]}/coverage-$R.tar.bz2" -C tmp/nondet2 --wildcards '*total.info'
   
           CDIFF=$($SCRIPT_DIR/internal/nondetone.sh tmp/nondet1/total.info tmp/nondet2/total.info)
-          if [[ "$CDIFF" -gt $MAXDIFF && "$CDIFF" -lt $MAXNONDET ]]; then
+          #use a limit that makes sense for the difference in line count. this avoids artefacts created
+          #by test suites which kill the programs (lighttpd)
+          if [[ "$CDIFF" -gt $MAXDIFF && ( "$CDIFF" -lt $MAXNONDET ) ]]; then
             MAXDIFF=$CDIFF
           fi
           echo $CDIFF >> "tmp/nondet-$i-$j"
@@ -88,9 +98,30 @@ for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUA
   ((TOTALALLFAILED += $ALLFAILED))
 done
 
-echo -n "***Overall nondeterminism: "
-awk '{print $2}'  tmp/nondet-max |paste -sd+ |bc
+if [[ $LATEX -eq 1 ]]; then
+  N2DIGITS='egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1'
 
-awk '{print $2}'  tmp/nondet-max | $SCRIPT_DIR/statistics.pl
+  echo "\\newcommand{\\${VARPREFIX}RevsAllTestsFailed}[0]{$TOTALALLFAILED\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}RevsAllTestsOK}[0]{$TOTALALLOK\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}RevsTestsMixedResults}[0]{$((REVISIONS-TOTALALLFAILED-TOTALALLOK))\\xspace}"
+  # this is also defined by covsummary. we may use different data here, so keep it consistent
+  echo "\\renewcommand{\\${VARPREFIX}TransientTestErrs}[0]{$((REVISIONS-TOTALALLOK))\\xspace}"
 
-echo "Revisions where all the tests failed: $TOTALALLFAILED ; where all tests were OK: $TOTALALLOK"
+  NONDETMAX=$(awk '{print $2}' tmp/nondet-max | $SCRIPT_DIR/statistics.pl|egrep -o "max is [0-9.]+"|eval $N2DIGITS )
+  NONDETAVG=$(awk '{print $2}' tmp/nondet-max | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
+  NONDETMEDIAN=$(awk '{print $2}' tmp/nondet-max | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
+  NONDETMODE=$(awk '{print $2}' tmp/nondet-max | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
+  NONDETSTDEV=$(awk '{print $2}' tmp/nondet-max | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
+  echo "\\newcommand{\\${VARPREFIX}NonDetMax}[0]{$NONDETMAX\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}NonDetAverage}[0]{$NONDETAVG\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}NonDetMedian}[0]{$NONDETMEDIAN\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}NonDetMode}[0]{$NONDETMODE\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}NonDetStdev}[0]{$NONDETSTDEV\\xspace}"
+else
+  echo -n "***Overall nondeterminism: "
+  awk '{print $2}'  tmp/nondet-max |paste -sd+ |bc
+
+  awk '{print $2}'  tmp/nondet-max | $SCRIPT_DIR/statistics.pl
+
+  echo "Revisions where all the tests failed: $TOTALALLFAILED ; where all tests were OK: $TOTALALLOK"
+fi

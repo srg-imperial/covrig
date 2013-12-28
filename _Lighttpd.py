@@ -47,13 +47,10 @@ class Lighttpd(Container):
         if self.compileError == False: 
             with cd(self.path):
                 with settings(warn_only=True):
-                  for i in range(2):
+                  for i in range(5):
                     result = run(('timeout ' + str(self.timeout) +
                                  " make check CFLAGS='-fprofile-arcs -ftest-coverage -O0 " +
                                  "-lm -std=c99' LDFLAGS='-fprofile-arcs -ftest-coverage'"))
                     if result.failed:
                         self.maketestError = result.return_code
-                    # copy every gcno/gcda file in the src directory
-                    #run("find . -iname *.gcno | xargs -I '{}' cp {} " + self.source_path)
-                    #run("find . -iname *.gcda | xargs -I '{}' cp {} " + self.source_path)
                     
