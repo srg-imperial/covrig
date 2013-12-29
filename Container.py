@@ -19,7 +19,7 @@ class Container(object):
         self.user = _user
         self.pwd = _pwd
 
-        self.offline = _image == "offline"
+        self.offline = not _image
         # no errors yet :)
         self.compileError = False
         self.maketestError = False

@@ -129,7 +129,10 @@ class Analytics(object):
 
 def main():
   parser = argparse.ArgumentParser(prog='Analytics')
-  parser.add_argument('--offline', action="store_true",
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument('--image', default='baseline',
+                     help="specify docker image (default: %(default)s)")
+  group.add_argument('--offline', action="store_true",
       help="process the revisions reusing previous coverage information")
   parser.add_argument('--resume', action="store_true",
       help="resume processing from the last revision found in data file (e.g. data/<program>/<program>.csv)")
@@ -138,8 +141,6 @@ def main():
   parser.add_argument('program', help="program to analyse")
   parser.add_argument('revisions', type=int, nargs='?', default=0, help="number of revisions to process")
   args = parser.parse_args()
-
-  image = "offline" if args.offline else "baseline"
 
   benchmarks = {
       "lighttpd" : { "class": Lighttpd, "revision": "0d40b25", "n": 400 },
@@ -164,7 +165,9 @@ def main():
       lastrecord = lastrecord.split(',')
       if len(lastrecord):
         lastrev = lastrecord[0]
-    container = Analytics.run_custom(b["class"], image, b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
+    container = Analytics.run_custom(b["class"],
+                                     args.image if not args.offline else None,
+                                     b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
     container.go(outputfolder, outputfile)
   except KeyError:
     print "Unrecognized program name %s" % args.program
