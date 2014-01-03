@@ -13,6 +13,7 @@ from _Diffutils import *
 from _Binutils import *
 from _Findutils import *
 from _Dovecot import *
+from _Squid import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -150,6 +151,7 @@ def main():
       "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 6000 },
       "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
       "dovecot"  : { "class": Dovecot, "revision": "fbf5813", "n": 1000 },
+      "squid"    : { "class": Squid, "revision": "fa4c8a3", "n": 1000 },
       }
   try:
     b = benchmarks[args.program]
