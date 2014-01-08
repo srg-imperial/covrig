@@ -15,4 +15,4 @@ NOEXEC=$(grep 'noexec 1' tmpfixcov | wc -l)
 FULLYCOVERED=$(grep 'fullycovered 1' tmpfixcov | wc -l)
 
 echo "Looked at $FIXES fixes ($UNHANDLED unhandled): $COV lines covered, $NOTCOV lines not covered"
-echo "$NOEXEC fixes did not change/remove code, $FULLYCOVERED fixes were fully covered"
+echo "$NOEXEC fixes did not change/add code, $FULLYCOVERED fixes were fully covered"
