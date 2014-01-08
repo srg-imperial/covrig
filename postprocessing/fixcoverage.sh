@@ -2,7 +2,7 @@
 
 # script to determine wether bugs are in covered or uncovered code
 # first argument is the target git repository
-# second argument is a revision (sha of a revisions which introduced a bug)
+# second argument is a revision (sha of a revisions which have been determined to be a fix)
 # third argument is a folder which contains the coverage information for the revision
 # in the format coverage-<sha>.tar.bz2
 
@@ -62,10 +62,9 @@ declare -r git_new_file_regex="\+\+\+ b/(.*)"
 declare -r new_hunk_regex="@@.*\+([0-9]+),([0-9]+) @@"
 declare -r new_hunk_def_regex="@@.*\+([0-9]+) @@"
 
-PREVSHA=$( cd $REPO && git rev-parse $SHA~1 )
 bIFS=$IFS
 IFS=$'\n'
-DIFF=( $(cd $REPO && git diff -b -U0 $SHA $SHA~1) )
+DIFF=( $(cd $REPO && git diff -b -U0 $SHA~1 $SHA) )
 IFS=$bIFS
 
 TOTAL_NEW=0
@@ -97,7 +96,7 @@ for line in "${DIFF[@]}"; do
     let "LLINE = SLINE + CLINE"
     while [[ $i -lt $LLINE ]]; do
       if [[ $COVSTATUS -lt 3 ]]; then
-        is_covered "$CFILE" $i $COV $PREVSHA
+        is_covered "$CFILE" $i $COV $SHA
         COVSTATUS=$?
         if [[ $COVSTATUS -ge 3 ]]; then
           echo "$SHA revfail -"
