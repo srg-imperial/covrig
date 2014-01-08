@@ -60,3 +60,24 @@ To get the results, run
 ```
 postprocessing/nondet.sh data/Redis1/Redis.csv data/Redis1 data/Redis2 data/Redis3 data/Redis4 data/Redis5
 ```
+
+---
+
+Scenario: I have a list of revisions which fix bugs. How do I get more interesting information about them?
+
+Solution:  Run
+```
+./postprocessing/fixcoverage-multiple.sh repos/memcached/ bugs/bugs-memcached.simple data/Memcached/
+```
+The first argument is local clone of the target git repository, the second argument is a file with the list of revisions which fix bugs (one per line), the third argument is a folder which contains the results of the analytics.py script.
+The output looks like
+```
+Looked at 46 fixes (1 unhandled): 179 lines covered, 68 lines not covered
+4 fixes did not change/remove code, 28 fixes were fully covered
+```
+
+---
+
+Scenario: I have a list of revisions which introduce bugs. How do I get more interesting information about them?
+
+Solution: As before, but use the `postprocessing/faultcoverage-multiple.sh` script
