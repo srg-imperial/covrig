@@ -8,9 +8,10 @@ REVISIONS=250
 declare -r GPELOC=tmp/multipleeloc
 declare -r GPTLOC=tmp/multipletloc
 declare -r GPCOV=tmp/multipletcov
+declare -r CHURN=tmp/multiplechrn
 
 mkdir -p graphs latex
-rm -f $GPELOC $GPTLOC
+rm -f $GPELOC $GPTLOC $GPCOV $CHURN
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 for ((i=0;i<${#INPUTS[@]};++i)); do
@@ -25,10 +26,12 @@ for ((i=0;i<${#INPUTS[@]};++i)); do
     $SCRIPT_DIR/grapheloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/eloc${OUTPUTS[$i]}
     $SCRIPT_DIR/graphtloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/tloc${OUTPUTS[$i]}
     $SCRIPT_DIR/graphcoverage.sh tmp/outptmp_${OUTPUTS[$i]} graphs/covg${OUTPUTS[$i]}
+    $SCRIPT_DIR/graphchurn.sh tmp/outptmp_${OUTPUTS[$i]} graphs/chrn${OUTPUTS[$i]}
 
     $SCRIPT_DIR/grapheloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/eloc${OUTPUTS[$i]}" "$GPELOC"
     $SCRIPT_DIR/graphtloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/tloc${OUTPUTS[$i]}" "$GPTLOC"
     $SCRIPT_DIR/graphcoverage.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/covg${OUTPUTS[$i]}" "$GPCOV"
+    $SCRIPT_DIR/graphchurn.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/chrn${OUTPUTS[$i]}" "$CHURN"
     $SCRIPT_DIR/covsummary.sh --latex --prefix=${OUTPUTS[$i]} tmp/outptmp_${OUTPUTS[$i]} > latex/${OUTPUTS[$i]}.tex
   fi
 done
@@ -61,4 +64,13 @@ echo '!epstool --copy --bbox "coverage.1.eps" "coverage.eps"' >>multiplecov.gp
 echo '!epstopdf coverage.eps && mv coverage.pdf graphs/ && rm coverage.1.eps "coverage.eps"' >>multiplecov.gp
 gnuplot multiplecov.gp
 
-rm -f tmp/outptmp_* multiple?loc.gp multiplecov.gp
+echo 'set term postscript eps enhanced' >multiplechurn.gp
+echo 'set output "churn.1.eps"' >> multiplechurn.gp
+echo 'set multiplot layout 2, 3' >> multiplechurn.gp
+echo 'set tmargin 2' >> multiplechurn.gp
+egrep -v 'set term|set output|!eps' "$CHURN" >>multiplechurn.gp
+echo '!epstool --copy --bbox "churn.1.eps" "churn.eps"' >>multiplechurn.gp
+echo '!epstopdf churn.eps && mv churn.pdf graphs/ && rm churn.1.eps "churn.eps"' >>multiplechurn.gp
+gnuplot multiplechurn.gp
+
+rm -f tmp/outptmp_* multiple?loc.gp multiplecov.gp multiplechurn.gp
