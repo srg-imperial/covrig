@@ -9,9 +9,11 @@ declare -r GPELOC=tmp/multipleeloc
 declare -r GPTLOC=tmp/multipletloc
 declare -r GPCOV=tmp/multipletcov
 declare -r CHURN=tmp/multiplechrn
+declare -r ELTL=tmp/multipleeltl
+declare -r ELTLZO=tmp/multipleeltlzo
 
 mkdir -p graphs latex
-rm -f $GPELOC $GPTLOC $GPCOV $CHURN
+rm -f $GPELOC $GPTLOC $GPCOV $CHURN $ELTL $ELTLZO
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 for ((i=0;i<${#INPUTS[@]};++i)); do
@@ -25,11 +27,15 @@ for ((i=0;i<${#INPUTS[@]};++i)); do
     $SCRIPT_DIR/patchcoverage.sh tmp/outptmp_${OUTPUTS[$i]} graphs/patchcov${OUTPUTS[$i]}
     $SCRIPT_DIR/grapheloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/eloc${OUTPUTS[$i]}
     $SCRIPT_DIR/graphtloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/tloc${OUTPUTS[$i]}
+    $SCRIPT_DIR/grapheloctloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/eltl${OUTPUTS[$i]}
+    $SCRIPT_DIR/grapheloctloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/etzo${OUTPUTS[$i]} zeroone
     $SCRIPT_DIR/graphcoverage.sh tmp/outptmp_${OUTPUTS[$i]} graphs/covg${OUTPUTS[$i]}
     $SCRIPT_DIR/graphchurn.sh tmp/outptmp_${OUTPUTS[$i]} graphs/chrn${OUTPUTS[$i]}
 
     $SCRIPT_DIR/grapheloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/eloc${OUTPUTS[$i]}" "$GPELOC"
     $SCRIPT_DIR/graphtloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/tloc${OUTPUTS[$i]}" "$GPTLOC"
+    $SCRIPT_DIR/grapheloctloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/eltl${OUTPUTS[$i]} standard "$ELTL"
+    $SCRIPT_DIR/grapheloctloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/etzo${OUTPUTS[$i]} zeroone "$ELTLZO"
     $SCRIPT_DIR/graphcoverage.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/covg${OUTPUTS[$i]}" "$GPCOV"
     $SCRIPT_DIR/graphchurn.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/chrn${OUTPUTS[$i]}" "$CHURN"
     $SCRIPT_DIR/covsummary.sh --latex --prefix=${OUTPUTS[$i]} tmp/outptmp_${OUTPUTS[$i]} > latex/${OUTPUTS[$i]}.tex
@@ -73,4 +79,22 @@ echo '!epstool --copy --bbox "churn.1.eps" "churn.eps"' >>multiplechurn.gp
 echo '!epstopdf churn.eps && mv churn.pdf graphs/ && rm churn.1.eps "churn.eps"' >>multiplechurn.gp
 gnuplot multiplechurn.gp
 
-rm -f tmp/outptmp_* multiple?loc.gp multiplecov.gp multiplechurn.gp
+echo 'set term postscript eps enhanced' >multipleeltl.gp
+echo 'set output "eltl.1.eps"' >> multipleeltl.gp
+echo 'set multiplot layout 2, 3' >> multipleeltl.gp
+echo 'set tmargin 2' >> multipleeltl.gp
+egrep -v 'set term|set output|!eps' "$ELTL" >>multipleeltl.gp
+echo '!epstool --copy --bbox "eltl.1.eps" "eltl.eps"' >>multipleeltl.gp
+echo '!epstopdf eltl.eps && mv eltl.pdf graphs/ && rm eltl.1.eps "eltl.eps"' >>multipleeltl.gp
+gnuplot multipleeltl.gp
+
+echo 'set term postscript eps enhanced' >multipleeltlzo.gp
+echo 'set output "eltlzo.1.eps"' >> multipleeltlzo.gp
+echo 'set multiplot layout 2, 3' >> multipleeltlzo.gp
+echo 'set tmargin 2' >> multipleeltlzo.gp
+egrep -v 'set term|set output|!eps' "$ELTLZO" >>multipleeltlzo.gp
+echo '!epstool --copy --bbox "eltlzo.1.eps" "eltlzo.eps"' >>multipleeltlzo.gp
+echo '!epstopdf eltlzo.eps && mv eltlzo.pdf graphs/ && rm eltlzo.1.eps "eltlzo.eps"' >>multipleeltlzo.gp
+gnuplot multipleeltlzo.gp
+
+rm -f tmp/outptmp_* multiple?loc.gp multiplecov.gp multiplechurn.gp multipleeltl*.gp
