@@ -20,8 +20,10 @@ egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS=","; peloc=0; } ; { if (($7 > 0 |
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [[ $GRAPHTYPE == "standalone" ]]; then
   "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "Lines" "set size 0.8,0.8
-set title \"${OUTPUT:11}\"" $GRAPHTYPE
+set title \"${OUTPUT:11}\"
+set yrange [ 0 : ]" $GRAPHTYPE
 else
-  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "Lines" "set title \"${OUTPUT:11}\"" $GRAPHTYPE
+  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "Lines" "set yrange [ 0 : ]
+set title \"${OUTPUT:11}\"" $GRAPHTYPE
 fi
 #rm -f $DATAFILE
