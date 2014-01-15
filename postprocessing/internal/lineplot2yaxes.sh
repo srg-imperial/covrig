@@ -2,7 +2,7 @@
 
 INPUT=$1
 OUTPUT=$2
-XLABEL=${3:-Size}
+#XLABEL=${3:-Size}
 XLABEL=$(echo $XLABEL)
 YLABEL=${4:-Revisions}
 Y2LABEL=${4:-Revisions}
@@ -33,11 +33,11 @@ $CMD $ARGS >>$GRAPHTYPE << EOF
   set ytics nomirror
   set xrange [ 0 : ]
   set noxtics
-  #set nokey
+  set key left top
   $EXTRACMD
 
-  plot "$INPUT" using 2 lc rgb "#666666" t "", \
-       "$INPUT" using 3 lc rgb "#333333" t "" axes x1y2
+  plot "$INPUT" using 2 lc rgb "#4169E1" t "ELOC" w lines, \
+       "$INPUT" using 3 lc rgb "#B22222" t "TLOC" w lines axes x1y2
   
   !epstool --copy --bbox "$OUTPUT.1.eps" "$OUTPUT.eps"
   !epstopdf "$OUTPUT.eps" && rm "$OUTPUT.eps" "$OUTPUT.1.eps"

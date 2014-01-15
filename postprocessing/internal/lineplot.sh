@@ -2,7 +2,6 @@
 
 INPUT=$1
 OUTPUT=$2
-XLABEL=${3:-Size}
 XLABEL=$(echo $XLABEL)
 YLABEL=${4:-Revisions}
 EXTRACMD=$5
