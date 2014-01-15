@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-INPUTS=(data/Redis/Redis.csv data/Zeromq/Zeromq.csv data/Lighttpd/Lighttpd.csv data/Memcached/Memcached.csv data/Binutils/Binutils.csv)
-OUTPUTS=(redis zeromq lighttpd memcached binutils)
+INPUTS=(data/Redis/Redis.csv data/Zeromq/Zeromq.csv data/Lighttpd/Lighttpd.csv data/Memcached/Memcached.csv data/Binutils/Binutils.csv data/Git/Git.csv)
+OUTPUTS=(redis zeromq lighttpd memcached binutils git)
 
 REVISIONS=250
 
@@ -81,7 +81,7 @@ gnuplot multiplechurn.gp
 
 echo 'set term postscript eps enhanced' >multipleeltl.gp
 echo 'set output "eltl.1.eps"' >> multipleeltl.gp
-echo 'set multiplot layout 2, 3' >> multipleeltl.gp
+echo 'set multiplot layout 3, 2' >> multipleeltl.gp
 echo 'set tmargin 2' >> multipleeltl.gp
 egrep -v 'set term|set output|!eps' "$ELTL" >>multipleeltl.gp
 echo '!epstool --copy --bbox "eltl.1.eps" "eltl.eps"' >>multipleeltl.gp
@@ -90,7 +90,7 @@ gnuplot multipleeltl.gp
 
 echo 'set term postscript eps enhanced' >multipleeltlzo.gp
 echo 'set output "eltlzo.1.eps"' >> multipleeltlzo.gp
-echo 'set multiplot layout 2, 3' >> multipleeltlzo.gp
+echo 'set multiplot layout 3, 2' >> multipleeltlzo.gp
 echo 'set tmargin 2' >> multipleeltlzo.gp
 egrep -v 'set term|set output|!eps' "$ELTLZO" >>multipleeltlzo.gp
 echo '!epstool --copy --bbox "eltlzo.1.eps" "eltlzo.eps"' >>multipleeltlzo.gp
