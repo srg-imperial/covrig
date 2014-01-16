@@ -122,17 +122,22 @@ if [[ $LATEX -eq 1 ]]; then
 
   echo
 
-  egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk 'BEGIN { FS="," } ; { print $7+$8 }'|sort -n > tmp/patchcnt
-  PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
-  PATCHMEDIAN=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
-  PATCHMODE=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
-  PATCHSTDEV=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
-  echo "\\newcommand{\\${VARPREFIX}PatchAverage}[0]{$PATCHAVG\\xspace}"
-  echo "\\newcommand{\\${VARPREFIX}PatchMedian}[0]{$PATCHMEDIAN\\xspace}"
-  echo "\\newcommand{\\${VARPREFIX}PatchMode}[0]{$PATCHMODE\\xspace}"
-  echo "\\newcommand{\\${VARPREFIX}PatchStdev}[0]{$PATCHSTDEV\\xspace}"
-  
-  echo
+  STATVARNAMES=(Patch HunkZero eHunkZero HunkThree eHunkThree)
+  STATVARCOLS=(\$7+\$8 \$22 \$23 \$27 \$28) 
+
+  for i in 0 1 2 3 4; do
+    egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|sort -n > tmp/patchcnt
+    PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
+    PATCHMEDIAN=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
+    PATCHMODE=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
+    PATCHSTDEV=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{$PATCHSTDEV\\xspace}"
+    
+    echo
+  done
 
   declare -a BUCKETS
   BUCKETS[1]=0
