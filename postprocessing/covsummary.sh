@@ -77,22 +77,22 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}Timespan}[0]{$MOS\\xspace}"
 
   LASTSIZE=$(egrep -v "$IGNOREREVS" $1|tail -1 |awk 'BEGIN { FS="," } ; { print $2 }')
-  echo "\\newcommand{\\${VARPREFIX}Size}[0]{$LASTSIZE\\xspace}"
+  printf "\\\\newcommand{\\${VARPREFIX}Size}[0]{%'d\\\\xspace}\\n" $LASTSIZE
 
   LASTTSIZE=$(egrep -v "$IGNOREREVS" $1|tail -1|awk 'BEGIN { FS="," } ; { print $4 }')
-  echo "\\newcommand{\\${VARPREFIX}Tsize}[0]{$LASTTSIZE\\xspace}"
+  printf "\\\\newcommand{\\${VARPREFIX}Tsize}[0]{%'d\\\\xspace}\\n" $LASTSIZE
 
   FIRSTSIZE=$(egrep -v "$IGNOREREVS" $1|head -1|awk 'BEGIN { FS="," } ; { print $2 }')
   DELTAELOC=$(($LASTSIZE - $FIRSTSIZE))
-  echo "\\newcommand{\\${VARPREFIX}DeltaSize}[0]{$DELTAELOC\\xspace}"
+  printf "\\\\newcommand{\\${VARPREFIX}DeltaSize}[0]{%'d\\\\xspace}\\n" $DELTAELOC
 
   COVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7 }'|paste -sd+ |bc)
-  echo "\\newcommand{\\${VARPREFIX}CovLines}[0]{$COVLINES\\xspace}"
+  printf "\\\\newcommand{\\${VARPREFIX}CovLines}[0]{%'d\\\\xspace}\\n" $COVLINES
 
   UNCOVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $8 }'|paste -sd+ |bc)
-  echo "\\newcommand{\\${VARPREFIX}UncovLines}[0]{$UNCOVLINES\\xspace}"
-  
-  echo "\\newcommand{\\${VARPREFIX}PatchTotal}[0]{$((UNCOVLINES+COVLINES))\\xspace}"
+  printf "\\\\newcommand{\\${VARPREFIX}UncovLines}[0]{%'d\\\\xspace}\\n" $UNCOVLINES
+ 
+  printf "\\\\newcommand{\\${VARPREFIX}PatchTotal}[0]{%'d\\\\xspace}\\n" $((UNCOVLINES+COVLINES))
 
   TRANSIENTCOMPILEERRORS=$(egrep 'compileError|NoCoverage' $1|wc -l)
   echo "\\newcommand{\\${VARPREFIX}TransientCompErrs}[0]{$TRANSIENTCOMPILEERRORS\\xspace}"
@@ -118,7 +118,7 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}TestAndExecutableRevs}[0]{$TESTANDEXECUTABLE\\xspace}"
 
   REVISIONS=$(egrep -v "$IGNOREREVS" $1|wc -l)
-  echo "\\newcommand{\\${VARPREFIX}NoTestNoExecutableRevs}[0]{$(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}NoTestNoExecutableRevs}[0]{%'d\\xspace}" $(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))
 
   echo
 
@@ -168,6 +168,7 @@ if [[ $LATEX -eq 1 ]]; then
       PATCHCOVAVG=$(printf "%.0f\\%%" $(echo "$PATCHCOVAVG * 100"|bc))
       PATCHCOVMEDIAN=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS)
       PATCHCOVMEDIAN=$(printf "%.0f\\%%" $(echo "$PATCHCOVMEDIAN * 100"|bc))
+      #this will fail if the mode has multiple values
       PATCHCOVMODE=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS)
       PATCHCOVSTDEV=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT"|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS)
       PATCHCOVSTDEV=$(printf "%.0fpp" $(echo "$PATCHCOVSTDEV * 100"|bc))
@@ -255,7 +256,8 @@ else
   echo
   
   echo -n "+++Revisions affecting only test files: "
-  egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($24 == $26 && $26 > 0) print 1 }'|wc -l
+  #egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($24 == $26 && $26 > 0) print 1 }'|wc -l
+  egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 == 0 && $8 == 0 && $26 > 0) print 1 }'|wc -l
   echo
   
   echo -n "+++Revisions affecting only executable files: "
@@ -290,7 +292,7 @@ else
   do
     grep -B1 $R $1|awk 'BEGIN { FS="," } ; { print $3 }' | { read -r first; read -r second
       if [[ $first -gt $second ]]; then
-        echo $R >> tmp/summary
+        echo $R $(($first - $second)) >> tmp/summary
       fi
     }
   done
