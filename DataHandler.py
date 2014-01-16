@@ -19,6 +19,8 @@ class DataHandler(object):
         self.maketestErr = _collector.maketestError
         self.total_eloc = '0'
         self.covered_eloc = '0'
+        self.total_branches = '0'
+        self.covered_branches = '0'
         self.tsize = '0'
         self.hunks = '0'
         self.ehunks = '0'
@@ -44,6 +46,8 @@ class DataHandler(object):
         if self.compileErr == False and self.emptyCommit == False:
             self.total_eloc = _collector.total_eloc
             self.covered_eloc = _collector.covered_eloc
+            self.total_branches = _collector.total_branches
+            self.covered_branches = _collector.covered_branches
             # extract test suite size as sloc
             self.tsize = _collector.tsuite_size
             self.hunks = _collector.hunks
@@ -85,7 +89,7 @@ class DataHandler(object):
         data += self.prev_covered
         data += [self.timestamp, self.exitStatus, self.hunks, self.ehunks,
             self.changed_files, self.echanged_files, self.changed_test_files,
-            self.hunks3, self.ehunks3, self.merge]
+            self.hunks3, self.ehunks3, self.merge, self.total_branches, self.covered_branches]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
         if isfile('data/' + self.outputfolder + '/' + self.outputfile + '.csv'):
@@ -101,7 +105,7 @@ class DataHandler(object):
                   "author", "#addedlines", "#covlines", "#notcovlines",
                   "patchcoverage", "#covlinesprevpatches*", "time", "exit",
                   "hunks", "ehunks", "changed_files", "echanged_files",
-                  "changed_test_files", "hunks3", "ehunks3", "merge"]
+                  "changed_test_files", "hunks3", "ehunks3", "merge", "#br", "#brcov"]
                 a.writerow(header)
                 a.writerow(data)
 

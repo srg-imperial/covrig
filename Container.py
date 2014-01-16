@@ -43,6 +43,8 @@ class Container(object):
         self.merge = False
         self.total_eloc = 0
         self.covered_eloc = 0
+        self.total_branches = 0
+        self.covered_branches = 0
 
         self._gcovNameCache = set()
         self._gcovNoNameCache = set()
@@ -203,7 +205,7 @@ class Container(object):
     def rec_initial_coverage(self):
       assert not self.offline
       with self.omnicd(self.source_path):
-        run('lcov -c -i -d . -o base.info')
+        run('lcov --rc lcov_branch_coverage=1 -c -i -d . -o base.info')
 
     def make_test(self):
       assert not self.offline  
@@ -227,23 +229,29 @@ class Container(object):
       else:
         covdatadir = self.source_path
         with self.omnicd(covdatadir), settings(warn_only=True):
-          res = self.omnirun('lcov -c -d . -o test.info')
+          res = self.omnirun('lcov --rc lcov_branch_coverage=1 -c -d . -o test.info')
           if res.failed:
             return
-          run("lcov -a base.info -a test.info -o total.info")
+          run("lcov --rc lcov_branch_coverage=1 -a base.info -a test.info -o total.info")
           run('find -name "*.gcda"|xargs gcov', quiet=True)
 
       with self.omnicd(covdatadir), settings(warn_only=True):
         ignore = ' '.join(["'%s'" % p for p in self.tsuite_path])
-        self.omnirun('lcov -r total.info %s -o total.info' % ignore)
+        self.omnirun('lcov --rc lcov_branch_coverage=1 -r total.info %s -o total.info' % ignore)
         if hasattr(self, 'ignore_coverage_from'):
           ignore = ' '.join(["'%s'" % p for p in self.ignore_coverage_from])
-          self.omnirun('lcov -r total.info %s -o total.info' % ignore)
-        lines = self.omnirun("lcov --summary total.info 2>&1|tail -3|head -1|sed 's/.*(//' |egrep -o '[0-9]+'")
+          self.omnirun('lcov --rc lcov_branch_coverage=1 -r total.info %s -o total.info' % ignore)
+        lines = self.omnirun("lcov --rc lcov_branch_coverage=1 --summary total.info 2>&1|tail -3|head -1|sed 's/.*(//' |egrep -o '[0-9]+'")
         lines = lines.splitlines()
         if len(lines) == 2:
           self.covered_eloc = lines[0]
           self.total_eloc = lines[1]
+
+        branches = self.omnirun("lcov --rc lcov_branch_coverage=1 --summary total.info 2>&1|tail -1|sed 's/.*(//' |egrep -o '[0-9]+'")
+        branches = branches.splitlines()
+        if len(branches) == 2:
+          self.covered_branches = branches[0]
+          self.total_branches = branches[1]
 
     def has_coverage_information(self, filepath):
       if self.offline:
@@ -422,6 +430,8 @@ class Container(object):
             # fill overall coverage results and exit status
             c.covered_eloc = self.covered_eloc
             c.total_eloc = self.total_eloc
+            c.covered_branches = self.covered_branches
+            c.total_branches = self.total_branches
             c.compileError = self.compileError
             c.maketestError = self.maketestError
             if self.covered_eloc:
