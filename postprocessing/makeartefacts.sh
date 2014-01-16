@@ -43,8 +43,8 @@ for ((i=0;i<${#INPUTS[@]};++i)); do
 done
 
 #we only have bug coverage for memcached
-$SCRIPT_DIR/graphbugcoverage.sh repos/memcached/ bugs/bugs-memcached.simple data/Memcached/ graphs/bugcoveragememcached
-$SCRIPT_DIR/graphbugcoverage.sh repos/memcached/ bugs/bugs-memcached.simple data/Memcached/ graphs/fixcoveragememcached fix
+$SCRIPT_DIR/graphbugcoverage.sh repos/memcached/ bugs/fixes-memcached.simple data/Memcached/ graphs/bugcoveragememcached
+$SCRIPT_DIR/graphbugcoverage.sh repos/memcached/ bugs/fixes-memcached.simple data/Memcached/ graphs/fixcoveragememcached fix
 
 echo 'set term postscript eps enhanced' >multipleeloc.gp
 echo 'set output "eloc.1.eps"' >> multipleeloc.gp
