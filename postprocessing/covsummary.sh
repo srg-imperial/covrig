@@ -77,22 +77,22 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}Timespan}[0]{$MOS\\xspace}"
 
   LASTSIZE=$(egrep -v "$IGNOREREVS" $1|tail -1 |awk 'BEGIN { FS="," } ; { print $2 }')
-  printf "\\\\newcommand{\\${VARPREFIX}Size}[0]{%'d\\\\xspace}\\n" $LASTSIZE
+  printf "\\\\newcommand{\\\\${VARPREFIX}Size}[0]{%'d\\\\xspace}\\n" $LASTSIZE
 
   LASTTSIZE=$(egrep -v "$IGNOREREVS" $1|tail -1|awk 'BEGIN { FS="," } ; { print $4 }')
-  printf "\\\\newcommand{\\${VARPREFIX}Tsize}[0]{%'d\\\\xspace}\\n" $LASTSIZE
+  printf "\\\\newcommand{\\\\${VARPREFIX}Tsize}[0]{%'d\\\\xspace}\\n" $LASTTSIZE
 
   FIRSTSIZE=$(egrep -v "$IGNOREREVS" $1|head -1|awk 'BEGIN { FS="," } ; { print $2 }')
   DELTAELOC=$(($LASTSIZE - $FIRSTSIZE))
-  printf "\\\\newcommand{\\${VARPREFIX}DeltaSize}[0]{%'d\\\\xspace}\\n" $DELTAELOC
+  printf "\\\\newcommand{\\\\${VARPREFIX}DeltaSize}[0]{%'d\\\\xspace}\\n" $DELTAELOC
 
   COVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7 }'|paste -sd+ |bc)
-  printf "\\\\newcommand{\\${VARPREFIX}CovLines}[0]{%'d\\\\xspace}\\n" $COVLINES
+  printf "\\\\newcommand{\\\\${VARPREFIX}CovLines}[0]{%'d\\\\xspace}\\n" $COVLINES
 
   UNCOVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $8 }'|paste -sd+ |bc)
-  printf "\\\\newcommand{\\${VARPREFIX}UncovLines}[0]{%'d\\\\xspace}\\n" $UNCOVLINES
+  printf "\\\\newcommand{\\\\${VARPREFIX}UncovLines}[0]{%'d\\\\xspace}\\n" $UNCOVLINES
  
-  printf "\\\\newcommand{\\${VARPREFIX}PatchTotal}[0]{%'d\\\\xspace}\\n" $((UNCOVLINES+COVLINES))
+  printf "\\\\newcommand{\\\\${VARPREFIX}PatchTotal}[0]{%'d\\\\xspace}\\n" $((UNCOVLINES+COVLINES))
 
   TRANSIENTCOMPILEERRORS=$(egrep 'compileError|NoCoverage' $1|wc -l)
   echo "\\newcommand{\\${VARPREFIX}TransientCompErrs}[0]{$TRANSIENTCOMPILEERRORS\\xspace}"
@@ -118,7 +118,7 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}TestAndExecutableRevs}[0]{$TESTANDEXECUTABLE\\xspace}"
 
   REVISIONS=$(egrep -v "$IGNOREREVS" $1|wc -l)
-  echo "\\newcommand{\\${VARPREFIX}NoTestNoExecutableRevs}[0]{%'d\\xspace}" $(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))
+  printf "\\\\newcommand{\\\\${VARPREFIX}NoTestNoExecutableRevs}[0]{%'d\\\\xspace}" $(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))
 
   echo
 
