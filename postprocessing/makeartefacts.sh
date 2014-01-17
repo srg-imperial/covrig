@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-INPUTS=(data/Redis/Redis.csv data/Zeromq/Zeromq.csv data/Lighttpd/Lighttpd.csv data/Memcached/Memcached.csv data/Binutils/Binutils.csv data/Git/Git.csv)
-OUTPUTS=(redis zeromq lighttpd memcached binutils git)
+INPUTS=(data/Binutils/Binutils.csv data/Git/Git.csv data/Lighttpd/Lighttpd.csv data/Memcached/Memcached.csv data/Redis/Redis.csv data/Zeromq/Zeromq.csv)
+OUTPUTS=(binutils git lighttpd memcached redis zeromq)
 
 REVISIONS=250
 
