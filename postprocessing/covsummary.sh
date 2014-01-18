@@ -94,6 +94,11 @@ if [[ $LATEX -eq 1 ]]; then
  
   printf "\\\\newcommand{\\\\${VARPREFIX}PatchTotal}[0]{%'d\\\\xspace}\\n" $((UNCOVLINES+COVLINES))
 
+  INITIALCOVERAGE=$(grep -v '#' $1|head -1|awk 'BEGIN { FS="," } ; { print $3*100/$2}'|eval $N2DIGITS)
+  echo "\\newcommand{\\${VARPREFIX}InitialCoverage}[0]{$INITIALCOVERAGE\\xspace}"
+  FINALCOVERAGE=$(tail -1 $1|awk 'BEGIN { FS="," } ; { print $3*100/$2}'|eval $N2DIGITS)
+  echo "\\newcommand{\\${VARPREFIX}FinalCoverage}[0]{$FINALCOVERAGE\\xspace}"
+
   TRANSIENTCOMPILEERRORS=$(egrep 'compileError|NoCoverage' $1|wc -l)
   echo "\\newcommand{\\${VARPREFIX}TransientCompErrs}[0]{$TRANSIENTCOMPILEERRORS\\xspace}"
 
@@ -122,20 +127,27 @@ if [[ $LATEX -eq 1 ]]; then
 
   echo
 
-  STATVARNAMES=(Patch HunkZero eHunkZero HunkThree eHunkThree)
-  STATVARCOLS=(\$7+\$8 \$22 \$23 \$27 \$28) 
+  STATVARNAMES=(Patch HunkZero eHunkZero HunkThree eHunkThree Coverage)
+  STATVARCOLS=(\$7+\$8 \$22 \$23 \$27 \$28 \$3*100/\$2) 
+  STATVARPERCENT=(no no no no no yes)
 
-  for i in 0 1 2 3 4; do
+  for ((i=0;i<${#STATVARNAMES[@]};++i)); do
     egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|sort -n > tmp/patchcnt
     PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
     PATCHMEDIAN=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
     PATCHMODE=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
     PATCHSTDEV=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
-    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\xspace}"
-    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\xspace}"
-    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\xspace}"
-    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{$PATCHSTDEV\\xspace}"
-    
+    if [[ ${STATVARPERCENT[$i]} == "no" ]]; then
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\xspace}"
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\xspace}"
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\xspace}"
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{$PATCHSTDEV\\xspace}"
+    else
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\%\\xspace}"
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\%\\xspace}"
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\%\\xspace}"
+      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{${PATCHSTDEV}pp\\xspace}"
+    fi
     echo
   done
 
