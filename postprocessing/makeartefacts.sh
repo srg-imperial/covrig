@@ -49,6 +49,9 @@ $SCRIPT_DIR/graphbugcoverage.sh repos/memcached/ bugs/fixes-memcached.simple dat
 $SCRIPT_DIR/graphbugcoverage.sh repos/zeromq/ bugs/fixes-zeromq.simple data/Zeromq/ graphs/bugcoveragezeromq
 $SCRIPT_DIR/graphbugcoverage.sh repos/zeromq/ bugs/fixes-zeromq.simple data/Zeromq/ graphs/fixcoveragezeromq fix
 
+$SCRIPT_DIR/graphbugcoverage.sh repos/redis/ bugs/fixes-redis.simple data/Redis/ graphs/bugcoverageredis
+$SCRIPT_DIR/graphbugcoverage.sh repos/redis/ bugs/fixes-redis.simple data/Redis/ graphs/fixcoverageredis fix
+
 echo 'set term postscript eps enhanced' >multipleeloc.gp
 echo 'set output "eloc.1.eps"' >> multipleeloc.gp
 echo 'set multiplot layout 2, 3' >> multipleeloc.gp
