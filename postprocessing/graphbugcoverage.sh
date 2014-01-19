@@ -44,7 +44,7 @@ EOF
 
 gnuplot << EOF
   set term postscript eps enhanced
-  set output "$OUTPUT.linelevel.1.eps"
+  set output "$OUTPUT-linelevel.1.eps"
   set style data histograms
   set style histogram rowstacked
   set style fill pattern 3 border
@@ -56,8 +56,8 @@ gnuplot << EOF
 
   plot "$TMPDATA" u 2 ls 1 t "Covered", "" u 3 ls 1 t "Not covered"
 
-  !epstool --copy --bbox "$OUTPUT.linelevel.1.eps" "$OUTPUT.linelevel.eps"
-  !epstopdf "$OUTPUT.linelevel.eps" && rm "$OUTPUT.linelevel.eps" "$OUTPUT.linelevel.1.eps"
+  !epstool --copy --bbox "$OUTPUT-linelevel.1.eps" "$OUTPUT-linelevel.eps"
+  !epstopdf "$OUTPUT-linelevel.eps" && rm "$OUTPUT-linelevel.eps" "$OUTPUT-linelevel.1.eps"
 EOF
 
 

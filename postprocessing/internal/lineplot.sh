@@ -27,12 +27,12 @@ $CMD $ARGS >>$GRAPHTYPE << EOF
   $XLABELCMD
   set ylabel "$YLABEL"
   set xrange [ 0 : ]
-  #set yrange [ 0 : ]
   set noxtics
-  #set nokey
+  set style line 1 lc rgb '#0060ad' lt 1 lw 1 pt 1 ps 0.6
+
   $EXTRACMD
 
-  plot "$INPUT" using 2 lc rgb "#666666" t ""
+  plot "$INPUT" using 2 w points ls 1 notitle
   
   !epstool --copy --bbox "$OUTPUT.1.eps" "$OUTPUT.eps"
   !epstopdf "$OUTPUT.eps" && rm "$OUTPUT.eps" "$OUTPUT.1.eps"

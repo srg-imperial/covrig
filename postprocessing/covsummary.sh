@@ -127,27 +127,35 @@ if [[ $LATEX -eq 1 ]]; then
 
   echo
 
-  STATVARNAMES=(Patch HunkZero eHunkZero HunkThree eHunkThree Coverage)
-  STATVARCOLS=(\$7+\$8 \$22 \$23 \$27 \$28 \$3*100/\$2) 
-  STATVARPERCENT=(no no no no no yes)
+  STATVARNAMES=(Patch HunkZero eHunkZero HunkThree eHunkThree)
+  STATVARCOLS=(\$7+\$8 \$22 \$23 \$27 \$28)
 
+  #NB: these are computed only for revisions which add executable code
   for ((i=0;i<${#STATVARNAMES[@]};++i)); do
     egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|sort -n > tmp/patchcnt
     PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
     PATCHMEDIAN=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
     PATCHMODE=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
     PATCHSTDEV=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
-    if [[ ${STATVARPERCENT[$i]} == "no" ]]; then
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{$PATCHSTDEV\\xspace}"
-    else
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\%\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\%\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\%\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{${PATCHSTDEV}pp\\xspace}"
-    fi
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{$PATCHSTDEV\\xspace}"
+    echo
+  done
+
+  STATVARNAMES=(Coverage BranchCoverage)
+  STATVARCOLS=(\$3*100/\$2 \$31*100/\$30)
+  for ((i=0;i<${#STATVARNAMES[@]};++i)); do
+    egrep -v "$IGNOREREVS" $1 | awk "BEGIN { FS=\",\" } ; { if (NF < 30 || \$30 > 0) { print ${STATVARCOLS[$i]} } else { print 0 } }"|sort -n > tmp/patchcnt
+    PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
+    PATCHMEDIAN=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
+    PATCHMODE=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mode is [0-9.]+"|eval $N2DIGITS )
+    PATCHSTDEV=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Average}[0]{$PATCHAVG\\%\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Median}[0]{$PATCHMEDIAN\\%\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Mode}[0]{$PATCHMODE\\%\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}${STATVARNAMES[$i]}Stdev}[0]{${PATCHSTDEV}pp\\xspace}"
     echo
   done
 

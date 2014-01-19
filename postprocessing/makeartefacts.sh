@@ -7,13 +7,14 @@ REVISIONS=250
 
 declare -r GPELOC=tmp/multipleeloc
 declare -r GPTLOC=tmp/multipletloc
-declare -r GPCOV=tmp/multipletcov
+declare -r GPCOV=tmp/multiplecov
+declare -r GPCOV2=tmp/multiplecov-lb
 declare -r CHURN=tmp/multiplechrn
 declare -r ELTL=tmp/multipleeltl
 declare -r ELTLZO=tmp/multipleeltlzo
 
 mkdir -p graphs latex
-rm -f $GPELOC $GPTLOC $GPCOV $CHURN $ELTL $ELTLZO
+rm -f $GPELOC $GPTLOC $GPCOV $GPCOV2 $CHURN $ELTL $ELTLZO
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 for ((i=0;i<${#INPUTS[@]};++i)); do
@@ -77,6 +78,15 @@ echo 'set tmargin 2' >> multiplecov.gp
 egrep -v 'set term|set output|!eps' "$GPCOV" >>multiplecov.gp
 echo '!epstool --copy --bbox "coverage.1.eps" "coverage.eps"' >>multiplecov.gp
 echo '!epstopdf coverage.eps && mv coverage.pdf graphs/ && rm coverage.1.eps "coverage.eps"' >>multiplecov.gp
+gnuplot multiplecov.gp
+
+echo 'set term postscript eps enhanced' >multiplecov.gp
+echo 'set output "coverage-lb.1.eps"' >> multiplecov.gp
+echo 'set multiplot layout 2, 3' >> multiplecov.gp
+echo 'set tmargin 2' >> multiplecov.gp
+egrep -v 'set term|set output|!eps' "$GPCOV2" >>multiplecov.gp
+echo '!epstool --copy --bbox "coverage-lb.1.eps" "coverage-lb.eps"' >>multiplecov.gp
+echo '!epstopdf coverage-lb.eps && mv coverage-lb.pdf graphs/ && rm coverage-lb.1.eps "coverage-lb.eps"' >>multiplecov.gp
 gnuplot multiplecov.gp
 
 echo 'set term postscript eps enhanced' >multiplechurn.gp
