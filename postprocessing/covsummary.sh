@@ -86,14 +86,6 @@ if [[ $LATEX -eq 1 ]]; then
   DELTAELOC=$(($LASTSIZE - $FIRSTSIZE))
   printf "\\\\newcommand{\\\\${VARPREFIX}DeltaSize}[0]{%'d\\\\xspace}\\n" $DELTAELOC
 
-  COVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $7 }'|paste -sd+ |bc)
-  printf "\\\\newcommand{\\\\${VARPREFIX}CovLines}[0]{%'d\\\\xspace}\\n" $COVLINES
-
-  UNCOVLINES=$(egrep -v "$IGNOREREVS" $1 |awk 'BEGIN { FS="," } ; { print $8 }'|paste -sd+ |bc)
-  printf "\\\\newcommand{\\\\${VARPREFIX}UncovLines}[0]{%'d\\\\xspace}\\n" $UNCOVLINES
- 
-  printf "\\\\newcommand{\\\\${VARPREFIX}PatchTotal}[0]{%'d\\\\xspace}\\n" $((UNCOVLINES+COVLINES))
-
   INITIALCOVERAGE=$(grep -v '#' $1|head -1|awk 'BEGIN { FS="," } ; { print $3*100/$2}'|eval $N2DIGITS)
   echo "\\newcommand{\\${VARPREFIX}InitialCoverage}[0]{$INITIALCOVERAGE\\xspace}"
   FINALCOVERAGE=$(tail -1 $1|awk 'BEGIN { FS="," } ; { print $3*100/$2}'|eval $N2DIGITS)
@@ -123,14 +115,24 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}TestAndExecutableRevs}[0]{$TESTANDEXECUTABLE\\xspace}"
 
   REVISIONS=$(egrep -v "$IGNOREREVS" $1|wc -l)
-  printf "\\\\newcommand{\\\\${VARPREFIX}NoTestNoExecutableRevs}[0]{%'d\\\\xspace}" $(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))
+  printf "\\\\newcommand{\\\\${VARPREFIX}NoTestNoExecutableRevs}[0]{%'d\\\\xspace}\\n" $(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))
 
   echo
 
-  STATVARNAMES=(Patch HunkZero eHunkZero HunkThree eHunkThree)
-  STATVARCOLS=(\$7+\$8 \$22 \$23 \$27 \$28)
+  #CovLines and UncovLines refer to patch lines only
+  STATVARNAMES=(CovLines UncovLines PatchTotal eHunkZeroTotal eHunkThreeTotal)
+  STATVARCOLS=(\$7 \$8 \$7+\$8 \$23 \$28)
+  for ((i=0;i<${#STATVARNAMES[@]};++i)); do
+    TOTAL=$(egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE| awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|paste -sd+ |bc)
+    printf "\\\\newcommand{\\\\${VARPREFIX}${STATVARNAMES[$i]}}[0]{%'d\\\\xspace}\\n" $TOTAL
+  done
+
+  echo
 
   #NB: these are computed only for revisions which add executable code
+  STATVARNAMES=(Patch eHunkZero eHunkThree)
+  STATVARCOLS=(\$7+\$8 \$23 \$28)
+
   for ((i=0;i<${#STATVARNAMES[@]};++i)); do
     egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|sort -n > tmp/patchcnt
     PATCHAVG=$(cat tmp/patchcnt | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
@@ -212,12 +214,13 @@ if [[ $LATEX -eq 1 ]]; then
     echo
   done
 
+  TOTALPATCHELOC=$(grep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $7 + $8 }'|paste -sd+ |bc)
   LATENT1=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $10 }'|paste -sd+ |bc)
-  LATENT1=$(echo "scale=1; $LATENT1*100/($COVLINES+$UNCOVLINES)"|bc)"\\%"
+  LATENT1=$(echo "scale=1; $LATENT1*100/($TOTALPATCHELOC)"|bc)"\\%"
   LATENT5=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $14 }'|paste -sd+ |bc)
-  LATENT5=$(echo "scale=1; $LATENT5*100/($COVLINES+$UNCOVLINES)"|bc)"\\%"
+  LATENT5=$(echo "scale=1; $LATENT5*100/($TOTALPATCHELOC)"|bc)"\\%"
   LATENT10=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $19 }'|paste -sd+ |bc)
-  LATENT10=$(echo "scale=1; $LATENT10*100/($COVLINES+$UNCOVLINES)"|bc)"\\%"
+  LATENT10=$(echo "scale=1; $LATENT10*100/($TOTALPATCHELOC)"|bc)"\\%"
 
   echo "\\newcommand{\\${VARPREFIX}LatentOne}[0]{$LATENT1\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}LatentFive}[0]{$LATENT5\\xspace}"
