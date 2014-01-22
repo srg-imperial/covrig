@@ -14,9 +14,17 @@ TMPDATA="revcoverage.pp"
 for SHA in $(sort -u $REVISIONS); do
   if [[ "X$BUGORFIX" = "Xbug" ]]; then
     $SCRIPT_DIR/faultcoverage.sh $REPO $SHA $COVDIR > tmpfixcov
-  else
+  elif [[ "X$BUGORFIX" = "Xfix" ]]; then
     $SCRIPT_DIR/fixcoverage.sh $REPO $SHA $COVDIR > tmpfixcov
+  elif [[ "X$BUGORFIX" = "Xbugbr" ]]; then
+    $SCRIPT_DIR/faultcoverage-br.sh $REPO $SHA $COVDIR > tmpfixcov
+  elif [[ "X$BUGORFIX" = "Xfixbr" ]]; then
+    $SCRIPT_DIR/fixcoverage-br.sh $REPO $SHA $COVDIR > tmpfixcov
+  else
+    echo "Unknown graph type: $BUGORFIX"
+    exit 1
   fi
+
   COV=$(grep '1$' tmpfixcov | wc -l)
   NOTCOV=$(grep '0$' tmpfixcov | wc -l)
   if [[ "$COV" -gt 0 || "$NOTCOV" -gt 0 ]]; then

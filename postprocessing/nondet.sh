@@ -105,7 +105,7 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}RevsAllTestsOK}[0]{$TOTALALLOK\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}RevsTestsMixedResults}[0]{$((REVISIONS-TOTALALLFAILED-TOTALALLOK))\\xspace}"
   # this is also defined by covsummary. we may use different data here, so keep it consistent
-  echo "\\renewcommand{\\${VARPREFIX}TransientTestErrs}[0]{$((REVISIONS-TOTALALLOK))\\xspace}"
+  echo "%\\renewcommand{\\${VARPREFIX}TransientTestErrs}[0]{$((REVISIONS-TOTALALLOK))\\xspace}"
 
   NONDETMAX=$(awk '{print $2}' tmp/nondet-max | $SCRIPT_DIR/statistics.pl|egrep -o "max is [0-9.]+"|eval $N2DIGITS )
   NONDETAVG=$(awk '{print $2}' tmp/nondet-max | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )

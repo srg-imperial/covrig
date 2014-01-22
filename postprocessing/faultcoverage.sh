@@ -33,7 +33,7 @@ NOEXEC=1
 
 rm -rf faultcov-tmp
 mkdir -p tmp
-(cd $REPO && git diff -b -U0 $SHA~1 $SHA) > tmp/diff
+(cd $REPO && git diff -b -U0 $SHA $SHA~1) > tmp/diff
 
 while read line; do
   SLINE=0

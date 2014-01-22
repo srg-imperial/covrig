@@ -119,9 +119,16 @@ if [[ $LATEX -eq 1 ]]; then
 
   echo
 
+  ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $7+$8 }'|egrep '^1$'|wc -l)
+  echo "\\newcommand{\\${VARPREFIX}OneELOCPatches}[0]{$ONELINES\\xspace}"
+  ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $28 }'|egrep '^1$'|wc -l)
+  echo "\\newcommand{\\${VARPREFIX}OneeHunkPatches}[0]{$ONELINES\\xspace}"
+  ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $25 }'|egrep '^1$'|wc -l)
+  echo "\\newcommand{\\${VARPREFIX}OneeFilePatches}[0]{$ONELINES\\xspace}"
+
   #CovLines and UncovLines refer to patch lines only
-  STATVARNAMES=(CovLines UncovLines PatchTotal eHunkZeroTotal eHunkThreeTotal)
-  STATVARCOLS=(\$7 \$8 \$7+\$8 \$23 \$28)
+  STATVARNAMES=(CovLines UncovLines PatchTotal eHunkZeroTotal eHunkThreeTotal eFileTotal)
+  STATVARCOLS=(\$7 \$8 \$7+\$8 \$23 \$28 \$25)
   for ((i=0;i<${#STATVARNAMES[@]};++i)); do
     TOTAL=$(egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE| awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|paste -sd+ |bc)
     printf "\\\\newcommand{\\\\${VARPREFIX}${STATVARNAMES[$i]}}[0]{%'d\\\\xspace}\\n" $TOTAL
@@ -130,8 +137,8 @@ if [[ $LATEX -eq 1 ]]; then
   echo
 
   #NB: these are computed only for revisions which add executable code
-  STATVARNAMES=(Patch eHunkZero eHunkThree)
-  STATVARCOLS=(\$7+\$8 \$23 \$28)
+  STATVARNAMES=(Patch eHunkZero eHunkThree eFile)
+  STATVARCOLS=(\$7+\$8 \$23 \$28 \$25)
 
   for ((i=0;i<${#STATVARNAMES[@]};++i)); do
     egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE | awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|sort -n > tmp/patchcnt
