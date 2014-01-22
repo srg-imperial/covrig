@@ -121,9 +121,9 @@ if [[ $LATEX -eq 1 ]]; then
 
   ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $7+$8 }'|egrep '^1$'|wc -l)
   echo "\\newcommand{\\${VARPREFIX}OneELOCPatches}[0]{$ONELINES\\xspace}"
-  ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $28 }'|egrep '^1$'|wc -l)
+  ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7+$8 > 0) print $28 }'|egrep '^1$'|wc -l)
   echo "\\newcommand{\\${VARPREFIX}OneeHunkPatches}[0]{$ONELINES\\xspace}"
-  ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $25 }'|egrep '^1$'|wc -l)
+  ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7+$8 > 0) print $25 }'|egrep '^1$'|wc -l)
   echo "\\newcommand{\\${VARPREFIX}OneeFilePatches}[0]{$ONELINES\\xspace}"
 
   #CovLines and UncovLines refer to patch lines only

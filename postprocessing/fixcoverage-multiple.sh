@@ -28,17 +28,26 @@ done
 [ $# -gt 2 ] || die "Usage: $0 <repo> <revfile> <covfolder> [csv] [line|br]"
 
 BR=${5:-line}
+N2DIGITS='egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1'
 
->tmpfixcov
+mkdir -p tmp
+>tmp/fixcov
+>tmp/fixcovstats
 OE=0
 OT=0
 TE=0
 
 for SHA in $(sort -u $2); do
   if [[ "X$BR" == "Xbr" ]]; then
-    $SCRIPT_DIR/fixcoverage-br.sh $1 $SHA $3 >> tmpfixcov
+    $SCRIPT_DIR/fixcoverage-br.sh $1 $SHA $3 | tee tmp/fixcovone >> tmp/fixcov
   else
-    $SCRIPT_DIR/fixcoverage.sh $1 $SHA $3 >> tmpfixcov
+    $SCRIPT_DIR/fixcoverage.sh $1 $SHA $3 | tee tmp/fixcovone >> tmp/fixcov
+  fi
+  
+  if ! grep -q revfail tmp/fixcovone ; then
+    COV=$(grep '1$' tmp/fixcovone | wc -l)
+    NOTCOV=$(grep '0$' tmp/fixcovone | wc -l)
+    echo $COV $((COV+NOTCOV)) >> tmp/fixcovstats
   fi
 
   if [[ $# -gt 3 ]]; then
@@ -52,11 +61,19 @@ for SHA in $(sort -u $2); do
 done
 
 FIXES=$(sort -u $2 | wc -l)
-UNHANDLED=$(grep revfail tmpfixcov | wc -l)
-COV=$(grep '1$' tmpfixcov | wc -l)
-NOTCOV=$(grep '0$' tmpfixcov | wc -l)
-NOEXEC=$(grep 'noexec 1' tmpfixcov | wc -l)
-FULLYCOVERED=$(grep 'fullycovered 1' tmpfixcov | wc -l)
+UNHANDLED=$(grep revfail tmp/fixcov | wc -l)
+COV=$(grep '1$' tmp/fixcov | wc -l)
+NOTCOV=$(grep '0$' tmp/fixcov | wc -l)
+NOEXEC=$(grep 'noexec 1' tmp/fixcov | wc -l)
+FULLYCOVERED=$(grep 'fullycovered 1' tmp/fixcov | wc -l)
+
+SIZEAVG=$(awk '{ print $2 }' tmp/fixcovstats|sort -n | $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
+SIZEMEDIAN=$(awk '{ print $2 }' tmp/fixcovstats |sort -n| $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
+SIZESTDEV=$(awk '{ print $2 }' tmp/fixcovstats |sort -n| $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
+
+COVAVG=$(awk '{ if ($2 > 0) print $1*100/$2 }' tmp/fixcovstats |sort -n| $SCRIPT_DIR/statistics.pl|egrep -o "mean is [0-9.]+"|eval $N2DIGITS )
+COVMEDIAN=$(awk '{ if ($2 > 0) print $1*100/$2 }' tmp/fixcovstats |sort -n| $SCRIPT_DIR/statistics.pl|egrep -o "median is [0-9.]+"|eval $N2DIGITS )
+COVSTDEV=$(awk '{ if ($2 > 0) print $1*100/$2 }' tmp/fixcovstats |sort -n| $SCRIPT_DIR/statistics.pl|egrep -o "stdev is [0-9.]+"|eval $N2DIGITS )
 
 if  [[ $LATEX -eq 1 ]]; then
   if [[ "X$BR" != "Xbr" ]]; then
@@ -76,6 +93,14 @@ if  [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}FixesTotal${TYPREFIX}}[0]{$((COV+NOTCOV))\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}Coverage}[0]{$(echo "scale=1; $COV*100/($COV+$NOTCOV)"|bc)\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}FixesFully${TYPREFIX}Covered}[0]{$((FULLYCOVERED-NOEXEC))\\xspace}"
+  echo
+  echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}CoverageAverage}[0]{$COVAVG\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}CoverageMedian}[0]{$COVMEDIAN\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}CoverageStdev}[0]{$COVSTDEV\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}SizeAverage}[0]{$SIZEAVG\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}SizeMedian}[0]{$SIZEMEDIAN\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}SizeStdev}[0]{$SIZESTDEV\\xspace}"
+  echo
 else
   echo "Looked at $FIXES fixes ($UNHANDLED unhandled): $COV lines covered, $NOTCOV lines not covered"
   echo "$NOEXEC fixes did not change/add code, $FULLYCOVERED fixes were fully covered"
