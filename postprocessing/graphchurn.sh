@@ -15,9 +15,7 @@ mkdir -p tmp
 #OUTPUT should be graphs/...
 DATAFILE="tmp/${OUTPUT:7}"
 
-#egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS=","; peloc=0; } ; { if (($7 > 0 || $8 > 0) && peloc > 0) print NR,2*($7+$8)-($2-peloc); peloc=$2; }'|sort -n -k 2 >$DATAFILE
-#egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS=","; peloc=0; } ; { if (($7 > 0 || $8 > 0) && peloc > 0) print NR,2*($7+$8)-($2-peloc); peloc=$2; }'|sort -n -k 2 >$DATAFILE
-egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS=","; peloc=0; } ; { if (($7 > 0 || $8 > 0)) print NR,$25; }'|sort -n -k 2 >$DATAFILE
+egrep -v "$IGNOREREVS" $INPUT |awk 'BEGIN { FS=","; peloc=0; } ; { if (($7 > 0 || $8 > 0) && peloc > 0) print NR,2*($7+$8)-($2-peloc); peloc=$2; }' >$DATAFILE
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [[ $GRAPHTYPE == "standalone" ]]; then
