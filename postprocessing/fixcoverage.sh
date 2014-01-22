@@ -6,6 +6,9 @@
 # third argument is a folder which contains the coverage information for the revision
 # in the format coverage-<sha>.tar.bz2
 
+#NB: we can also use the data in the csv output for fixes (but not for bugs)
+#so the same approch (getting the coverage from the lcov info) was used for consistency
+
 die () {
     echo >&2 "$@"
     exit 1

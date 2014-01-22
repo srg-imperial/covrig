@@ -29,6 +29,26 @@ done
 
 BR=${5:-line}
 N2DIGITS='egrep -o "[0-9]+([.][0-9][0-9]?)?" |head -1'
+IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
+
+#XXX: patches with more than 127 ELOC are not supported
+latent_coverage () {
+  local REV=$1
+  local CSVFILE=$2
+  local cov=0
+  if grep -A 1 $REV $CSVFILE | tail -1| egrep -q -v $IGNOREREVS; then
+    cov=$(grep -A 1 $REV $CSVFILE | tail -1 |awk 'BEGIN { FS="," } ; { print $10}')
+  fi
+  for (( i=1 ; i<10; i++ )); do
+    if grep -A $((i+1)) $REV $CSVFILE | tail -1| egrep -q -v $IGNOREREVS; then
+      LATENT=$(grep -A $((i+1)) $REV $CSVFILE | tail -1 |awk 'BEGIN { FS="," } ; { print $'$((i+10))'-$'$((i+9))'}')
+      if [[ $LATENT -lt 0 ]]; then exit; fi
+      ((cov += LATENT))
+    fi
+  done
+
+  return $cov
+}
 
 mkdir -p tmp
 >tmp/fixcov
@@ -36,6 +56,7 @@ mkdir -p tmp
 OE=0
 OT=0
 TE=0
+LATENTCOV=0
 
 for SHA in $(sort -u $2); do
   if [[ "X$BR" == "Xbr" ]]; then
@@ -48,6 +69,8 @@ for SHA in $(sort -u $2); do
     COV=$(grep '1$' tmp/fixcovone | wc -l)
     NOTCOV=$(grep '0$' tmp/fixcovone | wc -l)
     echo $COV $((COV+NOTCOV)) >> tmp/fixcovstats
+    latent_coverage $SHA "$4"
+    ((LATENTCOV += $?))
   fi
 
   if [[ $# -gt 3 ]]; then
@@ -81,6 +104,7 @@ if  [[ $LATEX -eq 1 ]]; then
     #this is the same for line/branch. output it once
     echo "\\newcommand{\\${VARPREFIX}Bugs}[0]{$((FIXES-UNHANDLED))\\xspace}"
     echo "\\newcommand{\\${VARPREFIX}FixesWithoutCode}[0]{$NOEXEC\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}FixesLatentLineCoverage}[0]{$LATENTCOV\\xspace}"
     if [[ $# -gt 3 ]]; then
       echo "\\newcommand{\\${VARPREFIX}FixesOnlyTests}[0]{$OT\\xspace}"
       echo "\\newcommand{\\${VARPREFIX}FixesOnlyCode}[0]{$OE\\xspace}"
