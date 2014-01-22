@@ -34,8 +34,8 @@ $CMD $ARGS >>$GRAPHTYPE << EOF
   set xrange [ 0 : ]
   set noxtics
   set key left top
-  set style line 1 lc rgb '#0060ad' lt 1 lw 2 pt 1 ps 1
-  set style line 2 lc rgb '#dd181f' lt 2 lw 1 pt 2 ps 1
+  set style line 1 lc rgb '#00B5E5' lt 1 lw 2 pt 1 ps 1
+  set style line 2 lc rgb '#CB2027' lt 2 lw 1 pt 2 ps 1
   $EXTRACMD
 
   plot "$INPUT" using 2 ls 1 t "Code" w lines, \

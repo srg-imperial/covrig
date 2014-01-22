@@ -28,7 +28,7 @@ $CMD $ARGS >>$GRAPHTYPE << EOF
   set ylabel "$YLABEL"
   set xrange [ 0 : ]
   set noxtics
-  set style line 1 lc rgb '#0060ad' lt 1 lw 1 pt 1 ps 0.6
+  set style line 1 lc rgb '#00B5E5' lt 1 lw 1 pt 1 ps 0.6
 
   $EXTRACMD
 
