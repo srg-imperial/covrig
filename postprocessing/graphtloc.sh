@@ -22,7 +22,7 @@ if [[ $GRAPHTYPE == "standalone" ]]; then
   "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "" "TLOC" "set size 0.8,0.8
 set title \"${OUTPUT:11}\"" $GRAPHTYPE
 else
-  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "" "TLOC" "set title \"${OUTPUT:11}\"" $GRAPHTYPE
+  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "" "TLOC" "set title \"${OUTPUT:11}\" offset 0,-0.6" $GRAPHTYPE
 fi
 
 #rm -f $DATAFILE

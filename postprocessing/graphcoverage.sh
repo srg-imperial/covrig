@@ -26,9 +26,9 @@ set yrange [ 0 : 100 ]" $GRAPHTYPE
 set title \"${OUTPUT:11}\"
 set yrange [ 0 : 100 ]" $GRAPHTYPE
 else
-  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "Coverage" "set title \"${OUTPUT:11}\"
+  "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "Coverage" "set title \"${OUTPUT:11}\" offset 0,-0.6
 set yrange [ 0 : 100 ]" $GRAPHTYPE
-  "$SCRIPT_DIR/internal/pointplot2.sh" $DATAFILE "$OUTPUT-lb" "Revision" "Coverage" "set title \"${OUTPUT:11}\"
+  "$SCRIPT_DIR/internal/pointplot2.sh" $DATAFILE "$OUTPUT-lb" "Revision" "Coverage" "set title \"${OUTPUT:11}\" offset 0,-0.6
 set yrange [ 0 : 100 ]" $GRAPHTYPE-lb
 fi
 #rm -f $DATAFILE

@@ -31,10 +31,15 @@ $CMD $ARGS >>$GRAPHTYPE << EOF
   set key left top
   set style line 1 lc rgb '#00B5E5' lt 1 lw 1 pt 1 ps 0.5
   set style line 2 lc rgb '#CB2027' lt 2 lw 1 pt 2 ps 0.5
+
+  set style line 3 lc rgb '#00B5E5' lt 1 lw 1.5 pt 1 ps 1
+  set style line 4 lc rgb '#CB2027' lt 2 lw 1.5 pt 2 ps 1
   $EXTRACMD
 
-  plot "$INPUT" using 2 t "Line cov" w points ls 1, \
-       ""       using 3 t "Br cov"   w points ls 2
+  plot "$INPUT" using 2 notitle w points ls 1, \
+       ""       using 3 notitle w points ls 2, \
+       -1       t "Line cov" w points ls 3, \
+       -1       t "Branch cov" w points ls 4
   
   !epstool --copy --bbox "$OUTPUT.1.eps" "$OUTPUT.eps"
   !epstopdf "$OUTPUT.eps" && rm "$OUTPUT.eps" "$OUTPUT.1.eps"

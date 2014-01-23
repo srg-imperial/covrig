@@ -24,6 +24,6 @@ set title \"${OUTPUT:11}\"
 set yrange [ 0 : 600 ]" $GRAPHTYPE
 else
   "$SCRIPT_DIR/internal/lineplot.sh" $DATAFILE "$OUTPUT" "Revision" "Lines" "set yrange [ 0 : 600 ]
-set title \"${OUTPUT:11}\"" $GRAPHTYPE
+set title \"${OUTPUT:11}\" offset 0,-0.6" $GRAPHTYPE
 fi
 #rm -f $DATAFILE

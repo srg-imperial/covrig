@@ -31,6 +31,6 @@ set yrange [ 0 : ]
 set y2label \"Test\"" $GRAPHTYPE
 else
   "$SCRIPT_DIR/internal/lineplot2yaxes.sh" $DATAFILE "$OUTPUT" "" "Code" "set yrange [ 0 : ]
-set title \"${OUTPUT:11}\"
+set title \"${OUTPUT:11}\" offset 0,-0.6
 set y2label \"Test\"" $GRAPHTYPE
 fi
