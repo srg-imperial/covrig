@@ -114,6 +114,11 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}OnlyExecutableRevs}[0]{$ONLYEXECUTABLE\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}TestAndExecutableRevs}[0]{$TESTANDEXECUTABLE\\xspace}"
 
+
+  FULLYCOVERED=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 > 0 && $8 == 0) print 1 }'|wc -l)
+  FULLYCOVERED=$(echo "scale=1 ; $FULLYCOVERED*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
+  echo "\\newcommand{\\${VARPREFIX}FullyCoveredPercent}[0]{$FULLYCOVERED\\%\\xspace}"
+
   REVISIONS=$(egrep -v "$IGNOREREVS" $1|wc -l)
   printf "\\\\newcommand{\\\\${VARPREFIX}NoTestNoExecutableRevs}[0]{%'d\\\\xspace}\\n" $(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))
 

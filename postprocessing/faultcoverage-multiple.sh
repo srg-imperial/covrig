@@ -88,12 +88,13 @@ if  [[ $LATEX -eq 1 ]]; then
     echo "\\newcommand{\\${VARPREFIX}BugsWithoutBranches}[0]{$NOEXEC\\xspace}"
   fi
   echo "\\newcommand{\\${VARPREFIX}BugsTotal${TYPREFIX}}[0]{$((COV+NOTCOV))\\xspace}"
-  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}Coverage}[0]{$(echo "scale=1; $COV*100/($COV+$NOTCOV)"|bc)\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}Coverage}[0]{$(echo "scale=1; $COV*100/($COV+$NOTCOV)"|bc)\\%\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}BugsFully${TYPREFIX}Covered}[0]{$((FULLYCOVERED-NOEXEC))\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}BugsFully${TYPREFIX}CoveredPercent}[0]{$(echo "scale=1 ; ($FULLYCOVERED-$NOEXEC)*100/($FIXES-$UNHANDLED)" |bc)\\%\\xspace}"
   echo
-  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}CoverageAverage}[0]{$COVAVG\\xspace}"
-  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}CoverageMedian}[0]{$COVMEDIAN\\xspace}"
-  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}CoverageStdev}[0]{$COVSTDEV\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}CoverageAverage}[0]{$COVAVG\\%\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}CoverageMedian}[0]{$COVMEDIAN\\%\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}CoverageStdev}[0]{${COVSTDEV}pp\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}SizeAverage}[0]{$SIZEAVG\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}SizeMedian}[0]{$SIZEMEDIAN\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}Bug${TYPREFIX}SizeStdev}[0]{$SIZESTDEV\\xspace}"
