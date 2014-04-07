@@ -152,6 +152,7 @@ def main():
       "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
       "dovecot"  : { "class": Dovecot, "revision": "fbf5813", "n": 1000 },
       "squid"    : { "class": Squid, "revision": "fa4c8a3", "n": 1000 },
+      "git"      : { "class": Git, "revision": "d7aced9", "n": 500 },
       }
   try:
     b = benchmarks[args.program]

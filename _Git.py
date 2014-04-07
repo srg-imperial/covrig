@@ -11,17 +11,22 @@ class Git(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        self.path = '/home/git'
-        self.source_path = '/home/git'
-        self.tsuite_path = ('/home/git/t', '/home/git/test-*')
-        # set timeout (in seconds) for the test suite to run
-        self.timeout = 7200
+        if (self.offline):
+            self.path = local("realpath 'repos/git'", capture=True)
+        else:
+            self.path = '/home/git'
+            self.source_path = '/home/git'
+            # set timeout (in seconds) for the test suite to run
+            self.timeout = 7200
+        
+        self.tsuite_path = ('t', 'test-*')
+        self.ignore_coverage_from = ('/usr/include/*', )
 
     def compile(self):
         """ compile Git """
         with cd(self.path):
            with settings(warn_only=True):
-               result = run(('make configure && ./configure && make -j4 coverage-compile'))
+               result = run("make configure && ./configure && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile")
                if result.failed:
                    self.compileError = True
 
@@ -32,7 +37,6 @@ class Git(Container):
         if self.compileError == False: 
             with cd(self.path):
                 with settings(warn_only=True):
-                    result = run(("timeout " + str(self.timeout) + 
-                                  " make coverage"))
+                    result = run("timeout " + str(self.timeout) + " make coverage")
                     if result.failed:
                         self.maketestError = result.return_code
