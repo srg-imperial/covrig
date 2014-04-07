@@ -102,7 +102,7 @@ if  [[ $LATEX -eq 1 ]]; then
   if [[ "X$BR" != "Xbr" ]]; then
     TYPREFIX=Line
     #this is the same for line/branch. output it once
-    echo "\\newcommand{\\${VARPREFIX}Bugs}[0]{$((FIXES-UNHANDLED))\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}Fixes}[0]{$((FIXES-UNHANDLED-NOEXEC))\\xspace}"
     echo "\\newcommand{\\${VARPREFIX}FixesWithoutCode}[0]{$NOEXEC\\xspace}"
     echo "\\newcommand{\\${VARPREFIX}FixesLatentLineCoverage}[0]{$LATENTCOV\\xspace}"
     if [[ $# -gt 3 ]]; then

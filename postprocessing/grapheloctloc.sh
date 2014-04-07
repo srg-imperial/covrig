@@ -27,10 +27,12 @@ SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [[ $GRAPHTYPE == "standalone" ]]; then
   "$SCRIPT_DIR/internal/lineplot2yaxes.sh" $DATAFILE "$OUTPUT" "" "Code" "set size 0.8,0.8
 set title \"${OUTPUT:11}\"
-set yrange [ 0 : ]
-set y2label \"Test\"" $GRAPHTYPE
+set yrange [ 0 : 250 ]
+set y2label \"Test\"
+" $GRAPHTYPE
 else
-  "$SCRIPT_DIR/internal/lineplot2yaxes.sh" $DATAFILE "$OUTPUT" "" "Code" "set yrange [ 0 : ]
+  "$SCRIPT_DIR/internal/lineplot2yaxes.sh" $DATAFILE "$OUTPUT" "" "Code" "set yrange [ 0 : 250 ]
 set title \"${OUTPUT:11}\" offset 0,-0.6
-set y2label \"Test\"" $GRAPHTYPE
+set y2label \"Test\"
+" $GRAPHTYPE
 fi

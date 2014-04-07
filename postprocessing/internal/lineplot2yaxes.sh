@@ -30,7 +30,7 @@ $CMD $ARGS >>$GRAPHTYPE << EOF
   set ylabel "$YLABEL"
   set y2label "$Y2LABEL"
   set y2tics nomirror
-  set ytics nomirror
+  set ytics nomirror 50
   set xrange [ 0 : ]
   set noxtics
   set key left top

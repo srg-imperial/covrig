@@ -53,6 +53,7 @@ rm -f tmp/nondet-*
 ACTUALREVS=$($SCRIPT_DIR/internal/goodtobad.sh $REVFILE $REVISIONS)
 TOTALALLOK=0
 TOTALALLFAILED=0
+TOTALCONTRIB=0
 
 for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUALCODEORTEST); do
   MAXDIFF=-1
@@ -94,6 +95,9 @@ for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUA
   if [[ $MAXDIFF -ge 0 ]]; then
     echo $R $MAXDIFF >> "tmp/nondet-max"
   fi
+  if [[ $MAXDIFF -gt 0 ]]; then
+    ((TOTALCONTRIB += 1))
+  fi
   ((TOTALALLOK += $ALLOK))
   ((TOTALALLFAILED += $ALLFAILED))
 done
@@ -117,6 +121,7 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}NonDetMedian}[0]{$NONDETMEDIAN\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}NonDetMode}[0]{$NONDETMODE\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}NonDetStdev}[0]{$NONDETSTDEV\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}NonDetCount}[0]{$TOTALCONTRIB\\xspace}"
 else
   echo -n "***Overall nondeterminism: "
   awk '{print $2}'  tmp/nondet-max |paste -sd+ |bc

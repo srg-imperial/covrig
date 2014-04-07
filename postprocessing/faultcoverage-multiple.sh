@@ -46,6 +46,13 @@ for SHA in $(sort -u $2); do
     COV=$(grep '1$' tmp/faultcovone | wc -l)
     NOTCOV=$(grep '0$' tmp/faultcovone | wc -l)
     echo $COV $((COV+NOTCOV)) >> tmp/faultcovstats
+    if ! grep -q 'noexec 1' tmp/faultcovone; then
+      if [[ $COV -eq 0 && $NOTCOV -eq 0 ]]; then
+        cat tmp/faultcovone
+        echo "WTF"
+        exit 1
+      fi
+    fi
   fi
 
   if [[ $# -gt 3 ]]; then
@@ -77,6 +84,7 @@ COVSTDEV=$(awk '{ if ($2 > 0) print $1*100/$2 }' tmp/faultcovstats |sort -n| $SC
 if  [[ $LATEX -eq 1 ]]; then
   if [[ "X$BR" != "Xbr" ]]; then
     TYPREFIX=Line
+    echo "\\newcommand{\\${VARPREFIX}Bugs}[0]{$((FIXES-UNHANDLED-NOEXEC))\\xspace}"
     echo "\\newcommand{\\${VARPREFIX}BugsWithoutCode}[0]{$NOEXEC\\xspace}"
     if [[ $# -gt 3 ]]; then
       echo "\\newcommand{\\${VARPREFIX}BugsOnlyTests}[0]{$OT\\xspace}"

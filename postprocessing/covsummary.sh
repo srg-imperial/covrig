@@ -87,9 +87,9 @@ if [[ $LATEX -eq 1 ]]; then
   printf "\\\\newcommand{\\\\${VARPREFIX}DeltaSize}[0]{%'d\\\\xspace}\\n" $DELTAELOC
 
   INITIALCOVERAGE=$(grep -v '#' $1|head -1|awk 'BEGIN { FS="," } ; { print $3*100/$2}'|eval $N2DIGITS)
-  echo "\\newcommand{\\${VARPREFIX}InitialCoverage}[0]{$INITIALCOVERAGE\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}InitialCoverage}[0]{$INITIALCOVERAGE\\%\\xspace}"
   FINALCOVERAGE=$(tail -1 $1|awk 'BEGIN { FS="," } ; { print $3*100/$2}'|eval $N2DIGITS)
-  echo "\\newcommand{\\${VARPREFIX}FinalCoverage}[0]{$FINALCOVERAGE\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}FinalCoverage}[0]{$FINALCOVERAGE\\%\\xspace}"
 
   TRANSIENTCOMPILEERRORS=$(egrep 'compileError|NoCoverage' $1|wc -l)
   echo "\\newcommand{\\${VARPREFIX}TransientCompErrs}[0]{$TRANSIENTCOMPILEERRORS\\xspace}"
@@ -113,23 +113,24 @@ if [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}OnlyTestRevs}[0]{$ONLYTEST\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}OnlyExecutableRevs}[0]{$ONLYEXECUTABLE\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}TestAndExecutableRevs}[0]{$TESTANDEXECUTABLE\\xspace}"
-
-
-  FULLYCOVERED=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 > 0 && $8 == 0) print 1 }'|wc -l)
-  FULLYCOVERED=$(echo "scale=1 ; $FULLYCOVERED*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
-  echo "\\newcommand{\\${VARPREFIX}FullyCoveredPercent}[0]{$FULLYCOVERED\\%\\xspace}"
-
   REVISIONS=$(egrep -v "$IGNOREREVS" $1|wc -l)
   printf "\\\\newcommand{\\\\${VARPREFIX}NoTestNoExecutableRevs}[0]{%'d\\\\xspace}\\n" $(($REVISIONS-$ONLYEXECUTABLE-$ONLYTEST-$TESTANDEXECUTABLE))
 
   echo
 
+  FULLYCOVERED=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 > 0 && $8 == 0) print 1 }'|wc -l)
+  FULLYCOVERED=$(echo "scale=1 ; $FULLYCOVERED*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
+  echo "\\newcommand{\\${VARPREFIX}FullyCoveredPercent}[0]{$FULLYCOVERED\\%\\xspace}"
+
   ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $7+$8 }'|egrep '^1$'|wc -l)
-  echo "\\newcommand{\\${VARPREFIX}OneELOCPatches}[0]{$ONELINES\\xspace}"
+  ONELINES=$(echo "scale=1 ; $ONELINES*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
+  echo "\\newcommand{\\${VARPREFIX}OneELOCPatches}[0]{$ONELINES\\%\\xspace}"
   ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7+$8 > 0) print $28 }'|egrep '^1$'|wc -l)
-  echo "\\newcommand{\\${VARPREFIX}OneeHunkPatches}[0]{$ONELINES\\xspace}"
+  ONELINES=$(echo "scale=1 ; $ONELINES*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
+  echo "\\newcommand{\\${VARPREFIX}OneeHunkPatches}[0]{$ONELINES\\%\\xspace}"
   ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7+$8 > 0) print $25 }'|egrep '^1$'|wc -l)
-  echo "\\newcommand{\\${VARPREFIX}OneeFilePatches}[0]{$ONELINES\\xspace}"
+  ONELINES=$(echo "scale=1 ; $ONELINES*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
+  echo "\\newcommand{\\${VARPREFIX}OneeFilePatches}[0]{$ONELINES\\%\\xspace}"
 
   #CovLines and UncovLines refer to patch lines only
   STATVARNAMES=(CovLines UncovLines PatchTotal eHunkZeroTotal eHunkThreeTotal eFileTotal)
@@ -138,6 +139,7 @@ if [[ $LATEX -eq 1 ]]; then
     TOTAL=$(egrep -v "$IGNOREREVS" $1 |eval $SELECTACTUALCODE| awk "BEGIN { FS=\",\" } ; { print ${STATVARCOLS[$i]} }"|paste -sd+ |bc)
     printf "\\\\newcommand{\\\\${VARPREFIX}${STATVARNAMES[$i]}}[0]{%'d\\\\xspace}\\n" $TOTAL
   done
+  
 
   echo
 
@@ -226,7 +228,37 @@ if [[ $LATEX -eq 1 ]]; then
     echo
   done
 
+  BUCKETS[0]=0
+  BUCKETS[1]=10
+  BUCKETS[2]=100
+  BUCKETS[3]=100000
+
+  #LaTeX doesn't allow digits in command names
+  declare -a BUCKETNAMES
+  BUCKETNAMES[0]="Zero"
+  BUCKETNAMES[1]="Ten"
+  BUCKETNAMES[2]="Hundred"
+  BUCKETNAMES[3]="NA"
+  for BUCKETIDX in 0 1 2; do
+    AWKSCRIPT="BEGIN { FS=\",\" ; cov = 0 ; total = 0; entries = 0 } ; {
+                if (\$7+\$8 >  ${BUCKETS[$BUCKETIDX]} &&
+                    \$7+\$8 <= ${BUCKETS[$((BUCKETIDX+1))]}) {
+                  cov += \$7 ; total += \$7+\$8 ; entries += 1
+                }
+              } ;
+              END { if (entries == 0) { print 0, N/A } else { printf \"%d %.1f\\n\", entries, cov*100/total } }"
+    BUCKETENTRIES=$(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT" | wc -l);
+    OUTPUT=( $(egrep -v "$IGNOREREVS" $1 |awk "$AWKSCRIPT") )
+    BUCKETENTRIES=${OUTPUT[0]}
+    BUCKETCOVERAGE=${OUTPUT[1]}
+    echo "\\newcommand{\\${VARPREFIX}OverallPatchCovEntries${BUCKETNAMES[$BUCKETIDX]}}[0]{$BUCKETENTRIES\\xspace}"
+    echo "\\newcommand{\\${VARPREFIX}OverallPatchCov${BUCKETNAMES[$BUCKETIDX]}}[0]{$BUCKETCOVERAGE\\%\\xspace}"
+    echo
+  done
+
   TOTALPATCHELOC=$(grep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $7 + $8 }'|paste -sd+ |bc)
+  OVERALLCOV=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $7 }'|paste -sd+ |bc)
+  OVERALLCOV=$(echo "scale=1; $OVERALLCOV*100/($TOTALPATCHELOC)"|bc)"\\%"
   LATENT1=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $10 }'|paste -sd+ |bc)
   LATENT1=$(echo "scale=1; $LATENT1*100/($TOTALPATCHELOC)"|bc)"\\%"
   LATENT5=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $14 }'|paste -sd+ |bc)
@@ -234,6 +266,7 @@ if [[ $LATEX -eq 1 ]]; then
   LATENT10=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $19 }'|paste -sd+ |bc)
   LATENT10=$(echo "scale=1; $LATENT10*100/($TOTALPATCHELOC)"|bc)"\\%"
 
+  echo "\\newcommand{\\${VARPREFIX}OverallPatchCoverage}[0]{$OVERALLCOV\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}LatentOne}[0]{$LATENT1\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}LatentFive}[0]{$LATENT5\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}LatentTen}[0]{$LATENT10\\xspace}"

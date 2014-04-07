@@ -12,9 +12,10 @@ declare -r GPCOV2=tmp/multiplecov-lb
 declare -r CHURN=tmp/multiplechrn
 declare -r ELTL=tmp/multipleeltl
 declare -r ELTLZO=tmp/multipleeltlzo
+declare -r PCS=tmp/patchcovstacked
 
 mkdir -p graphs latex
-rm -f $GPELOC $GPTLOC $GPCOV $GPCOV2 $CHURN $ELTL $ELTLZO
+rm -f $GPELOC $GPTLOC $GPCOV $GPCOV2 $CHURN $ELTL $ELTLZO $PCH $PCS
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 for ((i=0;i<${#INPUTS[@]};++i)); do
@@ -32,6 +33,7 @@ for ((i=0;i<${#INPUTS[@]};++i)); do
     $SCRIPT_DIR/grapheloctloc.sh tmp/outptmp_${OUTPUTS[$i]} graphs/etzo${OUTPUTS[$i]} zeroone
     $SCRIPT_DIR/graphcoverage.sh tmp/outptmp_${OUTPUTS[$i]} graphs/covg${OUTPUTS[$i]}
     $SCRIPT_DIR/graphchurn.sh tmp/outptmp_${OUTPUTS[$i]} graphs/chrn${OUTPUTS[$i]}
+    $SCRIPT_DIR/graphpatchcoverage.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/pchg${OUTPUTS[$i]}" >>$PCS
 
     $SCRIPT_DIR/grapheloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/eloc${OUTPUTS[$i]}" "$GPELOC"
     $SCRIPT_DIR/graphtloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/tloc${OUTPUTS[$i]}" "$GPTLOC"
@@ -51,7 +53,7 @@ egrep -v 'set term|set output|!eps' "$GPELOC" >>multipleeloc.gp
 echo '!epstool --copy --bbox "eloc.1.eps" "eloc.eps"' >>multipleeloc.gp
 echo '!epstopdf eloc.eps && mv eloc.pdf graphs/ && rm eloc.1.eps "eloc.eps"' >>multipleeloc.gp
 gnuplot multipleeloc.gp
-
+#
 echo 'set term postscript eps enhanced' >multipletloc.gp
 echo 'set output "tloc.1.eps"' >> multipletloc.gp
 echo 'set multiplot layout 2, 3' >> multipletloc.gp
@@ -60,7 +62,7 @@ egrep -v 'set term|set output|!eps' "$GPTLOC" >>multipletloc.gp
 echo '!epstool --copy --bbox "tloc.1.eps" "tloc.eps"' >>multipletloc.gp
 echo '!epstopdf tloc.eps && mv tloc.pdf graphs/ && rm tloc.1.eps "tloc.eps"' >>multipletloc.gp
 gnuplot multipletloc.gp
-
+#
 echo 'set term postscript eps enhanced' >multiplecov.gp
 echo 'set output "coverage.1.eps"' >> multiplecov.gp
 echo 'set multiplot layout 2, 3' >> multiplecov.gp
@@ -87,7 +89,7 @@ egrep -v 'set term|set output|!eps' "$CHURN" >>multiplechurn.gp
 echo '!epstool --copy --bbox "churn.1.eps" "churn.eps"' >>multiplechurn.gp
 echo '!epstopdf churn.eps && mv churn.pdf graphs/ && rm churn.1.eps "churn.eps"' >>multiplechurn.gp
 gnuplot multiplechurn.gp
-
+#
 echo 'set term postscript eps enhanced' >multipleeltl.gp
 echo 'set output "eltl.1.eps"' >> multipleeltl.gp
 echo 'set multiplot layout 3, 2' >> multipleeltl.gp
@@ -96,7 +98,7 @@ egrep -v 'set term|set output|!eps' "$ELTL" >>multipleeltl.gp
 echo '!epstool --copy --bbox "eltl.1.eps" "eltl.eps"' >>multipleeltl.gp
 echo '!epstopdf eltl.eps && mv eltl.pdf graphs/ && rm eltl.1.eps "eltl.eps"' >>multipleeltl.gp
 gnuplot multipleeltl.gp
-
+#
 echo 'set term postscript eps enhanced' >multipleeltlzo.gp
 echo 'set output "eltlzo.1.eps"' >> multipleeltlzo.gp
 echo 'set multiplot layout 3, 2' >> multipleeltlzo.gp
@@ -105,5 +107,28 @@ egrep -v 'set term|set output|!eps' "$ELTLZO" >>multipleeltlzo.gp
 echo '!epstool --copy --bbox "eltlzo.1.eps" "eltlzo.eps"' >>multipleeltlzo.gp
 echo '!epstopdf eltlzo.eps && mv eltlzo.pdf graphs/ && rm eltlzo.1.eps "eltlzo.eps"' >>multipleeltlzo.gp
 gnuplot multipleeltlzo.gp
+
+gnuplot << EOF
+set term postscript eps enhanced
+set output "patchcovstack.1.eps"
+set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
+set border 3 front linetype -1 linewidth 1.000
+set key outside right top vertical Left reverse noenhanced autotitles nobox
+set style data histogram
+set style histogram rowstacked
+set style fill solid 1.00 border -1
+set style line 1 lt 1 lc rgb "#BC2222"
+set style line 2 lt 1 lc rgb "#FFB90F"
+set style line 3 lt 1 lc rgb "#CAFF70"
+set style line 4 lt 1 lc rgb "#4D9B00"
+
+set boxwidth 0.7 relative
+
+plot "$PCS" u 2 t "[0%,     25%]" ls 1, '' u 3 t "(25%,   50%]" ls 2, '' u 4 t "(50%,   75%]" ls 3, '' u 5:xticlabels(1) t "(75%, 100%]" ls 4
+
+!epstool --copy --bbox "patchcovstack.1.eps" "patchcovstack.eps"
+!epstopdf "patchcovstack.eps" && mv patchcovstack.pdf graphs/ && rm "patchcovstack.eps" "patchcovstack.1.eps"
+EOF
+
 
 rm -f tmp/outptmp_* multiple?loc.gp multiplecov.gp multiplechurn.gp multipleeltl*.gp
