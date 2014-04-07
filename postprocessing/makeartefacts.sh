@@ -135,5 +135,7 @@ plot "$PCS" u 2 t "[0%,     25%]" ls 1, '' u 3 t "(25%,   50%]" ls 2, '' u 4 t "
 !epstopdf "patchcovstack.eps" && mv patchcovstack.pdf graphs/ && rm "patchcovstack.eps" "patchcovstack.1.eps"
 EOF
 
-
 rm -f tmp/outptmp_* multiple?loc.gp multiplecov.gp multiplechurn.gp multipleeltl*.gp
+
+echo Getting bug and fix data...
+./postprocessing/bugdata.sh >/dev/null
