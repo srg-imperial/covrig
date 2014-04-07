@@ -17,6 +17,11 @@ declare -r PCS=tmp/patchcovstacked
 mkdir -p graphs latex
 rm -f $GPELOC $GPTLOC $GPCOV $GPCOV2 $CHURN $ELTL $ELTLZO $PCH $PCS
 
+if [ ! -d data ]; then
+  echo 'data folder must exist before running this script.'
+  exit
+fi
+
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 for ((i=0;i<${#INPUTS[@]};++i)); do
   if [ -f ${INPUTS[$i]} ]; then
