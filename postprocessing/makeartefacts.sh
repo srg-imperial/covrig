@@ -13,9 +13,10 @@ declare -r CHURN=tmp/multiplechrn
 declare -r ELTL=tmp/multipleeltl
 declare -r ELTLZO=tmp/multipleeltlzo
 declare -r PCS=tmp/patchcovstacked
+declare -r PTS=tmp/patchtypestacked
 
 mkdir -p graphs latex
-rm -f $GPELOC $GPTLOC $GPCOV $GPCOV2 $CHURN $ELTL $ELTLZO $PCH $PCS
+rm -f $GPELOC $GPTLOC $GPCOV $GPCOV2 $CHURN $ELTL $ELTLZO $PCH $PCS $PTS
 
 if [ ! -d data ]; then
   echo 'data folder must exist before running this script.'
@@ -39,6 +40,7 @@ for ((i=0;i<${#INPUTS[@]};++i)); do
     $SCRIPT_DIR/graphcoverage.sh tmp/outptmp_${OUTPUTS[$i]} graphs/covg${OUTPUTS[$i]}
     $SCRIPT_DIR/graphchurn.sh tmp/outptmp_${OUTPUTS[$i]} graphs/chrn${OUTPUTS[$i]}
     $SCRIPT_DIR/graphpatchcoverage.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/pchg${OUTPUTS[$i]}" >>$PCS
+    $SCRIPT_DIR/graphpatchtype.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/ptst${OUTPUTS[$i]}" >>$PTS
 
     $SCRIPT_DIR/grapheloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/eloc${OUTPUTS[$i]}" "$GPELOC"
     $SCRIPT_DIR/graphtloc.sh "tmp/outptmp_${OUTPUTS[$i]}" "graphs/tloc${OUTPUTS[$i]}" "$GPTLOC"
@@ -134,6 +136,29 @@ plot "$PCS" u 2 t "[0%,     25%]" ls 1, '' u 3 t "(25%,   50%]" ls 2, '' u 4 t "
 !epstool --copy --bbox "patchcovstack.1.eps" "patchcovstack.eps"
 !epstopdf "patchcovstack.eps" && mv patchcovstack.pdf graphs/ && rm "patchcovstack.eps" "patchcovstack.1.eps"
 EOF
+
+gnuplot << EOF
+set term postscript eps enhanced
+set output "patchtypestacked.1.eps"
+set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
+set border 3 front linetype -1 linewidth 1.000
+set key outside right top vertical Left reverse noenhanced autotitles nobox
+set style data histogram
+set style histogram rowstacked
+set style fill solid 1.00 border -1
+set style line 1 lt 1 lc rgb "#BD2121"
+set style line 2 lt 1 lc rgb "#BD3DFF"
+set style line 3 lt 1 lc rgb "#6394ED"
+set style line 4 lt 1 lc rgb "#EDEDED"
+
+set boxwidth 0.7 relative
+
+plot "$PTS" u 2 t "Code only" ls 1, '' u 3 t "Code+Test" ls 2, '' u 4 t "Test only" ls 3, '' u 5:xticlabels(1) t "Other" ls 4
+
+!epstool --copy --bbox "patchtypestacked.1.eps" "patchtypestacked.eps"
+!epstopdf "patchtypestacked.eps" && mv patchtypestacked.pdf graphs/ && rm "patchtypestacked.eps" "patchtypestacked.1.eps"
+EOF
+
 
 rm -f tmp/outptmp_* multiple?loc.gp multiplecov.gp multiplechurn.gp multipleeltl*.gp
 
