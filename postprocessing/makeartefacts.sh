@@ -15,7 +15,7 @@ declare -r ELTLZO=tmp/multipleeltlzo
 declare -r PCS=tmp/patchcovstacked
 declare -r PTS=tmp/patchtypestacked
 
-mkdir -p graphs latex
+mkdir -p graphs latex tmp
 rm -f $GPELOC $GPTLOC $GPCOV $GPCOV2 $CHURN $ELTL $ELTLZO $PCH $PCS $PTS
 
 if [ ! -d data ]; then
