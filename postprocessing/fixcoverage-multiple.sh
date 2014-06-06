@@ -117,7 +117,7 @@ if  [[ $LATEX -eq 1 ]]; then
   echo "\\newcommand{\\${VARPREFIX}FixesTotal${TYPREFIX}}[0]{$((COV+NOTCOV))\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}Coverage}[0]{$(echo "scale=1; $COV*100/($COV+$NOTCOV)"|bc)\\%\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}FixesFully${TYPREFIX}Covered}[0]{$((FULLYCOVERED-NOEXEC))\\xspace}"
-  echo "\\newcommand{\\${VARPREFIX}FixesFully${TYPREFIX}CoveredPercent}[0]{$(echo "scale=1 ; ($FULLYCOVERED-$NOEXEC)*100/($FIXES-$UNHANDLED)" |bc)\\%\\xspace}"
+  echo "\\newcommand{\\${VARPREFIX}FixesFully${TYPREFIX}CoveredPercent}[0]{$(echo "scale=1 ; ($FULLYCOVERED-$NOEXEC)*100/($FIXES-$UNHANDLED-$NOEXEC)" |bc)\\%\\xspace}"
   echo
   echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}CoverageAverage}[0]{$COVAVG\\%\\xspace}"
   echo "\\newcommand{\\${VARPREFIX}Fix${TYPREFIX}CoverageMedian}[0]{$COVMEDIAN\\%\\xspace}"
