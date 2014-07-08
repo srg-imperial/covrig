@@ -55,6 +55,7 @@ for SHA in $(sort -u $2); do
     fi
   fi
 
+# this code counts fixes rather than the bugs. output disabled below
   if [[ $# -gt 3 ]]; then
     ONLYEXEC=$(grep $SHA $4|awk 'BEGIN { FS="," } ; { if (($7 > 0 || $8 > 0) && $26 == 0) print 1 }'|wc -l)
     ONLYTEST=$(grep $SHA $4|awk 'BEGIN { FS="," } ; { if ($7 == 0 && $8 == 0 && $26 > 0) print 1 }'|wc -l)
@@ -86,11 +87,12 @@ if  [[ $LATEX -eq 1 ]]; then
     TYPREFIX=Line
     echo "\\newcommand{\\${VARPREFIX}Bugs}[0]{$((FIXES-UNHANDLED-NOEXEC))\\xspace}"
     echo "\\newcommand{\\${VARPREFIX}BugsWithoutCode}[0]{$NOEXEC\\xspace}"
-    if [[ $# -gt 3 ]]; then
-      echo "\\newcommand{\\${VARPREFIX}BugsOnlyTests}[0]{$OT\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}BugsOnlyCode}[0]{$OE\\xspace}"
-      echo "\\newcommand{\\${VARPREFIX}BugsTestsAndCode}[0]{$TE\\xspace}"
-    fi
+
+#    if [[ $# -gt 3 ]]; then
+#      echo "\\newcommand{\\${VARPREFIX}BugsOnlyTests}[0]{$OT\\xspace}"
+#      echo "\\newcommand{\\${VARPREFIX}BugsOnlyCode}[0]{$OE\\xspace}"
+#      echo "\\newcommand{\\${VARPREFIX}BugsTestsAndCode}[0]{$TE\\xspace}"
+#    fi
   else
     TYPREFIX=Branch
     echo "\\newcommand{\\${VARPREFIX}BugsWithoutBranches}[0]{$NOEXEC\\xspace}"
