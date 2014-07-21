@@ -122,6 +122,10 @@ if [[ $LATEX -eq 1 ]]; then
   FULLYCOVERED=$(echo "scale=1 ; $FULLYCOVERED*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
   echo "\\newcommand{\\${VARPREFIX}FullyCoveredPercent}[0]{$FULLYCOVERED\\%\\xspace}"
 
+  ZEROCOVERED=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { if ($7 == 0 && $8 > 0) print 1 }'|wc -l)
+  ZEROCOVERED=$(echo "scale=1 ; $ZEROCOVERED*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
+  echo "\\newcommand{\\${VARPREFIX}ZeroCoveredPercent}[0]{$ZEROCOVERED\\%\\xspace}"
+  
   ONELINES=$(egrep -v "$IGNOREREVS" $1|awk 'BEGIN { FS="," } ; { print $7+$8 }'|egrep '^1$'|wc -l)
   ONELINES=$(echo "scale=1 ; $ONELINES*100/($ONLYEXECUTABLE+$TESTANDEXECUTABLE)" | bc)
   echo "\\newcommand{\\${VARPREFIX}OneELOCPatches}[0]{$ONELINES\\%\\xspace}"
