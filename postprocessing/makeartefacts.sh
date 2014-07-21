@@ -120,7 +120,7 @@ set term postscript eps enhanced
 set output "patchcovstack.1.eps"
 set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set border 3 front linetype -1 linewidth 1.000
-set key outside right top vertical Left reverse noenhanced autotitles nobox
+set key outside right top vertical Left reverse invert noenhanced autotitles nobox
 set style data histogram
 set style histogram rowstacked
 set style fill solid 1.00 border -1
@@ -128,10 +128,12 @@ set style line 1 lt 1 lc rgb "#BC2222"
 set style line 2 lt 1 lc rgb "#FFB90F"
 set style line 3 lt 1 lc rgb "#CAFF70"
 set style line 4 lt 1 lc rgb "#4D9B00"
+set style line 5 lt 1 lc rgb "#222222"
 
 set boxwidth 0.7 relative
 
-plot "$PCS" u 2 t "[0%,     25%]" ls 1, '' u 3 t "(25%,   50%]" ls 2, '' u 4 t "(50%,   75%]" ls 3, '' u 5:xticlabels(1) t "(75%, 100%]" ls 4
+#plot "$PCS" u (\$2+\$3) t "[0%,     25%]" ls 1, '' u 4 t "(25%,   50%]" ls 2, '' u 5 t "(50%,   75%]" ls 3, '' u 6:xticlabels(1) t "(75%, 100%]" ls 4
+plot "$PCS" u 2 t '' ls 5, '' u 3 t "[0%,     25%]" ls 1, '' u 4 t "(25%,   50%]" ls 2, '' u 5 t "(50%,   75%]" ls 3, '' u 6:xticlabels(1) t "(75%, 100%]" ls 4
 
 !epstool --copy --bbox "patchcovstack.1.eps" "patchcovstack.eps"
 !epstopdf "patchcovstack.eps" && mv patchcovstack.pdf graphs/ && rm "patchcovstack.eps" "patchcovstack.1.eps"
@@ -140,9 +142,10 @@ EOF
 gnuplot << EOF
 set term postscript eps enhanced
 set output "patchtypestacked.1.eps"
-set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
+set xtics nomirror
+set grid y linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set border 3 front linetype -1 linewidth 1.000
-set key outside right top vertical Left reverse noenhanced autotitles nobox
+set key outside right top vertical Left reverse invert noenhanced autotitles nobox
 set style data histogram
 set style histogram rowstacked
 set style fill solid 1.00 border -1

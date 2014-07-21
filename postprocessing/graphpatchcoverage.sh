@@ -21,10 +21,11 @@ DATAFILE="tmp/${OUTPUT:7}"
 
   declare -a BUCKETS
   BUCKETS[0]=-1
-  BUCKETS[1]=0.25
-  BUCKETS[2]=0.5
-  BUCKETS[3]=0.75
-  BUCKETS[4]=1
+  BUCKETS[1]=0
+  BUCKETS[2]=0.25
+  BUCKETS[3]=0.5
+  BUCKETS[4]=0.75
+  BUCKETS[5]=1
 
   #LaTeX doesn't allow digits in command names
   echo -n "${OUTPUT:11} "
@@ -35,7 +36,7 @@ DATAFILE="tmp/${OUTPUT:7}"
   BUCKETNAMES[2]="H"
   BUCKETNAMES[3]="3Q"
   BUCKETNAMES[4]="N/A"
-  for BUCKETIDX in 0 1 2 3; do
+  for BUCKETIDX in 0 1 2 3 4; do
      AWKSCRIPT="BEGIN { FS=\",\" } ; {
      if (\$7+\$8 > 0 && \$7/(\$7+\$8) > ${BUCKETS[$BUCKETIDX]} &&
        \$7/(\$7+\$8) <= ${BUCKETS[$((BUCKETIDX+1))]}) {
