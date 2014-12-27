@@ -1,6 +1,5 @@
 from fabric.api import *
 import argparse
-import docker
 import subprocess
 
 # Analytics modules
@@ -8,6 +7,7 @@ from _Memcached import *
 from _Redis import *
 from _Zeromq import *
 from _Lighttpd import *
+from _Lighttpd2 import *
 from _Beanstalkd import *
 from _Git import *
 from _Diffutils import *
@@ -15,6 +15,7 @@ from _Binutils import *
 from _Findutils import *
 from _Dovecot import *
 from _Squid import *
+from _Vim import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -145,7 +146,9 @@ def main():
   args = parser.parse_args()
 
   benchmarks = {
-      "lighttpd" : { "class": Lighttpd, "revision": "0d40b25", "n": 400 },
+      "beanstalkd": { "class": Beanstalkd, "revision": "fb0a466", "n": 600 },
+      "lighttpd" : { "class": Lighttpd, "revision": "c8fbc16", "n": 600 },
+      "lighttpd2": { "class": Lighttpd2, "revision": "0d40b25", "n": 400 },
       "memcached": { "class": Memcached, "revision": "87e2f36", "n": 409 },
       "zeromq"   : { "class": Zeromq, "revision": "573d7b0", "n": 500 },
       "redis"    : { "class": Redis, "revision": "347ab78", "n": 500 },
@@ -154,9 +157,9 @@ def main():
       "dovecot"  : { "class": Dovecot, "revision": "fbf5813", "n": 1000 },
       "squid"    : { "class": Squid, "revision": "fa4c8a3", "n": 1000 },
       "git"      : { "class": Git, "revision": "d7aced9", "n": 500 },
+      "vim"      : { "class": Vim, "revision": "79cde60", "n": 330 },
       }
-  
-  if args.program in benchmarks:
+  try:
     b = benchmarks[args.program]
     outputfolder = args.output if args.output else b["class"].__name__
     outputfile = b["class"].__name__
@@ -174,7 +177,7 @@ def main():
                                      args.image if not args.offline else None,
                                      b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
     container.go(outputfolder, outputfile)
-  else:
+  except KeyError:
     print "Unrecognized program name %s" % args.program
 
 if __name__== "__main__":
