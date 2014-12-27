@@ -1,0 +1,45 @@
+from fabric.api import *
+
+from Container import Container
+
+class {{ name }}(Container):
+
+    def __init__(self, _image, _user, _pwd):
+        Container.__init__(self, _image, _user, _pwd)
+
+        if (self.offline):
+            self.path = local("realpath '{{ repo_path }}'", capture=True)
+        else:
+            self.path = '{{ path }}'
+            self.source_path = '{{ source_path }}'
+            self.timeout = {{ timeout }}
+        
+        self.tsuite_path = (
+          {% for item in tsuite_path %}
+            '{{ item }}',
+          {% endfor %}
+        )
+        self.ignore_coverage_from = (
+            '/usr/include/*',
+          {% for item in ignore_coverage_from %}
+            '{{ item }}',
+          {% endfor %}
+        )
+
+    def compile(self):
+        with cd(self.path), settings(warn_only=True):
+            {% block compile %}
+            result = run("{{ compile_command }}")
+            {% endblock %}
+            if result.failed:
+                self.compileError = True
+
+    def make_test(self):
+        super({{ name }}, self).make_test()
+        if not self.compileError: 
+            with cd(self.path), settings(warn_only=True):
+                {% block test %}
+                result = run("timeout " + str(self.timeout) + " {{ test_command }}")
+                {% endblock %}
+                if result.failed:
+                    self.maketestError = result.return_code
