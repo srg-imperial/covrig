@@ -157,7 +157,7 @@ def main():
       "dovecot"  : { "class": Dovecot, "revision": "fbf5813", "n": 1000 },
       "squid"    : { "class": Squid, "revision": "fa4c8a3", "n": 1000 },
       "git"      : { "class": Git, "revision": "d7aced9", "n": 500 },
-      "vim"      : { "class": Vim, "revision": "79cde60", "n": 330 },
+      "vim"      : { "class": Vim, "revision": "5ad9cbaf", "n": 600 },
       }
   try:
     b = benchmarks[args.program]

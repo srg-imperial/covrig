@@ -19,7 +19,7 @@ class Vim(Container):
           # set timeout (in seconds) for the test suite to run
           self.timeout = 200
         
-        self.tsuite_path = ('src/testdir')
+        self.tsuite_path = ('src/testdir', )
         self.ignore_coverage_from = ('/usr/include/*', )
 
   
