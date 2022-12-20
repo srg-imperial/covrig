@@ -32,23 +32,23 @@ class Dovecot(Container):
             'src/lib-index/test-*',
             'src/lib-http/test-*',
         )
- 
-  
+
+
     def compile(self):
         """ compile Dovecot """
         with cd(self.path):
-           with settings(warn_only=True):
-               result = run("sh autogen.sh && " +
-                            "sh configure CFLAGS='--coverage -O0' LDFLAGS='--coverage' && " +
-                            "make -j`grep -c '^processor' /proc/cpuinfo`")
-               if result.failed:
-                   self.compileError = True
+            with settings(warn_only=True):
+                result = run("sh autogen.sh && " +
+                             "sh configure CFLAGS='--coverage -O0' LDFLAGS='--coverage' && " +
+                             "make -j`grep -c '^processor' /proc/cpuinfo`")
+                if result.failed:
+                    self.compileError = True
 
     def make_test(self):
         super(Dovecot, self).make_test()
         """ run the test suite """
         # if compile failed, skip this step
-        if self.compileError == False: 
+        if self.compileError == False:
             with cd(self.path):
                 with settings(warn_only=True):
                     result = run("timeout " + str(self.timeout) +

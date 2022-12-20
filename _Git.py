@@ -18,23 +18,23 @@ class Git(Container):
             self.source_path = '/home/git'
             # set timeout (in seconds) for the test suite to run
             self.timeout = 7200
-        
+
         self.tsuite_path = ('t', 'test-*')
         self.ignore_coverage_from = ('/usr/include/*', )
 
     def compile(self):
         """ compile Git """
         with cd(self.path):
-           with settings(warn_only=True):
-               result = run("make configure && ./configure && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile")
-               if result.failed:
-                   self.compileError = True
+            with settings(warn_only=True):
+                result = run("make configure && ./configure && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile")
+                if result.failed:
+                    self.compileError = True
 
     def make_test(self):
         """ run the test suite """
         super(Git, self).make_test()
         # if compile failed, skip this step
-        if self.compileError == False: 
+        if self.compileError == False:
             with cd(self.path):
                 with settings(warn_only=True):
                     result = run("timeout " + str(self.timeout) + " make coverage")

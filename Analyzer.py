@@ -6,7 +6,7 @@ import csv
 
 class Sketch(object):
     """ Sketch a raw graph """
-    
+
     # fields are:
     # id, eloc, coverage, t_size, author, edited_lines, covered_lines,
     #   patch_coverage, timestamp, exitStatus
