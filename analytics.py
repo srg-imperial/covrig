@@ -40,7 +40,7 @@ def clean_a():
 
 class Analytics(object):
     """ Main class """
-    
+
     def __init__(self, _pclass, _image, _commits):
         # the class itself
         self.pclass = _pclass
@@ -48,7 +48,7 @@ class Analytics(object):
         self.image = _image
         # commits
         self.commits = _commits
- 
+
     @classmethod
     def run_last(cls, _pclass, _image, _commit):
         """ process the last n commits """
@@ -75,13 +75,13 @@ class Analytics(object):
             if c.startswith("%s__" % _startaftercommit):
               startindex = index
               break
-          print "Retaining %d revisions" % startindex
+          print("Retaining %d revisions" % startindex)
           clist = clist[:startindex+1]
         if _maxcommits:
           clist = clist[-(_maxcommits+1):]
-        print "Will analyse %d commits" % len(clist)
+        print("Will analyse %d commits" % len(clist))
         return cls(_pclass, _image, clist)
-        
+
     def go(self, outputfolder, outputfile):
         """ run all the tests for every version specified in a new container """
 
@@ -94,9 +94,9 @@ class Analytics(object):
         prev_commit_id = self.commits[-1].split('__')[0]
         del self.commits[-1]
         self.commits.reverse()
-        for i in self.commits: 
+        for i in self.commits:
             # self.commits format is ['commit.id__author.name__timestamp']
-            print i
+            print(i)
             a = i.split('__')
             commit_id = a[0]
             timestamp = a[1]
@@ -119,7 +119,7 @@ class Analytics(object):
               for i, (files, lines) in enumerate(prev_uncovered_list):
                 prev_uncovered_list[i] = c.prev_patch_coverage(i, files, lines)
 
-              print (c.changed_files, c.uncovered_lines_list)
+              print(c.changed_files, c.uncovered_lines_list)
               prev_uncovered_list.insert(0, (c.changed_files, c.uncovered_lines_list));
               prev_uncovered_list.pop()
 
@@ -128,7 +128,7 @@ class Analytics(object):
               c.halt()
             if c.compileError == False:
               prev_commit_id = commit_id
-        
+
 
 def main():
   parser = argparse.ArgumentParser(prog='Analytics')
@@ -178,7 +178,8 @@ def main():
                                      b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
     container.go(outputfolder, outputfile)
   except KeyError:
-    print "Unrecognized program name %s" % args.program
+      print("Unrecognized program name %s" % args.program)
+
 
 if __name__== "__main__":
     main()
