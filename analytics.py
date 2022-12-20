@@ -24,18 +24,21 @@ from _Vim import *
 
 
 """ cleaning functions to clean old/running containers """
+
+
 def clean_r():
     """ stop all running containers """
     Connection.local("docker ps | awk '{print $1}' | xargs docker stop")
+
 
 def clean_s():
     """ delete all container being run so far """
     Connection.local("docker ps -a | grep 'ago' | awk '{print $1}' | xargs docker rm")
 
+
 def clean_a():
     clean_r()
     clean_s()
-
 
 
 class Analytics(object):
@@ -65,20 +68,20 @@ class Analytics(object):
         clist = []
         r.spawn()
         # attach timestamp and author to the commit
-        clist = r.get_commits(_count+1, _commit)
+        clist = r.get_commits(_count + 1, _commit)
         r.halt()
 
         if _startaftercommit:
-            #keep the whole list by default
+            # keep the whole list by default
             startindex = len(clist)
-            for index,c in enumerate(clist):
+            for index, c in enumerate(clist):
                 if c.startswith("%s__" % _startaftercommit):
                     startindex = index
                     break
             print("Retaining %d revisions" % startindex)
-            clist = clist[:startindex+1]
+            clist = clist[:startindex + 1]
         if _maxcommits:
-            clist = clist[-(_maxcommits+1):]
+            clist = clist[-(_maxcommits + 1):]
         print("Will analyse %d commits" % len(clist))
         return cls(_pclass, _image, clist)
 
@@ -86,9 +89,9 @@ class Analytics(object):
         """ run all the tests for every version specified in a new container """
 
         # create a data/program-name directory where data will be collected
-        Connection.local('mkdir -p data/' + outputfolder)
+        self.conn.local('mkdir -p data/' + outputfolder)
         # list of uncovered files (and corresponding lines) i revisions ago
-        prev_uncovered_list = [ ([], []) ] * 10
+        prev_uncovered_list = [([], [])] * 10
 
         # check oldest commit first. this makes it easier to check patch coverage in subsequent versions
         prev_commit_id = self.commits[-1].split('__')[0]
@@ -110,7 +113,7 @@ class Analytics(object):
                 if not c.emptyCommit:
                     c.tsize_compute()
                     if not c.offline:
-                        c.compile()    # long steps
+                        c.compile()  # long steps
                         c.make_test()  #
                     c.overall_coverage()
                     if not c.offline:
@@ -146,18 +149,18 @@ def main():
     args = parser.parse_args()
 
     benchmarks = {
-        "beanstalkd": { "class": Beanstalkd, "revision": "fb0a466", "n": 600 },
-        "lighttpd" : { "class": Lighttpd, "revision": "c8fbc16", "n": 600 },
-        "lighttpd2": { "class": Lighttpd2, "revision": "0d40b25", "n": 400 },
-        "memcached": { "class": Memcached, "revision": "87e2f36", "n": 409 },
-        "zeromq"   : { "class": Zeromq, "revision": "573d7b0", "n": 500 },
-        "redis"    : { "class": Redis, "revision": "347ab78", "n": 500 },
-        "binutils" : { "class": Binutils, "revision": "a0a1bb07", "n": 6000 },
-        "diffutils": { "class": Diffutils, "revision": "b2f1e4b", "n": 350 },
-        "dovecot"  : { "class": Dovecot, "revision": "fbf5813", "n": 1000 },
-        "squid"    : { "class": Squid, "revision": "fa4c8a3", "n": 1000 },
-        "git"      : { "class": Git, "revision": "d7aced9", "n": 500 },
-        "vim"      : { "class": Vim, "revision": "5ad9cbaf", "n": 600 },
+        "beanstalkd": {"class": Beanstalkd, "revision": "fb0a466", "n": 600},
+        "lighttpd": {"class": Lighttpd, "revision": "c8fbc16", "n": 600},
+        "lighttpd2": {"class": Lighttpd2, "revision": "0d40b25", "n": 400},
+        "memcached": {"class": Memcached, "revision": "87e2f36", "n": 409},
+        "zeromq": {"class": Zeromq, "revision": "573d7b0", "n": 500},
+        "redis": {"class": Redis, "revision": "347ab78", "n": 500},
+        "binutils": {"class": Binutils, "revision": "a0a1bb07", "n": 6000},
+        "diffutils": {"class": Diffutils, "revision": "b2f1e4b", "n": 350},
+        "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
+        "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},
+        "git": {"class": Git, "revision": "d7aced9", "n": 500},
+        "vim": {"class": Vim, "revision": "5ad9cbaf", "n": 600},
     }
     try:
         b = benchmarks[args.program]
@@ -175,11 +178,12 @@ def main():
                 lastrev = lastrecord[0]
         container = Analytics.run_custom(b["class"],
                                          args.image if not args.offline else None,
-                                         b["revision"], args.revisions if args.revisions else b["n"], lastrev, args.limit)
+                                         b["revision"], args.revisions if args.revisions else b["n"], lastrev,
+                                         args.limit)
         container.go(outputfolder, outputfile)
     except KeyError:
         print("Unrecognized program name %s" % args.program)
 
 
-if __name__== "__main__":
+if __name__ == "__main__":
     main()

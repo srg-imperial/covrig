@@ -1,4 +1,4 @@
-from fabric.api import *
+from fabric import Connection
 
 # Analytics modules
 from Container import Container
@@ -12,10 +12,12 @@ class Memcached(Container):
 
     def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
-
+        self.conn = Connection()
+        # TODO: supply args to conn? maybe _init args? (bottom comment https://stackoverflow.com/questions/10280984/how-to-set-the-working-directory-for-a-fabric-task)
+        # TODO: maybe as comment says it's to do with the "regular" user account?
         # set variables
-        if (self.offline):
-            self.path = local("realpath 'repos/memcached'", capture=True)
+        if self.offline:
+            self.path = self.conn.local("realpath 'repos/memcached'", capture=True)
         else:
             self.path = '/home/memcached'
             self.source_path = '/home/memcached'
@@ -25,15 +27,17 @@ class Memcached(Container):
 
     def compile(self):
         """ compile Memcached """
-        with cd(self.source_path):
-            with settings(warn_only=True):
+        with self.conn.cd(self.source_path):
+            with self.conn.settings(warn_only=True):
                 # prior to acb84f05e0a8dc67a572dc647071002f9e64499d libevent1 is required
-                result = run ('git rev-list acb84f05e0a8dc67a572dc647071002f9e64499d | grep $(git rev-parse HEAD)')
+                result = self.conn.run(
+                    "git rev-list acb84f05e0a8dc67a572dc647071002f9e64499d | grep $(git rev-parse HEAD)"
+                    .format(self.source_path))
                 if result.succeeded:
-                    run ('apt-get -y install libevent1-dev')
-                result = run(('su regular -c ./autogen.sh && su regular -c ./configure && ' +
-                              'su regular -c \'make clean\' && ' +
-                              'su regular -c \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'))
+                    self.conn.run("apt-get -y install libevent1-dev")
+                result = self.conn.run(('su regular -c ./autogen.sh && su regular -c ./configure && ' +
+                                        'su regular -c \'make clean\' && ' +
+                                        'su regular -c \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'))
                 if result.failed:
                     self.compileError = True
 
@@ -41,11 +45,11 @@ class Memcached(Container):
         super(Memcached, self).make_test()
         """ run the test suite """
         # if compile failed, skip this step
-        if self.compileError == False:
-            with cd(self.source_path):
-                with settings(warn_only=True):
+        if not self.compileError:
+            with self.conn.cd(self.source_path):
+                with self.conn.settings(warn_only=True):
                     for i in range(5):
-                        result = run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'')
+                        result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'')
                         if result.failed:
                             self.maketestError = result.return_code
-                        run('killall memcached')
+                        self.conn.run('killall memcached')
