@@ -1,4 +1,4 @@
-from fabric.api import *
+from fabric import Connection
 import argparse
 import subprocess
 
@@ -26,11 +26,11 @@ from _Vim import *
 """ cleaning functions to clean old/running containers """
 def clean_r():
     """ stop all running containers """
-    local("docker ps | awk '{print $1}' | xargs docker stop")
+    Connection.local("docker ps | awk '{print $1}' | xargs docker stop")
 
 def clean_s():
     """ delete all container being run so far """
-    local("docker ps -a | grep 'ago' | awk '{print $1}' | xargs docker rm")
+    Connection.local("docker ps -a | grep 'ago' | awk '{print $1}' | xargs docker rm")
 
 def clean_a():
     clean_r()
@@ -86,7 +86,7 @@ class Analytics(object):
         """ run all the tests for every version specified in a new container """
 
         # create a data/program-name directory where data will be collected
-        local('mkdir -p data/' + outputfolder)
+        Connection.local('mkdir -p data/' + outputfolder)
         # list of uncovered files (and corresponding lines) i revisions ago
         prev_uncovered_list = [ ([], []) ] * 10
 
