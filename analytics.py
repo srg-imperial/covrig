@@ -4,18 +4,18 @@ import subprocess
 
 # Analytics modules
 from _Memcached import *
-from _Redis import *
-from _Zeromq import *
-from _Lighttpd import *
-from _Lighttpd2 import *
-from _Beanstalkd import *
-from _Git import *
-from _Diffutils import *
-from _Binutils import *
-from _Findutils import *
-from _Dovecot import *
-from _Squid import *
-from _Vim import *
+# from _Redis import *
+# from _Zeromq import *
+# from _Lighttpd import *
+# from _Lighttpd2 import *
+# from _Beanstalkd import *
+# from _Git import *
+# from _Diffutils import *
+# from _Binutils import *
+# from _Findutils import *
+# from _Dovecot import *
+# from _Squid import *
+# from _Vim import *
 
 # Flow of control:
 #  Analytics() set up a cycle of containers using Container() + Subclass(Container)
@@ -26,19 +26,21 @@ from _Vim import *
 """ cleaning functions to clean old/running containers """
 
 
-def clean_r():
+def clean_r(c):
     """ stop all running containers """
-    Connection.local("docker ps | awk '{print $1}' | xargs docker stop")
+    # TODO: is this the right way of invoking Connection?
+    c.local("docker ps | awk '{print $1}' | xargs docker stop")
 
 
-def clean_s():
+def clean_s(c):
     """ delete all container being run so far """
-    Connection.local("docker ps -a | grep 'ago' | awk '{print $1}' | xargs docker rm")
+    c.local("docker ps -a | grep 'ago' | awk '{print $1}' | xargs docker rm")
 
 
 def clean_a():
-    clean_r()
-    clean_s()
+    c = Connection()
+    clean_r(c)
+    clean_s(c)
 
 
 class Analytics(object):
@@ -51,6 +53,8 @@ class Analytics(object):
         self.image = _image
         # commits
         self.commits = _commits
+        # TODO: Initialize connection?
+        self.conn = Connection()
 
     @classmethod
     def run_last(cls, _pclass, _image, _commit):
@@ -129,7 +133,7 @@ class Analytics(object):
                 c.collect(author_name, timestamp, outputfolder, outputfile)
             finally:
                 c.halt()
-            if c.compileError == False:
+            if not c.compileError:
                 prev_commit_id = commit_id
 
 
@@ -149,18 +153,18 @@ def main():
     args = parser.parse_args()
 
     benchmarks = {
-        "beanstalkd": {"class": Beanstalkd, "revision": "fb0a466", "n": 600},
-        "lighttpd": {"class": Lighttpd, "revision": "c8fbc16", "n": 600},
-        "lighttpd2": {"class": Lighttpd2, "revision": "0d40b25", "n": 400},
+        # "beanstalkd": {"class": Beanstalkd, "revision": "fb0a466", "n": 600},
+        # "lighttpd": {"class": Lighttpd, "revision": "c8fbc16", "n": 600},
+        # "lighttpd2": {"class": Lighttpd2, "revision": "0d40b25", "n": 400},
         "memcached": {"class": Memcached, "revision": "87e2f36", "n": 409},
-        "zeromq": {"class": Zeromq, "revision": "573d7b0", "n": 500},
-        "redis": {"class": Redis, "revision": "347ab78", "n": 500},
-        "binutils": {"class": Binutils, "revision": "a0a1bb07", "n": 6000},
-        "diffutils": {"class": Diffutils, "revision": "b2f1e4b", "n": 350},
-        "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
-        "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},
-        "git": {"class": Git, "revision": "d7aced9", "n": 500},
-        "vim": {"class": Vim, "revision": "5ad9cbaf", "n": 600},
+        # "zeromq": {"class": Zeromq, "revision": "573d7b0", "n": 500},
+        # "redis": {"class": Redis, "revision": "347ab78", "n": 500},
+        # "binutils": {"class": Binutils, "revision": "a0a1bb07", "n": 6000},
+        # "diffutils": {"class": Diffutils, "revision": "b2f1e4b", "n": 350},
+        # "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
+        # "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},
+        # "git": {"class": Git, "revision": "d7aced9", "n": 500},
+        # "vim": {"class": Vim, "revision": "5ad9cbaf", "n": 600},
     }
     try:
         b = benchmarks[args.program]

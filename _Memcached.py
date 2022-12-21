@@ -12,7 +12,6 @@ class Memcached(Container):
 
     def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
-        self.conn = Connection()
         # TODO: supply args to conn? maybe _init args? (bottom comment https://stackoverflow.com/questions/10280984/how-to-set-the-working-directory-for-a-fabric-task)
         # TODO: maybe as comment says it's to do with the "regular" user account?
         # set variables
@@ -28,18 +27,17 @@ class Memcached(Container):
     def compile(self):
         """ compile Memcached """
         with self.conn.cd(self.source_path):
-            with self.conn.settings(warn_only=True):
-                # prior to acb84f05e0a8dc67a572dc647071002f9e64499d libevent1 is required
-                result = self.conn.run(
-                    "git rev-list acb84f05e0a8dc67a572dc647071002f9e64499d | grep $(git rev-parse HEAD)"
-                    .format(self.source_path))
-                if result.succeeded:
-                    self.conn.run("apt-get -y install libevent1-dev")
-                result = self.conn.run(('su regular -c ./autogen.sh && su regular -c ./configure && ' +
-                                        'su regular -c \'make clean\' && ' +
-                                        'su regular -c \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'))
-                if result.failed:
-                    self.compileError = True
+            # prior to acb84f05e0a8dc67a572dc647071002f9e64499d libevent1 is required
+            result = self.conn.run(
+                "git rev-list acb84f05e0a8dc67a572dc647071002f9e64499d | grep $(git rev-parse HEAD)"
+                .format(self.source_path), warn=True)
+            if result.succeeded:
+                self.conn.run("apt-get -y install libevent1-dev", warn=True)
+            result = self.conn.run(('su regular -c ./autogen.sh && su regular -c ./configure && ' +
+                                    'su regular -c \'make clean\' && ' +
+                                    'su regular -c \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'), warn=True)
+            if result.failed:
+                self.compileError = True
 
     def make_test(self):
         super(Memcached, self).make_test()

@@ -1,8 +1,7 @@
 from __future__ import division
-from fabric.api import *
-from docker import Client
-import fnmatch
+from fabric import Connection
 import docker
+import fnmatch
 
 # Analytics modules
 from DataHandler import *
@@ -17,7 +16,8 @@ class Container(object):
         Covered = 3
 
     def __init__(self, _image, _user, _pwd):
-        self.client = Client(base_url='unix://var/run/docker.sock')
+        self.container = None
+        self.client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 
         self.image = _image
         self.user = _user
@@ -39,7 +39,7 @@ class Container(object):
         self.ehunkheads3 = []
 
         self.tsize = 0
-        #split the test suite into directories and files
+        # split the test suite into directories and files
         self.tsuite_dir = []
         self.tsuite_file = []
 
@@ -53,12 +53,14 @@ class Container(object):
         self._gcovNameCache = set()
         self._gcovNoNameCache = set()
 
-        if (self.offline):
-            self.initialpath = local("realpath .", capture=True)
+        # self.conn = Connection(user=self.user, host="", port=22, connect_kwargs={"pwd": self.pwd}) # TODO: host gets set later
+        # connection_attempts no longer supported
+
+        if self.offline:
+            # self.initialpath = self.conn.local("realpath .", capture=True) # TODO: how could this have been called if fabric_setup hadn't been called yet?
             self.difflinessh = "%s/deps/measure-cov.sh" % self.initialpath
         else:
             self.difflinessh = "/root/measure-cov.sh"
-
 
     # The following are methods used to spawn a new container
     #
@@ -66,66 +68,67 @@ class Container(object):
     def sshd_up(self):
         """ set up sshd """
         print(self.image)
-        self.cnt_id = self.client.create_container(self.image,
-                                                   command='/usr/sbin/sshd -D',
-                                                   ports=[22])
-        self.client.start(self.cnt_id, port_bindings={22: 60001})
+        self.container = self.client.containers.create(self.image,
+                                                       command='/usr/sbin/sshd -D',
+                                                       ports=[22])
+        self.cnt_id = self.container.id
+        self.container.start(port_bindings={22: 60001})
+        # TODO: doesn't autocomplete, hopefully this is right
 
     def set_ip(self):
         """ set container ID """
-        state = self.client.inspect_container(self.cnt_id)
+        # state = self.client.inspect_container(self.cnt_id)
+        state = self.client.containers.get(self.cnt_id).attrs
         self.ip = state['NetworkSettings']['IPAddress']
 
     def fabric_setup(self):
-        """ set fabric env parameters """
-        env.user = self.user
-        env.password = self.pwd
-        env.host_string = self.ip + ':22'
-        # in a perfect world, this would not be here
-        env.connection_attempts = 10
-
+        #     """ set fabric env parameters """
+        #     env.user = self.user
+        #     env.password = self.pwd
+        #     env.host_string = self.ip + ':22'
+        #     # in a perfect world, this would not be here
+        #     env.connection_attempts = 10
+        self.conn = Connection(user=self.user, host=self.ip, port=22, connect_kwargs={"pwd": self.pwd})
 
     def run_test(self):
         """ uname to check everything works """
-        run('uname -on')
-
+        self.conn.run('uname -on')
 
     def omnicd(self, path):
         if self.offline:
-            return lcd(path)
+            # TODO: lcd no longer supported so just use cd for now?
+            return self.conn.lcd(path)
         else:
-            return cd(path)
-
+            return self.conn.cd(path)
 
     def omnirun(self, cmd, **kwargs):
         print("running %s" % cmd)
-        if (self.offline):
-            return local(cmd, capture=True, **kwargs)
+        if self.offline:
+            return self.conn.local(cmd, capture=True, **kwargs)
         else:
-            return run(cmd, **kwargs)
-
+            return self.conn.run(cmd, **kwargs)
 
     def spawn(self):
         if not self.offline:
             """ call all the methods needed to spawn a container """
             self.sshd_up()
             self.set_ip()
-            self.fabric_setup()
-
+            # self.fabric_setup()
+            # Done earlier in init
 
     def halt(self):
         if not self.offline:
             """ shutdown the current container """
             print('\n\nHalting the current container...\n\n')
-            self.client.stop(self.cnt_id)
-            self.client.remove_container(self.cnt_id)
-
+            self.container.stop(self.cnt_id)
+            self.container.remove(self.cnt_id)
 
     def get_commits(self, n, ending_at=''):
         """ attach timestamp and author to a given commit """
-        commitlist = self.omnirun('cd %s && git rev-list -n %d --first-parent --format=%%h__%%ct__%%an %s|grep -v commit' % (self.path, n , ending_at))
+        commitlist = self.omnirun(
+            'cd %s && git rev-list -n %d --first-parent --format=%%h__%%ct__%%an %s|grep -v commit' % (
+                self.path, n, ending_at))
         return commitlist.splitlines()
-
 
     def count_sloc(self, path):
         """ use cloc to get the static lines of code for any given file or directory """
@@ -137,18 +140,17 @@ class Container(object):
                 lines += int(self.omnirun("wc -l " + p + "/*|tail -1|awk '{ print $1 }'"))
         return str(lines)
 
-
     def count_hunks(self, prev_revision):
         with self.omnicd(self.path):
             changed = self.omnirun("git diff -b -U0 " +
                                    prev_revision + " " + self.revision +
                                    " | perl -pe 's/\e\[?.*?[\@-~]//g'")
             if changed:
-                self.hunkheads = [i for i in changed.splitlines() if i.startswith( '@@' )]
+                self.hunkheads = [i for i in changed.splitlines() if i.startswith('@@')]
                 changed = self.omnirun("git diff -b " +
                                        prev_revision + " " + self.revision +
                                        " | perl -pe 's/\e\[?.*?[\@-~]//g'")
-                self.hunkheads3 = [i for i in changed.splitlines() if i.startswith( '@@' )]
+                self.hunkheads3 = [i for i in changed.splitlines() if i.startswith('@@')]
 
     def checkout(self, prev_revision, revision):
         """ checkout the revision we want """
@@ -163,7 +165,7 @@ class Container(object):
                 for path in self.limit_changes_to:
                     diffcmd += path + " "
             diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
-            result = self.omnirun (diffcmd)
+            result = self.omnirun(diffcmd)
             if not result:
                 self.emptyCommit = True
 
@@ -171,20 +173,20 @@ class Container(object):
         """ compute test suite as SLOCs """
         # rebuild the test suite with only files or dirs that 
         # actually exists in the current revision
-        actual_tsuite = [ ]
+        actual_tsuite = []
         for item in self.tsuite_path:
             item = "%s/%s" % (self.path, item)
             fileExists = self.omnirun('ls -U ' + item + ' >/dev/null 2>&1 && echo y || echo n')
             if fileExists == 'y':
                 actual_tsuite.append(item)
                 print('Added ' + item + ' to the test suite\n')
-                isdir = self.omnirun ('[ -d "' + item + '" ] && echo y || echo n')
+                isdir = self.omnirun('[ -d "' + item + '" ] && echo y || echo n')
                 if isdir == 'y':
                     self.tsuite_dir.append(item)
                 else:
                     self.tsuite_file.append(item)
         self.tsuite_path = actual_tsuite
-        #XXX count_sloc will fail if a wildcard path contains no files recognized by cloc
+        # XXX count_sloc will fail if a wildcard path contains no files recognized by cloc
         self.tsize = self.count_sloc(self.tsuite_path)
 
     def backup(self, commit):
@@ -195,30 +197,28 @@ class Container(object):
             return
         with self.omnicd(self.source_path):
             # save gcov/gcc/g++ info
-            with settings(warn_only=True):
-                run('gcov -v | head -1 > build_info.txt')
-                run('echo >> build_info.txt')
-                run('gcc -v &>> build_info.txt')
+            self.conn.run('gcov -v | head -1 > build_info.txt', warn=True)
+            self.conn.run('echo >> build_info.txt', warn=True)
+            self.conn.run('gcc -v &>> build_info.txt', warn=True)
         with self.omnicd(self.source_path):
             # bzip all the coverage files
-            run("find . -name '*.gcov' -or -name '*.info' > backuplist")
-            run("echo ./build_info.txt >> backuplist")
-            run('tar -cjf coverage-' + commit + '.tar.bz2 -T backuplist')
+            self.conn.run("find . -name '*.gcov' -or -name '*.info' > backuplist")
+            self.conn.run("echo ./build_info.txt >> backuplist")
+            self.conn.run('tar -cjf coverage-' + commit + '.tar.bz2 -T backuplist')
             # scp to localhost/data
-            get('coverage-' + commit + '.tar.bz2', 'data/' + self.outputfolder +
-                '/' + 'coverage-' + commit + '.tar.bz2')
+            self.conn.get('coverage-' + commit + '.tar.bz2', 'data/' + self.outputfolder +
+                          '/' + 'coverage-' + commit + '.tar.bz2')
 
     def rec_initial_coverage(self):
         assert not self.offline
         with self.omnicd(self.source_path):
-            run('lcov --rc lcov_branch_coverage=1 -c -i -d . -o base.info')
+            self.conn.run('lcov --rc lcov_branch_coverage=1 -c -i -d . -o base.info')
 
     def make_test(self):
         assert not self.offline
         if self.compileError or self.emptyCommit:
             return
         self.rec_initial_coverage()
-
 
     def overall_coverage(self):
         """ collect overall coverage results """
@@ -227,33 +227,38 @@ class Container(object):
 
         if self.offline:
             covdatadir = '%s/data/%s' % (self.initialpath, self.outputfolder)
-            with self.omnicd(covdatadir), settings(warn_only=True):
-                res = local('rm -rf tmp && mkdir tmp && tar xjf coverage-%s.tar.bz2 -C tmp' % self.revision)
+            with self.omnicd(covdatadir):
+                res = self.conn.local('rm -rf tmp && mkdir tmp && tar xjf coverage-%s.tar.bz2 -C tmp' % self.revision,
+                                      warn=True)
                 if res.failed:
                     return
                 covdatadir += "/tmp"
         else:
             covdatadir = self.source_path
-            with self.omnicd(covdatadir), settings(warn_only=True):
-                res = self.omnirun('lcov --rc lcov_branch_coverage=1 -c -d . -o test.info')
+            with self.omnicd(covdatadir):
+                res = self.omnirun('lcov --rc lcov_branch_coverage=1 -c -d . -o test.info', warn=True)
                 if res.failed:
                     return
-                run("lcov --rc lcov_branch_coverage=1 -a base.info -a test.info -o total.info")
-                run('find -name "*.gcda"|xargs gcov', quiet=True)
+                self.conn.run("lcov --rc lcov_branch_coverage=1 -a base.info -a test.info -o total.info", warn=True)
+                self.conn.run('find -name "*.gcda"|xargs gcov', quiet=True, warn=True)
 
-        with self.omnicd(covdatadir), settings(warn_only=True):
+        with self.omnicd(covdatadir):
             ignore = ' '.join(["'%s'" % p for p in self.tsuite_path])
-            self.omnirun('lcov --rc lcov_branch_coverage=1 -r total.info %s -o total.info' % ignore)
+            self.omnirun('lcov --rc lcov_branch_coverage=1 -r total.info %s -o total.info' % ignore, warn=True)
             if hasattr(self, 'ignore_coverage_from'):
                 ignore = ' '.join(["'%s'" % p for p in self.ignore_coverage_from])
-                self.omnirun('lcov --rc lcov_branch_coverage=1 -r total.info %s -o total.info' % ignore)
-            lines = self.omnirun("lcov --rc lcov_branch_coverage=1 --summary total.info 2>&1|tail -3|head -1|sed 's/.*(//' |egrep -o '[0-9]+'")
+                self.omnirun('lcov --rc lcov_branch_coverage=1 -r total.info %s -o total.info' % ignore, warn=True)
+            lines = self.omnirun(
+                "lcov --rc lcov_branch_coverage=1 --summary total.info 2>&1|tail -3|head -1|sed 's/.*(//' |egrep -o '[0-9]+'",
+                warn=True)
             lines = lines.splitlines()
             if len(lines) == 2:
                 self.covered_eloc = lines[0]
                 self.total_eloc = lines[1]
 
-            branches = self.omnirun("lcov --rc lcov_branch_coverage=1 --summary total.info 2>&1|tail -1|sed 's/.*(//' |egrep -o '[0-9]+'")
+            branches = self.omnirun(
+                "lcov --rc lcov_branch_coverage=1 --summary total.info 2>&1|tail -1|sed 's/.*(//' |egrep -o '[0-9]+'",
+                warn=True)
             branches = branches.splitlines()
             if len(branches) == 2:
                 self.covered_branches = branches[0]
@@ -265,11 +270,10 @@ class Container(object):
         else:
             covdatadir = self.source_path
 
-        print covdatadir
+        print(covdatadir)
         with self.omnicd(covdatadir):
-            result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info" % filepath);
+            result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info" % filepath)
         return bool(result)
-
 
     def is_covered(self, filepath, line):
         if self.offline:
@@ -277,8 +281,9 @@ class Container(object):
         else:
             covdatadir = self.source_path
 
-        with self.omnicd(covdatadir), settings(warn_only=True):
-            result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info |grep '^DA:%d,'" % (filepath, line))
+        with self.omnicd(covdatadir):
+            result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info |grep '^DA:%d,'" % (filepath, line),
+                                  warn=True)
             if not result:
                 return self.LineType.NotExecutable
             elif result.endswith(",0"):
@@ -286,13 +291,11 @@ class Container(object):
             else:
                 return self.LineType.Covered
 
-
     def is_merge(self, commit):
         with self.omnicd(self.path):
             mergestatus = self.omnirun("git show " + commit + "|head -2|tail -1")
             self.merge = mergestatus.startswith("Merge:")
             return self.merge
-
 
     def patch_coverage(self, prev_revision):
         """ compute the coverage for the current commit """
@@ -314,13 +317,13 @@ class Container(object):
             changed_files = self.omnirun(diffcmd)
             if changed_files:
                 self.changed_files = [i for i in changed_files.splitlines() if i]
-                print self.changed_files
+                print(self.changed_files)
                 # for every changed file 
                 for f in self.changed_files:
                     # get the filename
                     self.uncovered_lines_list.append([])
                     if self.compileError == False:
-                        #check whether it's a test file
+                        # check whether it's a test file
                         with self.omnicd(self.path):
                             fileExists = self.omnirun('[ -f ' + f + ' ] && echo y || echo n')
                             if fileExists == 'y':
@@ -347,7 +350,8 @@ class Container(object):
                                                           " -- " + f +
                                                           " | perl -pe 's/\e\[?.*?[\@-~]//g'")
                                 self.ehunkheads3 += [i for i in file_diff3.splitlines() if i.startswith('@@')]
-                            line_numbers = self.omnirun("%s %s %s %s" % (self.difflinessh, prev_revision, self.revision, f))
+                            line_numbers = self.omnirun(
+                                "%s %s %s %s" % (self.difflinessh, prev_revision, self.revision, f))
                             # for every changed line
                             for l in line_numbers.splitlines():
                                 # increment added lines
@@ -365,18 +369,19 @@ class Container(object):
                             print('No coverage information found for ' + f + '\n')
 
                             with self.omnicd(self.path):
-                                fileExists = self.omnirun ('[ -f ' + f + ' ] && echo y || echo n')
+                                fileExists = self.omnirun('[ -f ' + f + ' ] && echo y || echo n')
                                 if fileExists == 'y':
-                                    line_numbers = self.omnirun("%s %s %s %s" % (self.difflinessh, prev_revision, self.revision, f))
+                                    line_numbers = self.omnirun(
+                                        "%s %s %s %s" % (self.difflinessh, prev_revision, self.revision, f))
                                     lines = line_numbers.splitlines()
                                     self.added_lines += len(lines)
                                 else:
                                     print('No file found ' + f + '\n')
                 # save results
                 if self.covered_lines > 0:
-                    self.average = round( ((self.covered_lines / (self.covered_lines +
-                                                                  self.uncovered_lines))
-                                           * 100), 2)
+                    self.average = round(((self.covered_lines / (self.covered_lines +
+                                                                 self.uncovered_lines))
+                                          * 100), 2)
                 self.count_hunks(prev_revision)
 
     def prev_patch_coverage(self, backcnt, prev_files, prev_lines):
@@ -390,22 +395,22 @@ class Container(object):
                 prev_lines_same.append(prev_lines[i])
 
         """ ignore files that are modified """
-        prev_files = prev_files_same;
-        prev_lines = prev_lines_same;
+        prev_files = prev_files_same
+        prev_lines = prev_lines_same
         if self.compileError or self.emptyCommit or self.covered_eloc == 0:
             return prev_files, prev_lines
 
         covered = 0
         for i, f in enumerate(prev_files):
             covered += len(prev_lines[i])
-            prev_lines[i][:] = [ l for l in prev_lines[i] if self.is_covered(f, l) != self.LineType.Covered ]
+            prev_lines[i][:] = [l for l in prev_lines[i] if self.is_covered(f, l) != self.LineType.Covered]
             covered -= len(prev_lines[i])
 
-        assert(len(self.prev_covered) >= backcnt)
+        assert (len(self.prev_covered) >= backcnt)
         if len(self.prev_covered) == backcnt:
             self.prev_covered.append(covered)
         else:
-            self.prev_covered[backcnt] += covered;
+            self.prev_covered[backcnt] += covered
         return prev_files, prev_lines
 
     def collect(self, author_name, timestamp, outputfolder, outputfile):
@@ -441,7 +446,7 @@ class Container(object):
             c.compileError = self.compileError
             c.maketestError = self.maketestError
             if self.covered_eloc:
-                c.prev_covered  = self.prev_covered
+                c.prev_covered = self.prev_covered
             c.hunks = len(self.hunkheads)
             c.ehunks = len(self.ehunkheads)
             c.hunks3 = len(self.hunkheads3)
