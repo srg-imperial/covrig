@@ -38,6 +38,7 @@ def clean_s(c):
 
 
 def clean_a():
+    # TODO: initialize Connection correctly.
     c = Connection()
     clean_r(c)
     clean_s(c)
@@ -53,8 +54,8 @@ class Analytics(object):
         self.image = _image
         # commits
         self.commits = _commits
-        # TODO: Initialize connection?
-        self.conn = Connection()
+        # # TODO: Initialize connection?
+        self.conn = Connection('host')
 
     @classmethod
     def run_last(cls, _pclass, _image, _commit):
@@ -94,6 +95,7 @@ class Analytics(object):
 
         # create a data/program-name directory where data will be collected
         self.conn.local('mkdir -p data/' + outputfolder)
+        # TODO: is this supposed to create this on the docker container or on this local machine?
         # list of uncovered files (and corresponding lines) i revisions ago
         prev_uncovered_list = [([], [])] * 10
 
@@ -191,3 +193,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# TODO:
+# fatal: detected dubious ownership in repository at '/home/memcached'
+# To add an exception for this directory, call:
+#
+#         git config --global --add safe.directory /home/memcached
+# Can't open version.m4: Permission denied at version.pl line 47.
+# aclocal...
+# aclocal: error: configure.ac:2: file 'version.m4' does not exist
+# [] []
+# Files modified in the revision: []
+#
+# Lines modified and uncovered in the revision: []
+
+
