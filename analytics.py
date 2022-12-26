@@ -193,18 +193,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# TODO:
-# fatal: detected dubious ownership in repository at '/home/memcached'
-# To add an exception for this directory, call:
-#
-#         git config --global --add safe.directory /home/memcached
-# Can't open version.m4: Permission denied at version.pl line 47.
-# aclocal...
-# aclocal: error: configure.ac:2: file 'version.m4' does not exist
-# [] []
-# Files modified in the revision: []
-#
-# Lines modified and uncovered in the revision: []
-
-

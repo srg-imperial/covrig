@@ -70,7 +70,7 @@ class Container(object):
         print(self.image)
         self.container = self.client.containers.create(self.image,
                                                        command='/usr/sbin/sshd -D',
-                                                       ports={22: 60011})
+                                                       ports={22: 60004})
         self.cnt_id = self.container.id
         self.container.start()
         # TODO: doesn't autocomplete, hopefully this is right
@@ -93,6 +93,8 @@ class Container(object):
         #                        connect_kwargs={"password": self.pwd})
         # TODO: Password seems to be the passphrase for the private key I set up instead?
         self.conn = Connection(host=self.ip, port=22, user=self.user, connect_kwargs={"password": "project"})
+        # self.conn = Connection(user=self.user, host=self.ip, port=22,
+        #                        connect_kwargs={"password": self.pwd})
 
     def run_test(self):
         """ uname to check everything works """
@@ -181,11 +183,11 @@ class Container(object):
         for item in self.tsuite_path:
             item = "%s/%s" % (self.path, item)
             fileExists = self.omnirun('ls -U ' + item + ' >/dev/null 2>&1 && echo y || echo n')
-            if fileExists.stdout == 'y':
+            if fileExists.stdout.strip() == 'y':
                 actual_tsuite.append(item)
                 print('Added ' + item + ' to the test suite\n')
                 isdir = self.omnirun('[ -d "' + item + '" ] && echo y || echo n')
-                if isdir.stdout == 'y':
+                if isdir.stdout.strip() == 'y':
                     self.tsuite_dir.append(item)
                 else:
                     self.tsuite_file.append(item)
@@ -210,7 +212,7 @@ class Container(object):
             self.conn.run("echo ./build_info.txt >> backuplist")
             self.conn.run('tar -cjf coverage-' + commit + '.tar.bz2 -T backuplist')
             # scp to localhost/data
-            self.conn.get('coverage-' + commit + '.tar.bz2', 'data/' + self.outputfolder +
+            self.conn.get(self.source_path + '/coverage-' + commit + '.tar.bz2', local='data/' + self.outputfolder +
                           '/' + 'coverage-' + commit + '.tar.bz2')
 
     def rec_initial_coverage(self):
@@ -244,7 +246,7 @@ class Container(object):
                 if res.failed:
                     return
                 self.conn.run("lcov --rc lcov_branch_coverage=1 -a base.info -a test.info -o total.info", warn=True)
-                self.conn.run('find -name "*.gcda"|xargs gcov', quiet=True, warn=True)
+                self.conn.run('find -name "*.gcda"|xargs gcov', hide=True, warn=True)  # From quiet to hide
 
         with self.omnicd(covdatadir):
             ignore = ' '.join(["'%s'" % p for p in self.tsuite_path])
@@ -288,7 +290,7 @@ class Container(object):
         with self.omnicd(covdatadir):
             result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info |grep '^DA:%d,'" % (filepath, line),
                                   warn=True)
-            if not result: # TODO: is this picked up right given we don't turn it to stdout?
+            if result.ok:
                 return self.LineType.NotExecutable
             elif result.stdout.endswith(",0"):
                 return self.LineType.NotCovered
@@ -319,18 +321,18 @@ class Container(object):
             diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
 
             changed_files = self.omnirun(diffcmd)
-            if changed_files: #TODO: is this captured correctly?
+            if changed_files.stdout:
                 self.changed_files = [i for i in changed_files.stdout.splitlines() if i]
                 print(self.changed_files)
                 # for every changed file 
                 for f in self.changed_files:
                     # get the filename
                     self.uncovered_lines_list.append([])
-                    if self.compileError == False:
+                    if not self.compileError:
                         # check whether it's a test file
                         with self.omnicd(self.path):
                             fileExists = self.omnirun('[ -f ' + f + ' ] && echo y || echo n')
-                            if fileExists.stdout == 'y':
+                            if fileExists.stdout.strip() == 'y':
                                 realp = self.omnirun('realpath ' + f).stdout
                                 for tf in self.tsuite_file:
                                     if fnmatch.fnmatch(realp, tf):
@@ -374,7 +376,7 @@ class Container(object):
 
                             with self.omnicd(self.path):
                                 fileExists = self.omnirun('[ -f ' + f + ' ] && echo y || echo n')
-                                if fileExists.stdout == 'y':
+                                if fileExists.stdout.strip() == 'y':
                                     line_numbers = self.omnirun(
                                         "%s %s %s %s" % (self.difflinessh, prev_revision, self.revision, f))
                                     lines = line_numbers.stdout.splitlines()

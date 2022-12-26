@@ -4,8 +4,10 @@ RUN apt-get update && apt-get install -y \
 	apt-utils \
 	sudo \
 	build-essential \
-	autoconf \
 	automake \
+	autoconf \
+    autotools-dev \
+    pkg-config \
 	libtool \
 	git \
 	curl \
@@ -38,6 +40,16 @@ RUN apt-get -yq install libevent-dev
 RUN sudo apt-get install -yq --reinstall ca-certificates
 
 RUN git clone https://github.com/memcached/memcached.git /home/memcached
+RUN git config --global --add safe.directory /home/memcached
+RUN chown -R root:root /home/memcached
+RUN cd /home/memcached && git status && cd ../..
+RUN chown -R regular /home/memcached
+RUN su regular -c pwd && cd /home/memcached && git status && cd ../..
+# Don't know if this is necessary.
+
+# autogen.sh doesn't seem to work properly if we do it inline. Run here instead
+RUN cd /home/memcached && ./autogen.sh && cd ../..
+
 ADD measure-cov.sh /root/
 
 EXPOSE 22
