@@ -70,7 +70,7 @@ class Container(object):
         print(self.image)
         self.container = self.client.containers.create(self.image,
                                                        command='/usr/sbin/sshd -D',
-                                                       ports={22: 60004})
+                                                       ports={22: 60001})
         self.cnt_id = self.container.id
         self.container.start()
         # TODO: doesn't autocomplete, hopefully this is right
@@ -92,9 +92,8 @@ class Container(object):
         # self.conn = Connection(user=self.user, host=self.ip, port=22,
         #                        connect_kwargs={"password": self.pwd})
         # TODO: Password seems to be the passphrase for the private key I set up instead?
-        self.conn = Connection(host=self.ip, port=22, user=self.user, connect_kwargs={"password": "project"})
-        # self.conn = Connection(user=self.user, host=self.ip, port=22,
-        #                        connect_kwargs={"password": self.pwd})
+        # self.conn = Connection(host=self.ip, port=22, connect_kwargs={"password": "project"})
+        self.conn = Connection(host=self.ip, port=22, user=self.user)
 
     def run_test(self):
         """ uname to check everything works """
