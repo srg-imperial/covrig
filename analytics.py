@@ -179,7 +179,7 @@ def main():
         lastrev = None
         if args.resume:
             lastrecord = subprocess.check_output(["tail", "-1", output])
-            lastrecord = lastrecord.split(',')
+            lastrecord = lastrecord.decode().split(',')
             if len(lastrecord):
                 lastrev = lastrecord[0]
         container = Analytics.run_custom(b["class"],

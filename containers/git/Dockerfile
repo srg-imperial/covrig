@@ -1,16 +1,17 @@
-FROM ubuntu:20.04
+FROM ubuntu:14.04
 
-RUN apt-get update &&  apt-get install -yq \
+RUN apt-get update && apt-get install -yq \
 	sudo \
 	autoconf \
 	automake \
 	libtool \
 	git \
-	curl \
-	openssh-server \
     lcov \
     cloc \
+    openssh-server \
 	--no-install-recommends
+
+#	openssh-server \
 
 #RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
 #RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.60/cloc-1.60.tar.gz | tar xz && cd cloc-* && make install
@@ -35,11 +36,12 @@ RUN apt-get -y install \
 	libyaml-perl \
 	tcl \
 	libhttp-date-perl \
-    libtime-parsedate-perl \
 	python \
 	unzip \
 	libio-pty-perl \
-	libssl-dev
+	libssl-dev \
+    make \
+    realpath
 
 #	libtime-modules-perl \
 RUN sudo apt-get install -yq --reinstall ca-certificates

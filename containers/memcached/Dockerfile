@@ -17,9 +17,6 @@ RUN apt-get update && apt-get install -y \
     cloc \
 	--no-install-recommends
 
-#RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
-#RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
-
 RUN mkdir -p /var/run/sshd
 
 RUN mkdir /root/.ssh
@@ -33,10 +30,6 @@ RUN adduser --gecos "" --disabled-password regular
 
 RUN apt-get -yq install libevent-dev
 
-#RUN wget --version
-#
-#RUN wget https://letsencrypt.org/certs/isrg-root-x1-cross-signed.pem --no-check-certificate
-#RUN sudo cp isrg-root-x1-cross-signed.pem /etc/ssl/certs/
 RUN sudo apt-get install -yq --reinstall ca-certificates
 
 RUN git clone https://github.com/memcached/memcached.git /home/memcached
@@ -45,7 +38,7 @@ RUN chown -R root:root /home/memcached
 RUN cd /home/memcached && git status && cd ../..
 RUN chown -R regular /home/memcached
 RUN su regular -c pwd && cd /home/memcached && git status && cd ../..
-# Don't know if this is necessary.
+# Don't know if this is necessary still get a dubious certificate error if we run commands as regular (su regular).
 
 # autogen.sh doesn't seem to work properly if we do it inline. Run here instead
 RUN cd /home/memcached && ./autogen.sh && cd ../..
