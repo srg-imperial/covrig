@@ -12,7 +12,7 @@ class Redis(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/redis'", capture=True)
+            self.path = self.local("realpath 'repos/redis'").stdout.strip()
         else:
             self.path = '/home/redis'
             self.source_path = '/home/redis/src'
@@ -23,6 +23,9 @@ class Redis(Container):
         self.ignore_coverage_from = ('/usr/include/*', )
 
     def compile(self):
+        if self.offline:
+            # Shouldn't get here as compile is only done if we're online
+            self.path = self.conn.local("realpath 'repos/redis'").stdout
         """ compile redis """
         with self.conn.cd('/home/redis'):
             self.conn.run('chown -R regular:regular .', warn=True)

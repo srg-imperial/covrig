@@ -52,7 +52,7 @@ for ((i=0;i<${#INPUTS[@]};++i)); do
   fi
 done
 
-echo 'set term postscript eps enhanced' >multipleeloc.gp
+echo 'set term postscript eps enhanced color' >multipleeloc.gp
 echo 'set output "eloc.1.eps"' >> multipleeloc.gp
 echo 'set multiplot layout 2, 3' >> multipleeloc.gp
 echo 'set tmargin 2' >> multipleeloc.gp
@@ -61,7 +61,7 @@ echo '!epstool --copy --bbox "eloc.1.eps" "eloc.eps"' >>multipleeloc.gp
 echo '!epstopdf eloc.eps && mv eloc.pdf graphs/ && rm eloc.1.eps "eloc.eps"' >>multipleeloc.gp
 gnuplot multipleeloc.gp
 #
-echo 'set term postscript eps enhanced' >multipletloc.gp
+echo 'set term postscript eps enhanced color' >multipletloc.gp
 echo 'set output "tloc.1.eps"' >> multipletloc.gp
 echo 'set multiplot layout 2, 3' >> multipletloc.gp
 echo 'set tmargin 2' >> multipletloc.gp
@@ -70,7 +70,7 @@ echo '!epstool --copy --bbox "tloc.1.eps" "tloc.eps"' >>multipletloc.gp
 echo '!epstopdf tloc.eps && mv tloc.pdf graphs/ && rm tloc.1.eps "tloc.eps"' >>multipletloc.gp
 gnuplot multipletloc.gp
 #
-echo 'set term postscript eps enhanced' >multiplecov.gp
+echo 'set term postscript eps enhanced color' >multiplecov.gp
 echo 'set output "coverage.1.eps"' >> multiplecov.gp
 echo 'set multiplot layout 2, 3' >> multiplecov.gp
 echo 'set tmargin 2' >> multiplecov.gp
@@ -79,7 +79,7 @@ echo '!epstool --copy --bbox "coverage.1.eps" "coverage.eps"' >>multiplecov.gp
 echo '!epstopdf coverage.eps && mv coverage.pdf graphs/ && rm coverage.1.eps "coverage.eps"' >>multiplecov.gp
 gnuplot multiplecov.gp
 
-echo 'set term postscript eps enhanced' >multiplecov.gp
+echo 'set term postscript eps enhanced color' >multiplecov.gp
 echo 'set output "coverage-lb.1.eps"' >> multiplecov.gp
 echo 'set multiplot layout 2, 3' >> multiplecov.gp
 echo 'set tmargin 2' >> multiplecov.gp
@@ -88,7 +88,7 @@ echo '!epstool --copy --bbox "coverage-lb.1.eps" "coverage-lb.eps"' >>multipleco
 echo '!epstopdf coverage-lb.eps && mv coverage-lb.pdf graphs/ && rm coverage-lb.1.eps "coverage-lb.eps"' >>multiplecov.gp
 gnuplot multiplecov.gp
 
-echo 'set term postscript eps enhanced' >multiplechurn.gp
+echo 'set term postscript eps enhanced color' >multiplechurn.gp
 echo 'set output "churn.1.eps"' >> multiplechurn.gp
 echo 'set multiplot layout 2, 3' >> multiplechurn.gp
 echo 'set tmargin 2' >> multiplechurn.gp
@@ -97,7 +97,7 @@ echo '!epstool --copy --bbox "churn.1.eps" "churn.eps"' >>multiplechurn.gp
 echo '!epstopdf churn.eps && mv churn.pdf graphs/ && rm churn.1.eps "churn.eps"' >>multiplechurn.gp
 gnuplot multiplechurn.gp
 #
-echo 'set term postscript eps enhanced' >multipleeltl.gp
+echo 'set term postscript eps enhanced color' >multipleeltl.gp
 echo 'set output "eltl.1.eps"' >> multipleeltl.gp
 echo 'set multiplot layout 3, 2' >> multipleeltl.gp
 echo 'set tmargin 2' >> multipleeltl.gp
@@ -106,7 +106,7 @@ echo '!epstool --copy --bbox "eltl.1.eps" "eltl.eps"' >>multipleeltl.gp
 echo '!epstopdf eltl.eps && mv eltl.pdf graphs/ && rm eltl.1.eps "eltl.eps"' >>multipleeltl.gp
 gnuplot multipleeltl.gp
 #
-echo 'set term postscript eps enhanced' >multipleeltlzo.gp
+echo 'set term postscript eps enhanced color' >multipleeltlzo.gp
 echo 'set output "eltlzo.1.eps"' >> multipleeltlzo.gp
 echo 'set multiplot layout 3, 2' >> multipleeltlzo.gp
 echo 'set tmargin 2' >> multipleeltlzo.gp
@@ -116,7 +116,7 @@ echo '!epstopdf eltlzo.eps && mv eltlzo.pdf graphs/ && rm eltlzo.1.eps "eltlzo.e
 gnuplot multipleeltlzo.gp
 
 gnuplot << EOF
-set term postscript eps enhanced
+set term postscript eps enhanced color
 set output "patchcovstack.1.eps"
 set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
 set border 3 front linetype -1 linewidth 1.000
@@ -140,7 +140,7 @@ plot "$PCS" u 2 t '' ls 5, '' u 3 t "[0%,     25%]" ls 1, '' u 4 t "(25%,   50%]
 EOF
 
 gnuplot << EOF
-set term postscript eps enhanced
+set term postscript eps enhanced color
 set output "patchtypestacked.1.eps"
 set xtics nomirror
 set grid y linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000

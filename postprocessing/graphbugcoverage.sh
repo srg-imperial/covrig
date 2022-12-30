@@ -35,7 +35,7 @@ for SHA in $(sort -u $REVISIONS); do
 done
 
 gnuplot << EOF
-  set term postscript eps enhanced
+  set term postscript eps enhanced color
   set output "$OUTPUT.1.eps"
   set style fill solid border -1
   set yrange [ 0 : 100 ]
@@ -51,7 +51,7 @@ gnuplot << EOF
 EOF
 
 gnuplot << EOF
-  set term postscript eps enhanced
+  set term postscript eps enhanced color
   set output "$OUTPUT-linelevel.1.eps"
   set style data histograms
   set style histogram rowstacked

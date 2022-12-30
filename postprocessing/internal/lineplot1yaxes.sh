@@ -24,7 +24,7 @@ else
 fi
 
 $CMD $ARGS >>$GRAPHTYPE << EOF
-  set term postscript eps enhanced
+  set term postscript eps enhanced color
   set output "$OUTPUT.1.eps"
   $XLABELCMD
   set ylabel "$YLABEL"

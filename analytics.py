@@ -54,7 +54,7 @@ class Analytics(object):
         self.image = _image
         # commits
         self.commits = _commits
-        # # TODO: Initialize connection?
+        # Dummy local connection
         self.conn = Connection('host')
 
     @classmethod
@@ -95,7 +95,6 @@ class Analytics(object):
 
         # create a data/program-name directory where data will be collected
         self.conn.local('mkdir -p data/' + outputfolder)
-        # TODO: is this supposed to create this on the docker container or on this local machine?
         # list of uncovered files (and corresponding lines) i revisions ago
         prev_uncovered_list = [([], [])] * 10
 
@@ -114,6 +113,10 @@ class Analytics(object):
             c = self.pclass(self.image, 'root', 'root')
             c.outputfolder = outputfolder
             c.spawn()
+            if c.offline:  # TODO: Don't really know why being offline changes the commit hash length we get...
+                prev_commit_id = prev_commit_id[:7]
+                commit_id = commit_id[:7]
+
             try:
                 c.checkout(prev_commit_id, commit_id)
                 if not c.emptyCommit:
@@ -125,11 +128,11 @@ class Analytics(object):
                     if not c.offline:
                         c.backup(commit_id)
                     c.patch_coverage(prev_commit_id)
-                for i, (files, lines) in enumerate(prev_uncovered_list):
-                    prev_uncovered_list[i] = c.prev_patch_coverage(i, files, lines)
+                for j, (files, lines) in enumerate(prev_uncovered_list):
+                    prev_uncovered_list[j] = c.prev_patch_coverage(j, files, lines)
 
                 print(c.changed_files, c.uncovered_lines_list)
-                prev_uncovered_list.insert(0, (c.changed_files, c.uncovered_lines_list));
+                prev_uncovered_list.insert(0, (c.changed_files, c.uncovered_lines_list))
                 prev_uncovered_list.pop()
 
                 c.collect(author_name, timestamp, outputfolder, outputfile)
