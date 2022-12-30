@@ -70,7 +70,7 @@ class Container(object):
         print(self.image)
         self.container = self.client.containers.create(self.image,
                                                        command='/usr/sbin/sshd -D',
-                                                       ports={22: 60001})
+                                                       ports={22: 60002})
         self.cnt_id = self.container.id
         self.container.start()
         # TODO: doesn't autocomplete, hopefully this is right

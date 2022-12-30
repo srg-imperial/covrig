@@ -4,14 +4,14 @@ import subprocess
 
 # Analytics modules
 from _Memcached import *
-# from _Redis import *
-# from _Zeromq import *
+from _Redis import *
+from _Zeromq import *
 # from _Lighttpd import *
-# from _Lighttpd2 import *
+from _Lighttpd2 import *
 # from _Beanstalkd import *
 from _Git import *
 # from _Diffutils import *
-# from _Binutils import *
+from _Binutils import *
 # from _Findutils import *
 # from _Dovecot import *
 # from _Squid import *
@@ -157,11 +157,11 @@ def main():
     benchmarks = {
         # "beanstalkd": {"class": Beanstalkd, "revision": "fb0a466", "n": 600},
         # "lighttpd": {"class": Lighttpd, "revision": "c8fbc16", "n": 600},
-        # "lighttpd2": {"class": Lighttpd2, "revision": "0d40b25", "n": 400},
+        "lighttpd2": {"class": Lighttpd2, "revision": "0d40b25", "n": 400},
         "memcached": {"class": Memcached, "revision": "87e2f36", "n": 409},
-        # "zeromq": {"class": Zeromq, "revision": "573d7b0", "n": 500},
-        # "redis": {"class": Redis, "revision": "347ab78", "n": 500},
-        # "binutils": {"class": Binutils, "revision": "a0a1bb07", "n": 6000},
+        "zeromq": {"class": Zeromq, "revision": "573d7b0", "n": 500},
+        "redis": {"class": Redis, "revision": "347ab78", "n": 500},
+        "binutils": {"class": Binutils, "revision": "a0a1bb07", "n": 6000},
         # "diffutils": {"class": Diffutils, "revision": "b2f1e4b", "n": 350},
         # "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
         # "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},

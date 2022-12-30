@@ -31,7 +31,7 @@ class Memcached(Container):
             result = self.conn.run(
                 "git rev-list acb84f05e0a8dc67a572dc647071002f9e64499d | grep $(git rev-parse HEAD)"
                 .format(self.source_path), warn=True)
-            if result.ok: #use to be result.succeeded #TODO: Does this really work?
+            if result.ok:
                 self.conn.run("apt-get -y install libevent1-dev", warn=True)
             # result = self.conn.run(('su regular -c ./autogen.sh && su regular -c ./configure && ' +
             #                         'su regular -c \'make clean\' && ' +
@@ -39,7 +39,7 @@ class Memcached(Container):
             # result = self.conn.run(('./autogen.sh && ./configure && make clean && \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'), warn=True)
             # result = self.conn.run('ls && ./configure && make clean && \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"', warn=True)
             result = self.conn.run('./configure && make clean && make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'', warn=True)
-            if not result.ok: #used to be if result.failed
+            if result.failed:
                 self.compileError = True
 
     def make_test(self):

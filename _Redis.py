@@ -1,4 +1,4 @@
-from fabric.api import *
+from fabric import Connection
 
 # Analytics modules
 from Container import Container
@@ -11,8 +11,8 @@ class Redis(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        if (self.offline):
-            self.path = local("realpath 'repos/redis'", capture=True)
+        if self.offline:
+            self.path = self.conn.local("realpath 'repos/redis'", capture=True)
         else:
             self.path = '/home/redis'
             self.source_path = '/home/redis/src'
@@ -24,22 +24,20 @@ class Redis(Container):
 
     def compile(self):
         """ compile redis """
-        with cd('/home/redis'):
-            with settings(warn_only=True):
-                run('chown -R regular:regular .')
-                result = run('su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0\'')
-                if result.failed:
-                    self.compileError = True
+        with self.conn.cd('/home/redis'):
+            self.conn.run('chown -R regular:regular .', warn=True)
+            result = self.conn.run('su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0\'', warn=True)
+            if result.failed:
+                self.compileError = True
 
     def make_test(self):
         """ run the test suite """
         super(Redis, self).make_test()
         # if compile failed, skip this step
-        if self.compileError == False:
-            with cd('/home/redis/src'):
-                with settings(warn_only=True):
-                    for i in range(5):
-                        result = run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'')
-                        if result.failed:
-                            self.maketestError = result.return_code
-                        run('killall redis')
+        if not self.compileError:
+            with self.conn.cd('/home/redis/src'):
+                for i in range(5):
+                    result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
+                    if result.failed:
+                        self.maketestError = result.return_code
+                    self.conn.run('killall redis', warn=True)
