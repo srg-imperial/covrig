@@ -106,8 +106,8 @@ class Container(object):
         """ uname to check everything works """
         self.conn.run('uname -on')
 
-    def local(self, cmd: str, **kwargs):
-        return subprocess.run([cmd], shell=True, capture_output=True, text=True, **kwargs)
+    def local(self, cmd: str, text=True, **kwargs):
+        return subprocess.run([cmd], shell=True, capture_output=True, text=text, **kwargs)
 
     def omnicd(self, path):
         if self.offline:
@@ -124,9 +124,11 @@ class Container(object):
         if self.offline:
             # return self.conn.local(cmd, capture=True, **kwargs)
             kwargs.pop('warn', None)
-            return self.local(cmd, **kwargs)
+            text = kwargs.pop('text', True)  # Capture text arg if it can be found, otherwise True.
+            return self.local(cmd, text=text, **kwargs)
         else:
             kwargs.pop('cwd', None)  # Cleanse of cwd magic for a standard fabric run
+            kwargs.pop('text', None)
             return self.conn.run(cmd, **kwargs)
 
     def spawn(self):
@@ -155,9 +157,9 @@ class Container(object):
         lines = 0
         for p in path:
             try:
-                lines += int(self.omnirun("cloc " + p + " | tail -2 | awk '{print $5}'").stdout)
+                lines += int(self.omnirun("cloc " + p + " | tail -2 | awk '{print $5}'").stdout.strip())
             except ValueError:
-                lines += int(self.omnirun("wc -l " + p + "/*|tail -1|awk '{ print $1 }'").stdout)
+                lines += int(self.omnirun("wc -l " + p + "/*|tail -1|awk '{ print $1 }'").stdout.strip())
         return str(lines)
 
     def count_hunks(self, prev_revision):
@@ -167,13 +169,14 @@ class Container(object):
         with self.omnicd(self.path):
             changed = self.omnirun("git diff -b -U0 " +
                                    prev_revision + " " + self.revision +
-                                   " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd)
+                                   " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd, text=False)
+            # Make sure not in text mode as can be passed illegal utf8 encoded characters
             if changed:
-                self.hunkheads = [i for i in changed.stdout.splitlines() if i.startswith('@@')]
+                self.hunkheads = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
                 changed = self.omnirun("git diff -b " +
                                        prev_revision + " " + self.revision +
-                                       " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd)
-                self.hunkheads3 = [i for i in changed.stdout.splitlines() if i.startswith('@@')]
+                                       " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd, text=False)
+                self.hunkheads3 = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
 
     def checkout(self, prev_revision, revision):
         """ checkout the revision we want """
@@ -303,7 +306,7 @@ class Container(object):
         print(covdatadir)
         with self.omnicd(covdatadir):
             result = self.omnirun("sed -n '\|SF:.*/%s|,/end_of_record/p' total.info" % filepath, cwd=cwd)
-        return bool(result.stdout)
+        return bool(result.stdout.strip())
 
     def is_covered(self, filepath, line):
         cwd = None
@@ -329,7 +332,7 @@ class Container(object):
             cwd = self.path
         with self.omnicd(self.path):
             mergestatus = self.omnirun("git show " + commit + "|head -2|tail -1", cwd=cwd)
-            self.merge = mergestatus.stdout.startswith("Merge:")
+            self.merge = mergestatus.stdout.strip().startswith("Merge:")
             return self.merge
 
     def patch_coverage(self, prev_revision):
@@ -365,7 +368,7 @@ class Container(object):
                         # with self.omnicd(self.path): #TODO: aren't we already in context? I'm commenting of this
                         fileExists = self.omnirun('[ -f ' + f + ' ] && echo y || echo n', cwd=cwd)
                         if fileExists.stdout.strip() == 'y':
-                            realp = self.omnirun('realpath ' + f, cwd=cwd).stdout
+                            realp = self.omnirun('realpath ' + f, cwd=cwd).stdout.strip()
                             for tf in self.tsuite_file:
                                 if fnmatch.fnmatch(realp, tf):
                                     self.changed_test_files.append(f)

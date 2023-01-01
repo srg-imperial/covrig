@@ -1,6 +1,8 @@
 import csv
 from os.path import isfile
 
+WINDOW_SIZE = 10
+
 
 class DataHandler(object):
     """ Create an XML file for collecting the results;
@@ -38,12 +40,12 @@ class DataHandler(object):
 
         # prev_covered[i] contains the #lines covered from the revision current~i
         for i, _ in enumerate(self.prev_covered):
-            if (i > 0):
-                self.prev_covered[i] += self.prev_covered[i-1];
+            if i > 0:
+                self.prev_covered[i] += self.prev_covered[i - 1]
         # prev_covered[i] contains the #lines covered from revision current~1 to current~i
 
         # make sure no fatal errors occurred
-        if self.compileErr == False and self.emptyCommit == False:
+        if not self.compileErr and not self.emptyCommit:
             self.total_eloc = _collector.total_eloc
             self.covered_eloc = _collector.covered_eloc
             self.total_branches = _collector.total_branches
@@ -60,10 +62,10 @@ class DataHandler(object):
 
     def extractData(self):
         # if the compilation failed, leave the ELOCs at 0
-        if self.compileErr == True:
+        if self.compileErr:
             self.exitStatus = 'compileError'
         elif self.emptyCommit:
-            self.exitStatus = 'EmptyCommit';
+            self.exitStatus = 'EmptyCommit'
         else:
             # in case we didn't collect any data return immediately
             if self.covered_eloc == 0:
@@ -101,17 +103,25 @@ class DataHandler(object):
         else:
             with open('data/' + self.outputfolder + '/' + self.outputfile + '.csv', 'w') as fp:
                 a = csv.writer(fp, delimiter=',')
+                # header = ["rev", "#eloc", "coverage", "testsize",
+                #           "author", "#addedlines", "#covlines", "#notcovlines",
+                #           "patchcoverage", "#covlinesprevpatches*", "time", "exit",
+                #           "hunks", "ehunks", "changed_files", "echanged_files",
+                #           "changed_test_files", "hunks3", "ehunks3", "merge", "#br", "#brcov"]
+                """ Adding more lines for better csv printing """
                 header = ["rev", "#eloc", "coverage", "testsize",
                           "author", "#addedlines", "#covlines", "#notcovlines",
-                          "patchcoverage", "#covlinesprevpatches*", "time", "exit",
-                          "hunks", "ehunks", "changed_files", "echanged_files",
-                          "changed_test_files", "hunks3", "ehunks3", "merge", "#br", "#brcov"]
+                          "patchcoverage"]
+                header += ["#covlinesprevpatches*" for i in range(0, WINDOW_SIZE)]
+                header += ["time", "exit", "hunks", "ehunks", "changed_files", "echanged_files",
+                           "changed_test_files", "hunks3", "ehunks3", "merge", "#br", "#brcov"]
                 a.writerow(header)
                 a.writerow(data)
 
 
 class Collector(object):
     """ little helper-object for store info extracted from a container """
+
     # (interesting) member variables are set by Container::collect()
 
     def __init__(self):
@@ -126,4 +136,4 @@ class Collector(object):
         self.uncovered_lines = 0
         self.average = 0
         self.average = 0
-        self.prev_covered = [ 0 ] * 10
+        self.prev_covered = [0] * WINDOW_SIZE
