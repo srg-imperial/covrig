@@ -16,7 +16,7 @@ class Memcached(Container):
         # TODO: maybe as comment says it's to do with the "regular" user account?
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/memcached'", capture=True)
+            self.path = self.local("realpath 'repos/memcached'").stdout.strip()
         else:
             self.path = '/home/memcached'
             self.source_path = '/home/memcached'

@@ -78,7 +78,7 @@ class Container(object):
         print(self.image)
         self.container = self.client.containers.create(self.image,
                                                        command='/usr/sbin/sshd -D',
-                                                       ports={22: 60002})
+                                                       ports={22: 60001})
         self.cnt_id = self.container.id
         self.container.start()
 
@@ -172,11 +172,17 @@ class Container(object):
                                    " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd, text=False)
             # Make sure not in text mode as can be passed illegal utf8 encoded characters
             if changed:
-                self.hunkheads = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
+                if self.offline:
+                    self.hunkheads = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
+                else:
+                    self.hunkheads = [i for i in changed.stdout.splitlines() if i.startswith('@@')]
                 changed = self.omnirun("git diff -b " +
                                        prev_revision + " " + self.revision +
                                        " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd, text=False)
-                self.hunkheads3 = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
+                if self.offline:
+                    self.hunkheads3 = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
+                else:
+                    self.hunkheads3 = [i for i in changed.stdout.splitlines() if i.startswith('@@')]
 
     def checkout(self, prev_revision, revision):
         """ checkout the revision we want """
