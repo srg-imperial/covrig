@@ -95,12 +95,37 @@ class Container(object):
         #     env.host_string = self.ip + ':22'
         #     # in a perfect world, this would not be here
         #     env.connection_attempts = 10
-        # self.conn = Connection(user=self.user, host=self.ip, port=22, connect_kwargs={"password": self.pwd, "passphrase": "project", "look_for_keys": False, "allow_agent": False})
-        # self.conn = Connection(user=self.user, host=self.ip, port=22,
-        #                        connect_kwargs={"password": self.pwd})
-        # TODO: Password seems to be the passphrase for the private key I set up instead?
-        # self.conn = Connection(host=self.ip, port=22, connect_kwargs={"password": "project"})
-        self.conn = Connection(host=self.ip, port=22, user=self.user)
+        self.try_to_connect()
+
+    def try_to_connect(self, max_connection_attempts=10):
+        tries = 0
+        while tries < max_connection_attempts:
+            try:
+                self.conn = Connection(host=self.ip, port=22, user=self.user,
+                                       connect_kwargs={
+                                           "disabled_algorithms": {"pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]}
+                                       })
+                return
+            except Exception as e:
+                print(f'Failed to connect to container: {e}')
+                tries += 1
+                if tries < max_connection_attempts:
+                    print(f'Retrying... ({tries})')
+        print(f'Error: Maximum number of connection attempts exceeded.')
+
+    def try_to_run(self, cmd, max_connection_attempts=10, **kwargs):
+        tries = 0
+        while tries < max_connection_attempts:
+            try:
+                run = self.conn.run(cmd, **kwargs)
+                return run
+            except Exception as e:
+                print(f'Failed to connect to container: {e}')
+                tries += 1
+                if tries < max_connection_attempts:
+                    print(f'Retrying... ({tries})')
+        print(f'Error: Maximum number of connection attempts exceeded.')
+        return None
 
     def run_test(self):
         """ uname to check everything works """
@@ -129,7 +154,8 @@ class Container(object):
         else:
             kwargs.pop('cwd', None)  # Cleanse of cwd magic for a standard fabric run
             kwargs.pop('text', None)
-            return self.conn.run(cmd, **kwargs)
+            return self.try_to_run(cmd, **kwargs)
+            # return self.conn.run(cmd, **kwargs)
 
     def spawn(self):
         if not self.offline:

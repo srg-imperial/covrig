@@ -34,11 +34,11 @@ RUN apt-get -yq install libevent-dev
 RUN sudo apt-get install -yq --reinstall ca-certificates
 
 RUN git clone https://github.com/memcached/memcached.git /home/memcached
-RUN git config --global --add safe.directory /home/memcached
-RUN chown -R root:root /home/memcached
-RUN cd /home/memcached && git status && cd ../..
-RUN chown -R regular /home/memcached
-RUN su regular -c pwd && cd /home/memcached && git status && cd ../..
+#RUN git config --global --add safe.directory /home/memcached
+#RUN chown -R root:root /home/memcached
+#RUN cd /home/memcached && git status && cd ../..
+#RUN chown -R regular /home/memcached
+#RUN su regular -c pwd && cd /home/memcached && git status && cd ../..
 # Don't know if this is necessary still get a dubious certificate error if we run commands as regular (su regular).
 
 # autogen.sh doesn't seem to work properly if we do it inline. Run here instead
