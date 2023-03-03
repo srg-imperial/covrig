@@ -4,6 +4,8 @@ import sys
 from fabric import Connection
 import docker
 import fnmatch
+import random
+import time
 
 # Analytics modules
 from DataHandler import *
@@ -76,9 +78,28 @@ class Container(object):
     def sshd_up(self):
         """ set up sshd """
         print(self.image)
-        self.container = self.client.containers.create(self.image,
-                                                       command='/usr/sbin/sshd -D',
-                                                       ports={22: 60001})
+        # Pick a random number between 60001 and 61000 for the port mapping, and try to create a container, retry if the port is already in use
+        # Do this 20 times (arbitrary number) before giving up, and wait a random amount of time between retries
+        attempts, max_retries = 0, 20
+        while attempts < max_retries:
+            # This is a hack to get around the fact that the port is already allocated
+            random_port = random.randint(60001, 61000)
+            try:
+                self.container = self.client.containers.create(self.image,
+                                                               command='/usr/sbin/sshd -D',
+                                                               ports={22: random_port})
+                break
+            except docker.errors.APIError as e:
+                if "port is already allocated" in str(e):
+                    print(f"Port {random_port} already allocated, retrying...")
+                    time.sleep(random.uniform(0.1, 1))
+                    attempts += 1
+                    continue
+                else:
+                    raise e
+        if attempts == max_retries:
+            print("Could not create container, giving up")
+            sys.exit(1)
         self.cnt_id = self.container.id
         self.container.start()
 
@@ -87,6 +108,7 @@ class Container(object):
         # state = self.client.inspect_container(self.cnt_id)
         state = self.client.containers.get(self.cnt_id).attrs
         self.ip = state['NetworkSettings']['IPAddress']
+        print(f"Started container {self.cnt_id[:8]} with IP {self.ip}")
 
     def fabric_setup(self):
         #     """ set fabric env parameters """
@@ -99,6 +121,7 @@ class Container(object):
 
     def try_to_connect(self, max_connection_attempts=10):
         tries = 0
+        # Do this 10 times (arbitrary number) before giving up, use backoff
         while tries < max_connection_attempts:
             try:
                 self.conn = Connection(host=self.ip, port=22, user=self.user,
@@ -111,6 +134,7 @@ class Container(object):
                 tries += 1
                 if tries < max_connection_attempts:
                     print(f'Retrying... ({tries})')
+                    time.sleep((1.5 ** tries)/3) # exponential backoff scale to 12s
         print(f'Error: Maximum number of connection attempts exceeded.')
 
     def try_to_run(self, cmd, max_connection_attempts=10, **kwargs):
@@ -120,11 +144,12 @@ class Container(object):
                 run = self.conn.run(cmd, **kwargs)
                 return run
             except Exception as e:
-                print(f'Failed to connect to container: {e}')
+                print(f'Failed to run on container: {e}')
                 tries += 1
                 if tries < max_connection_attempts:
                     print(f'Retrying... ({tries})')
-        print(f'Error: Maximum number of connection attempts exceeded.')
+                    time.sleep((1.5 ** tries) / 3)  # exponential backoff scale to 12s
+        print(f'Error: Maximum number of run attempts exceeded.')
         return None
 
     def run_test(self):
