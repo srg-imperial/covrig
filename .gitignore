@@ -1,3 +1,5 @@
 *#
 *.pyc
 *.xml
+*.tar.bz2
+jun2015data/
