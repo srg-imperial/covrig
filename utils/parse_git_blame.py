@@ -27,15 +27,14 @@ if __name__ == '__main__':
     assert len(date) == 1, "Date file should only have one line."
     compare_date = date[0].strip()
 
-    print("Input file has {} lines.".format(len(lines)))
-
     # parse input file
     commit = ''
     author = ''
     committer_time = ''
     code = ''
-
+    lines_count = 0
     # write output file
+    code_seen = False
     with args.output as f_out:
         for line in lines:
             if commit == '':
@@ -57,13 +56,17 @@ if __name__ == '__main__':
                 committer_time = str(diff)
             elif line.startswith('\t'):
                 code = line.strip()
+                code_seen = True # Need this since we can have a line of code that is just a tab (white space changes)
                 # get rid of extra quotes
-            if commit and author and committer_time and code:
+            if commit and author and committer_time and code_seen:
                 # write to output file
                 f_out.write('{}|{}|{}|{}\n'.format(commit, author, committer_time, code))
-
+                lines_count += 1
+                code_seen = False
                 # reset variables
                 commit = ''
                 author = ''
                 committer_time = ''
                 code = ''
+
+    print("Wrote {} lines for file {}.".format(lines_count, args.input.name))
