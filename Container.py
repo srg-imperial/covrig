@@ -223,17 +223,19 @@ class Container(object):
                                    " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd, text=False)
             # Make sure not in text mode as can be passed illegal utf8 encoded characters
             if changed:
+                changed_stripped = changed.stdout.splitlines()
                 if self.offline:
-                    self.hunkheads = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
+                    self.hunkheads = [i for i in changed_stripped if i.decode('utf-8', 'replace').startswith('@@')]
                 else:
-                    self.hunkheads = [i for i in changed.stdout.splitlines() if i.startswith('@@')]
+                    self.hunkheads = [i for i in changed_stripped if i.startswith('@@')]
                 changed = self.omnirun("git diff -b " +
                                        prev_revision + " " + self.revision +
                                        " | perl -pe 's/\e\[?.*?[\@-~]//g'", cwd=cwd, text=False)
+                changed_stripped = changed.stdout.splitlines()
                 if self.offline:
-                    self.hunkheads3 = [i for i in changed.stdout.splitlines() if i.decode('utf-8', 'replace').startswith('@@')]
+                    self.hunkheads3 = [i for i in changed_stripped if i.decode('utf-8', 'replace').startswith('@@')]
                 else:
-                    self.hunkheads3 = [i for i in changed.stdout.splitlines() if i.startswith('@@')]
+                    self.hunkheads3 = [i for i in changed_stripped if i.startswith('@@')]
 
     def checkout(self, prev_revision, revision):
         """ checkout the revision we want """
@@ -244,7 +246,7 @@ class Container(object):
             cwd = self.path
         with self.omnicd(self.path):
             print('path is ' + self.path)
-            result = self.omnirun('git checkout ' + revision, cwd=cwd)
+            self.omnirun('git checkout ' + revision, cwd=cwd)
             self.is_merge(revision)
             diffcmd = "git diff -b --pretty='format:' --name-only " + prev_revision + " " + self.revision + " -- "
             if hasattr(self, 'limit_changes_to'):
@@ -252,7 +254,7 @@ class Container(object):
                     diffcmd += path + " "
             diffcmd += " | perl -pe 's/\e\[?.*?[\@-~]//g'"
             result = self.omnirun(diffcmd, cwd=cwd)
-            if not result:
+            if result.stdout.strip() == "":
                 self.emptyCommit = True
 
     def tsize_compute(self):
@@ -437,7 +439,7 @@ class Container(object):
                             print('Coverage information found\n')
                             self.echanged_files.append(f)
                             # get the changed lines numbers
-                            # with self.omnicd(self.path): #TODO: same as above
+                            # with self.omnicd(self.path):
                             file_diff = self.omnirun("git diff -b -U0 " +
                                                      prev_revision + " " + self.revision +
                                                      " -- " + f +
