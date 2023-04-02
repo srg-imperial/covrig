@@ -4,9 +4,9 @@
 # It takes as input a repository, a start commit and a number of commits.
 # It then runs the analytics on the specified number of commits starting from the start commit.
 
-# Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> <output_dir>
+# Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes>
 
-# Example: run_analytics_parallel.sh redis 100 4 data/Redis
+# Example: run_analytics_parallel.sh redis 100 4
 
 # The script will create a directory for each process in the output directory.
 # Each directory will contain the output of the analytics for the commits assigned to that process.
