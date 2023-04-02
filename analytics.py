@@ -13,7 +13,7 @@ from _Git import *
 # from _Diffutils import *
 from _Binutils import *
 # from _Findutils import *
-# from _Dovecot import *
+from _Dovecot import *
 # from _Squid import *
 # from _Vim import *
 
@@ -167,6 +167,7 @@ def main():
         "binutils": {"class": Binutils, "revision": "a0a1bb07", "n": 6000},
         # "diffutils": {"class": Diffutils, "revision": "b2f1e4b", "n": 350},
         # "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
+        "dovecot": {"class": Dovecot, "revision": "121b017", "n": 1000}, # matches up with mercurial/git-hg commits for ffbf5813, some commits don't work since have external dependencies we can't roll back to (Unicode)
         # "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},
         "git": {"class": Git, "revision": "d7aced9", "n": 500},
         # "vim": {"class": Vim, "revision": "5ad9cbaf", "n": 600},
