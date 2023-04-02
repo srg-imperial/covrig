@@ -24,7 +24,7 @@ ADD id_rsa.pub /root/.ssh/authorized_keys
 RUN chown -R root:root /root/.ssh
 RUN chmod -R 700 /root/.ssh
 
-RUN apt-get -yq install flex bison texinfo libncurses5-dev
+RUN apt-get -yq install flex bison texinfo libncurses5-dev dejagnu
 
 RUN apt-get install -yq --reinstall ca-certificates # Needed for higher ubuntu versions (e.g. 20)
 
