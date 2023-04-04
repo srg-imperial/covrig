@@ -89,14 +89,10 @@ class Container(object):
                                                                command='/usr/sbin/sshd -D',
                                                                ports={22: random_port})
                 break
-            except docker.errors.APIError as e:
-                if "port is already allocated" in str(e):
-                    print(f"Port {random_port} already allocated, retrying...")
-                    time.sleep(random.uniform(0.1, 1))
-                    attempts += 1
-                    continue
-                else:
-                    raise e
+            except Exception as e:
+                print(f"Most likely port {random_port} already allocated, retrying...")
+                time.sleep(random.uniform(0.1, 1))
+                attempts += 1
         if attempts == max_retries:
             print("Could not create container, giving up")
             sys.exit(1)
