@@ -38,9 +38,9 @@ class Redis(Container):
         super(Redis, self).make_test()
         # if compile failed, skip this step
         if not self.compileError:
-            with self.conn.cd('/home/redis/src'):
-                for i in range(5):
-                    result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
-                    if result.failed:
-                        self.maketestError = result.return_code
-                    self.conn.run('killall redis', warn=True)
+            with self.conn.cd(self.source_path):
+                # for i in range(5):
+                result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
+                if result.failed:
+                    self.maketestError = result.return_code
+                self.conn.run('killall redis', warn=True)

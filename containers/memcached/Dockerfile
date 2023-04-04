@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     lcov \
     cloc \
     realpath \
+    psmisc \
 	--no-install-recommends
 
 RUN cd /tmp && curl -L https://ftp.gnu.org/gnu/automake/automake-1.12.1.tar.gz --insecure | tar xz && cd automake-* && ./configure --prefix=/usr && make install

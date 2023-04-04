@@ -16,9 +16,16 @@ REPO=$1
 NUM_COMMITS=$2
 NUM_PROCESSES=$3
 
-# Check we have 3 args
-if [ "$#" -ne 3 ]; then
-  echo "Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes>"
+# if fourth arg is set, use it as the image name
+if [ "$#" -eq 4 ]; then
+  IMAGE=$4
+else
+  IMAGE=$REPO
+fi
+
+# Check we have 3 or 4 args
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
+  echo "Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> [image]"
   exit 1
 fi
 
@@ -48,24 +55,61 @@ mkdir -p "$OUT_DIR"
 
 NUM_COMMITS_PER_PROCESS=$((NUM_COMMITS / NUM_PROCESSES)) # Integer division
 
+# Get the remainder
+REMAINDER=$((NUM_COMMITS % NUM_PROCESSES))
+
+# Create an array of length NUM_PROCESSES, and fill it with NUM_COMMITS_PER_PROCESS
+NCPP_ARRAY=()
+for I in $(seq "$NUM_PROCESSES")
+do
+  if [ "$REMAINDER" -gt 0 ]; then
+    NCPP_ARRAY+=("$((NUM_COMMITS_PER_PROCESS + 1))")
+    REMAINDER=$((REMAINDER - 1))
+  else
+    NCPP_ARRAY+=("$NUM_COMMITS_PER_PROCESS")
+  fi
+done
+
 analytics(){
   # Pull the args into variables
   FILENAME=$1
   LIMIT=$2
   REPO=$3
   NUM_COMMITS=$4
+  IMAGE=$5
   # Run the analytics
-  python analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$REPO" "$REPO" "$NUM_COMMITS"
+  echo "============================"
+  echo "> python3 analytics.py --output $FILENAME --limit $LIMIT --image $IMAGE $REPO $NUM_COMMITS"
+  echo "============================"
+  python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" "$REPO" "$NUM_COMMITS"
 }
+export -f analytics
 
 # Start a timer
 START_TIME=$(date +%s)
 
+# generate the args we will supply to each process
+OUTPUT_FILES=()
+COMMIT_RANGES=()
+
+TOTAL=0
+
 for I in $(seq "$NUM_PROCESSES")
 do
-  analytics "$REPO""$I" $NUM_COMMITS_PER_PROCESS "$REPO" $((I * NUM_COMMITS_PER_PROCESS)) &
+  OUTPUT_FILES+=("$REPO""$I")
+  # Use the NCPP_ARRAY elements to get TOTAL
+  TOTAL=$((TOTAL + NCPP_ARRAY[I - 1]))
+  COMMIT_RANGES+=("$TOTAL")
 done
-wait
+
+# Run the analytics in parallel using GNU parallel
+
+# The -j flag specifies the number of processes to run in parallel
+# The -k flag specifies to keep the order of the output
+# Test the command first with --dry-run
+
+parallel --link --bar -j "$NUM_PROCESSES" analytics {1} {2} "$REPO" {3} "$IMAGE" ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}"
+
 
 echo "Done running analytics, merging files..."
 

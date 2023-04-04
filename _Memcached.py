@@ -47,8 +47,8 @@ class Memcached(Container):
         # if compile failed, skip this step
         if not self.compileError:
             with self.conn.cd(self.source_path):
-                for i in range(5):
-                    result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
-                    if result.failed:
-                        self.maketestError = result.return_code
-                    self.conn.run('killall memcached', warn=True)
+                # for i in range(5):
+                result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
+                if result.failed:
+                    self.maketestError = result.return_code
+                self.conn.run('killall memcached', warn=True)
