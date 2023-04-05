@@ -34,10 +34,6 @@ class Memcached(Container):
             result = self.conn.run(('su regular -c ./autogen.sh && su regular -c ./configure && ' +
                                     'su regular -c \'make clean\' && ' +
                                     'su regular -c \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'), warn=True)
-            # result = self.conn.run(('./autogen.sh && ./configure && make clean && \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"'), warn=True)
-            # result = self.conn.run('ls && ./configure && make clean && \"make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'\"', warn=True)
-
-            # result = self.conn.run('./configure && make clean && make CFLAGS+=\'-fprofile-arcs -ftest-coverage -g -O0 -pthread\'', warn=True)
             if result.failed:
                 self.compileError = True
 
