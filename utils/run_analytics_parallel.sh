@@ -110,7 +110,7 @@ rm -rf data/"$REPO"_log.txt
 # The -k flag specifies to keep the order of the output
 # Test the command first with --dry-run
 
-parallel --link --bar -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" | tee data/"$REPO"_log.txt
+parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" | tee data/"$REPO"_log.txt
 
 echo "Done running analytics, merging files..."
 
