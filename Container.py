@@ -81,30 +81,33 @@ class Container(object):
         # Pick a random number between 60001 and 61000 for the port mapping, and try to create a container, retry if the port is already in use
         # Do this 20 times (arbitrary number) before giving up, and wait a random amount of time between retries
         attempts, max_retries = 0, 20
+        random_port = -1
         while attempts < max_retries:
             # This is a hack to get around the fact that the port is already allocated
-            random_port = random.randint(60001, 61000)
+            random_port = random.randint(60001, 60999)
             try:
                 self.container = self.client.containers.create(self.image,
                                                                command='/usr/sbin/sshd -D',
                                                                ports={22: random_port})
+                self.cnt_id = self.container.id
+                self.container.start() # This line is the one that fails if the port is already allocated
                 break
             except Exception as e:
+                print(f"Docker threw error: {e}")
                 print(f"Most likely port {random_port} already allocated, retrying...")
                 time.sleep(random.uniform(0.1, 1))
                 attempts += 1
         if attempts == max_retries:
             print("Could not create container, giving up")
             sys.exit(1)
-        self.cnt_id = self.container.id
-        self.container.start()
+        print(f"Started container {self.cnt_id[:8]} on port {random_port}")
 
     def set_ip(self):
         """ set container ID """
         # state = self.client.inspect_container(self.cnt_id)
         state = self.client.containers.get(self.cnt_id).attrs
         self.ip = state['NetworkSettings']['IPAddress']
-        print(f"Started container {self.cnt_id[:8]} with IP {self.ip}")
+        print(f"Assigned container {self.cnt_id[:8]} IP {self.ip}")
 
     def fabric_setup(self):
         #     """ set fabric env parameters """
