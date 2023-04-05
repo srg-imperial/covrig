@@ -104,12 +104,13 @@ done
 
 # Run the analytics in parallel using GNU parallel
 
+rm -rf data/"$REPO"_log.txt
+
 # The -j flag specifies the number of processes to run in parallel
 # The -k flag specifies to keep the order of the output
 # Test the command first with --dry-run
 
-parallel --link --bar -j "$NUM_PROCESSES" analytics {1} {2} "$REPO" {3} "$IMAGE" ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}"
-
+parallel --link --bar -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" | tee data/"$REPO"_log.txt
 
 echo "Done running analytics, merging files..."
 

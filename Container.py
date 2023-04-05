@@ -190,7 +190,7 @@ class Container(object):
             """ shutdown the current container """
             print('\n\nHalting the current container...\n\n')
             self.container.stop()
-            self.container.remove()
+            self.container.remove(force=True)
 
     def get_commits(self, n, ending_at=''):
         """ attach timestamp and author to a given commit """
