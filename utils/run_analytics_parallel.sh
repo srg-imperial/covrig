@@ -4,9 +4,10 @@
 # It takes as input a repository, a start commit and a number of commits.
 # It then runs the analytics on the specified number of commits starting from the start commit.
 
-# Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes>
+# Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> <image> <final_commit>
 
-# Example: run_analytics_parallel.sh redis 100 4
+# Example: run_analytics_parallel.sh redis 100 4 redis12
+# Example: run_analytics_parallel.sh memcached 391 4 memcached12 e1c93df
 
 # The script will create a directory for each process in the output directory.
 # Each directory will contain the output of the analytics for the commits assigned to that process.
@@ -15,16 +16,15 @@
 REPO=$1
 NUM_COMMITS=$2
 NUM_PROCESSES=$3
+IMAGE=$4
 
-# if fourth arg is set, use it as the image name
-if [ "$#" -eq 4 ]; then
-  IMAGE=$4
-else
-  IMAGE=$REPO
+# if fifth arg is given, use it as the commit to end at
+if [ "$#" -eq 5 ]; then
+  FINAL_COMMIT=$5
 fi
 
 # Check we have 3 or 4 args
-if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
+if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
   echo "Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> [image]"
   exit 1
 fi
@@ -77,11 +77,12 @@ analytics(){
   REPO=$3
   NUM_COMMITS=$4
   IMAGE=$5
+  FINAL_COMMIT=$6
   # Run the analytics
   echo "============================"
   echo "> python3 analytics.py --output $FILENAME --limit $LIMIT --image $IMAGE $REPO $NUM_COMMITS"
   echo "============================"
-  python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" "$REPO" "$NUM_COMMITS"
+  python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" --endatcommit "$FINAL_COMMIT" "$REPO" "$NUM_COMMITS"
 }
 export -f analytics
 
@@ -110,7 +111,7 @@ rm -rf data/"$REPO"_log.txt
 # The -k flag specifies to keep the order of the output
 # Test the command first with --dry-run
 
-parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" &> data/"$REPO"_log.txt &
+parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" "$FINAL_COMMIT" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" &> data/"$REPO"_log.txt &
 pid=$!
 
 # Kill the parallel process if script killed

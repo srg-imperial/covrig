@@ -12,8 +12,6 @@ class Memcached(Container):
 
     def __init__(self, _image, _user, _pwd):
         Container.__init__(self, _image, _user, _pwd)
-        # TODO: supply args to conn? maybe _init args? (bottom comment https://stackoverflow.com/questions/10280984/how-to-set-the-working-directory-for-a-fabric-task)
-        # TODO: maybe as comment says it's to do with the "regular" user account?
         # set variables
         if self.offline:
             self.path = self.local("realpath 'repos/memcached'").stdout.strip()

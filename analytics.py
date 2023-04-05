@@ -151,6 +151,7 @@ def main():
                        help="process the revisions reusing previous coverage information")
     parser.add_argument('--resume', action="store_true",
                         help="resume processing from the last revision found in data file (e.g. data/<program>/<program>.csv)")
+    parser.add_argument('--endatcommit', help="process revisions up to this commit")
     parser.add_argument('--limit', type=int, help="limit to n number of revisions")
     parser.add_argument('--output', help="output file name")
     parser.add_argument('program', help="program to analyse")
@@ -188,7 +189,8 @@ def main():
                 lastrev = lastrecord[0]
         container = Analytics.run_custom(b["class"],
                                          args.image if not args.offline else None,
-                                         b["revision"], args.revisions if args.revisions else b["n"], lastrev,
+                                         args.endatcommit if args.endatcommit else b["revision"],
+                                         args.revisions if args.revisions else b["n"], lastrev,
                                          args.limit)
         container.go(outputfolder, outputfile)
     except KeyError:
