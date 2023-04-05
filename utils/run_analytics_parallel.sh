@@ -110,7 +110,32 @@ rm -rf data/"$REPO"_log.txt
 # The -k flag specifies to keep the order of the output
 # Test the command first with --dry-run
 
-parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" | tee data/"$REPO"_log.txt
+parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" &> data/"$REPO"_log.txt &
+pid=$!
+
+# Kill the parallel process if script killed
+trap "kill $pid 2> /dev/null" EXIT
+
+# Wait for the parallel process to finish, and check the number of processes running
+while kill -0 $pid 2> /dev/null; do
+    SUM=0
+    for I in $(seq "$NUM_PROCESSES")
+    do
+      # Check if the directory exists and is not empty
+      if [ -d "data/""$REPO""$I" ] && [ "$(ls -A "data/""$REPO""$I")" ]; then
+        SUM=$((SUM + $(ls -1 "data/""$REPO""$I" | wc -l) - 1))
+      fi
+    done
+    # Print the number of commits explored so far and the number of commits left to explore (in the same line)
+    echo -ne "Analytics running, ${SUM}/${NUM_COMMITS} revisions explored so far...\033[0K\r"
+    sleep 15
+done
+
+echo ""
+echo "============================"
+
+# Disable the trap if the script exits normally
+trap - EXIT
 
 echo "Done running analytics, merging files..."
 
@@ -140,4 +165,7 @@ done
 # Finish the timer
 END_TIME=$(date +%s)
 
-echo "Done in $((END_TIME - START_TIME)) seconds! The files are in the data directory under parallel_${REPO}."
+NUM_FILES=$(ls -1 "$OUT_DIR" | wc -l)
+echo "Log file is in data/${REPO}_log.txt."
+echo "Successfully analyzed $((NUM_FILES-1))/${NUM_COMMITS} revisions."
+echo "Done in $((END_TIME - START_TIME)) seconds! The data files are in the data directory under parallel_${REPO}."
