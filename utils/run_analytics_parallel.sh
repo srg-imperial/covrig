@@ -101,6 +101,8 @@ do
   # Use the NCPP_ARRAY elements to get TOTAL
   TOTAL=$((TOTAL + NCPP_ARRAY[I - 1]))
   COMMIT_RANGES+=("$TOTAL")
+  # Remove all the output directories just in case
+  rm -rf "data/""$REPO""$I"
 done
 
 # Run the analytics in parallel using GNU parallel
@@ -127,7 +129,12 @@ while kill -0 $pid 2> /dev/null; do
     do
       # Check if the directory exists and is not empty
       if [ -d "data/""$REPO""$I" ] && [ "$(ls -A "data/""$REPO""$I")" ]; then
-        SUM=$((SUM + $(ls -1 "data/""$REPO""$I" | wc -l) - 1))
+        # Get the name of the csv file inside "data"/"$REPO""$I", that is "$REPO" with the first letter uppercase and all the other letters lowercase
+        CSV_FILE_NAME=$(find "data/""$REPO""$I" -name "*.csv" -printf "%f\n")
+        if [ -n "$CSV_FILE_NAME" ]; then
+          # Add the number of lines in the csv file to the sum, minus 1 because the first line is the header
+          SUM=$((SUM + $(cat "data/""$REPO""$I""/""$CSV_FILE_NAME" | wc -l) - 1))
+        fi
       fi
     done
     # Print the number of commits explored so far and the number of commits left to explore (in the same line)
@@ -156,15 +163,28 @@ OUT_FILE="$OUT_DIR"/"$CSV_FILE_NAME"
 # Get the first line of one of the files and write it to the output file (also create the output file in the process)
 head -n 1 "$FIRST_DIR"/"$CSV_FILE_NAME" > "$OUT_FILE"
 
+OUT_MSG=""
+
 # Merge the files in reverse order
 for I in $(seq "$NUM_PROCESSES" -1 1)
 do
   # Remove the first line of the csv file
   tail -n +2 "data/""$REPO""$I"/"$CSV_FILE_NAME" >> "$OUT_FILE"
   # Copy over all the tar files
-  cp -r "data/""$REPO""$I"/*.tar.bz2 "$OUT_DIR"
+
+  # Get all tar.bz2 files in the directory
+  TAR_FILE_NAME=$(find "data/""$REPO""$I" -name "*.tar.bz2" -printf "%f\n")
+  if [ -z "$TAR_FILE_NAME" ]; then
+    OUT_MSG="Warning: No tar.bz2 files found for parallel partition ${I}.\n${OUT_MSG}"
+  else
+  # Copy all the tar.bz2 files to the output directory
+  find "data/""$REPO""$I" -name "*.tar.bz2" -exec cp {} "$OUT_DIR" \;
+  fi
   rm -rf "data/""$REPO""$I"
 done
+
+# Print the output message
+echo -ne "$OUT_MSG"
 
 # Finish the timer
 END_TIME=$(date +%s)
@@ -176,5 +196,5 @@ echo "Log files are in "data/""$REPO""_logs"."
 NUM_LINES=$(( $(wc -l < "$OUT_FILE") - 1 ))
 
 echo "Successfully analyzed ${NUM_LINES}/${NUM_COMMITS} revisions."
-echo "Created $((NUM_FILES - 1)) archives in ${OUT_DIR} for each revision that compiled."
+echo "Created $((NUM_FILES - 1)) archives in ${OUT_DIR} for each revision that compiled/had coverage data."
 echo "Done in $((END_TIME - START_TIME)) seconds! The data files are in the data directory under parallel_${REPO}."
