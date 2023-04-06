@@ -42,7 +42,7 @@ class Lighttpd2(Container):
             if result.stdout.strip() != "":
                 self.conn.run('sed -i "s/tar-ustar/tar-ustar serial-tests/g" configure.ac', warn=True)
             result = self.conn.run('sh autogen.sh && ' +
-                                   'sh configure --with-lua --with-gnutls --with-openssl --with-zlib --with-bzip2')
+                                   'sh configure --with-lua --with-gnutls --with-openssl --with-zlib --with-bzip2', warn=True)
 
             # if before or on revision b9fadd3db3bd8a56d2508e61ddbfaadfb28516c2, make gnutls_record_uncork() take 2 arguments
             result = self.conn.run('git rev-list b9fadd3db3bd8a56d2508e61ddbfaadfb28516c2 | grep $(git rev-parse HEAD)', warn=True)
