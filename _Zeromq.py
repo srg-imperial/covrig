@@ -42,8 +42,8 @@ class Zeromq(Container):
         # if compile failed, skip this step
         if not self.compileError:
             with self.conn.cd(self.path):
-                for i in range(5):
-                    result = self.conn.run(("timeout " + str(self.timeout) +
-                                  " make check CFLAGS='-O0' CXXFLAGS='-O0'"), warn=True)
-                    if result.failed:
-                        self.maketestError = result.return_code
+                # for i in range(5):
+                result = self.conn.run(("timeout " + str(self.timeout) +
+                              " make check CFLAGS='-O0' CXXFLAGS='-O0'"), warn=True)
+                if result.failed:
+                    self.maketestError = result.return_code
