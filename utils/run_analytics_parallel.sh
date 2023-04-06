@@ -111,7 +111,10 @@ rm -rf data/"$REPO"_log.txt
 # The -k flag specifies to keep the order of the output
 # Test the command first with --dry-run
 
-parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" "$FINAL_COMMIT" 2>&1 ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" &> data/"$REPO"_log.txt &
+rm -rf data/"$REPO"_logs
+mkdir -p "data/""$REPO""_logs"
+
+parallel --results "data/""$REPO""_logs" --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" "$FINAL_COMMIT" ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" &
 pid=$!
 
 # Kill the parallel process if script killed
@@ -131,6 +134,8 @@ while kill -0 $pid 2> /dev/null; do
     echo -ne "Analytics running, ${SUM}/${NUM_COMMITS} revisions explored so far...\033[0K\r"
     sleep 15
 done
+
+echo -ne "\033[0K\r"
 
 echo ""
 echo "============================"
@@ -167,6 +172,11 @@ done
 END_TIME=$(date +%s)
 
 NUM_FILES=$(ls -1 "$OUT_DIR" | wc -l)
-echo "Log file is in data/${REPO}_log.txt."
-echo "Successfully analyzed $((NUM_FILES-1))/${NUM_COMMITS} revisions."
+echo "Log files are in "data/""$REPO""_logs"."
+
+# Get the number of lines in the output file - 1
+NUM_LINES=$(( $(wc -l < "$OUT_FILE") - 1 ))
+
+echo "Successfully analyzed ${NUM_LINES}/${NUM_COMMITS} revisions."
+echo "Created $((NUM_FILES - 1)) archives in ${OUT_DIR} for each revision that compiled."
 echo "Done in $((END_TIME - START_TIME)) seconds! The data files are in the data directory under parallel_${REPO}."
