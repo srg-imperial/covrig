@@ -136,8 +136,6 @@ while kill -0 $pid 2> /dev/null; do
 done
 
 echo -ne "\033[0K\r"
-
-echo ""
 echo "============================"
 
 # Disable the trap if the script exits normally
