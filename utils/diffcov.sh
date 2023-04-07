@@ -5,7 +5,7 @@
 # d645757 is baseline - 347ab78 is curr
 
 echo "Make sure to run this script from the root of the covrig repo!"
-echo "As of 05/04/2023, requires latest version of LCOV (v1.16-47-g6ae8e6e) installed from source, pre-release"
+echo "As of 05/04/2023, requires latest version of LCOV (v1.16-47-g6ae8e6e) on local machine installed from source, pre-release"
 
 # Sleep for 2 seconds to give the user time to read the above
 sleep 2

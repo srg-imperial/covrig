@@ -192,6 +192,9 @@ END_TIME=$(date +%s)
 NUM_FILES=$(ls -1 "$OUT_DIR" | wc -l)
 echo "Log files are in "data/""$REPO""_logs"."
 
+# Zip the log directory
+zip -r "data/""$REPO""_logs.zip" "data/""$REPO""_logs"
+
 # Get the number of lines in the output file - 1
 NUM_LINES=$(( $(wc -l < "$OUT_FILE") - 1 ))
 
