@@ -119,14 +119,26 @@ class Container(object):
         self.try_to_connect()
 
     def try_to_connect(self, max_connection_attempts=10):
+        # Get the ubuntu version from the image, so we can use the correct sshd_config
+        labels = self.client.images.get(self.image).attrs['Config']['Labels']
+        if labels is None or 'ubuntu_version' not in labels:
+            image_version = 14.04
+            print('LABEL "ubuntu_version" not found in image, assuming 14.04')
+        else:
+            image_version = float(labels['ubuntu_version'])
+
         tries = 0
         # Do this 10 times (arbitrary number) before giving up, use backoff
         while tries < max_connection_attempts:
             try:
-                self.conn = Connection(host=self.ip, port=22, user=self.user,
-                                       connect_kwargs={
-                                           "disabled_algorithms": {"pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]}
-                                       })
+                # if the image is ubuntu 14.04 or prior, use the old sshd_config
+                if image_version < 16:
+                    self.conn = Connection(host=self.ip, port=22, user=self.user,
+                                           connect_kwargs={
+                                               "disabled_algorithms": {"pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]}
+                                           })
+                else:
+                    self.conn = Connection(host=self.ip, port=22, user=self.user)
                 return
             except Exception as e:
                 print(f'Failed to connect to container: {e}')
