@@ -26,7 +26,13 @@ class Binutils(Container):
     def compile(self):
         """ compile Binutils """
         with self.conn.cd(self.path):
-            result = self.conn.run('./configure && make -j2 CFLAGS=\"-O0 -coverage -Wno-error\" LDFLAGS=\"-coverage\"', warn=True)
+            result = self.conn.run("git rev-list b4d9e28e1d437c396461834f79be6cf0f2adc115 | grep $(git rev-parse HEAD)", warn=True)
+            if result.stdout.strip() != "":
+                # fix a bug that stops compilation for certain commits
+                self.conn.run("sed -i -e 's/@colophon/@@colophon/' -e 's/doc@cygnus.com/doc@@cygnus.com/' bfd/doc/bfd.texinfo", warn=True)
+                self.conn.run("sed -i -e 's/@colophon/@@colophon/' -e 's/doc@cygnus.com/doc@@cygnus.com/' ld/ld.texinfo",warn=True)
+                self.conn.run('sed -i -e "s/@itemx --output-mach=@var/@item --output-mach=@var/g" -e "s/@itemx --input-type=@var{type}/@item --input-type=@var{type}/g" -e "s/@itemx --output-type=@var{type}/@item --output-type=@var{type}/g" binutils/doc/binutils.texi', warn=True)
+            result = self.conn.run('./configure --disable-doc && make -j2 CFLAGS=\"-O0 -coverage -Wno-error\" LDFLAGS=\"-coverage\"', warn=True)
             if result.failed:
                 self.compileError = True
 
