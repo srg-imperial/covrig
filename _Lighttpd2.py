@@ -61,9 +61,9 @@ class Lighttpd2(Container):
         # if compile failed, skip this step
         if not self.compileError:
             with self.conn.cd(self.path):
-                # for i in range(5):
-                result = self.conn.run("timeout " + str(self.timeout) +
-                                       " make check CFLAGS='-fprofile-arcs -ftest-coverage -O0 " +
-                                       "-lm -std=c99' LDFLAGS='-fprofile-arcs -ftest-coverage'", warn=True)
-                if result.failed:
-                    self.maketestError = result.return_code
+                for i in range(5):
+                    result = self.conn.run("timeout " + str(self.timeout) +
+                                           " make check CFLAGS='-fprofile-arcs -ftest-coverage -O0 " +
+                                           "-lm -std=c99' LDFLAGS='-fprofile-arcs -ftest-coverage'", warn=True)
+                    if result.failed:
+                        self.maketestError = result.return_code
