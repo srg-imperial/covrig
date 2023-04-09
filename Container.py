@@ -311,6 +311,7 @@ class Container(object):
     def rec_initial_coverage(self):
         assert not self.offline
         with self.omnicd(self.source_path):
+            # Don't warn=True - we need this to work
             self.conn.run('lcov --rc lcov_branch_coverage=1 -c -i -d . -o base.info')
 
     def make_test(self):
