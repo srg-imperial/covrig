@@ -3,6 +3,7 @@ import argparse
 import subprocess
 
 # Analytics modules
+from _Apr import *
 from _Memcached import *
 from _Redis import *
 from _Zeromq import *
@@ -159,6 +160,7 @@ def main():
     args = parser.parse_args()
 
     benchmarks = {
+        "apr": {"class": Apr, "revision": "d54e362", "n": 500},
         # "beanstalkd": {"class": Beanstalkd, "revision": "fb0a466", "n": 600},
         # "lighttpd": {"class": Lighttpd, "revision": "c8fbc16", "n": 600},
         "lighttpd2": {"class": Lighttpd2, "revision": "0d40b25", "n": 400},
