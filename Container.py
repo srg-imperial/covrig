@@ -123,7 +123,7 @@ class Container(object):
         labels = self.client.images.get(self.image).attrs['Config']['Labels']
         if labels is None or 'ubuntu_version' not in labels:
             image_version = 14.04
-            print('LABEL "ubuntu_version" not found in image, assuming 14.04')
+            print('LABEL "ubuntu_version" not found in image, assuming <= 14.04')
         else:
             image_version = float(labels['ubuntu_version'])
 
