@@ -27,7 +27,8 @@ RUN chmod -R 700 /root/.ssh
 RUN apt-get install -yq \
     libssl-dev \
     stunnel4 \
-    python3
+    python3 \
+    python-impacket
 
 RUN apt-get install -yq --reinstall ca-certificates # Needed for higher ubuntu versions (e.g. 20)
 

@@ -29,9 +29,13 @@ class Curl(Container):
         with self.conn.cd(self.path):
             # create a directory for the coverage build (cvr)
             result = self.conn.run('autoreconf -fi && mkdir -p cvr', warn=True)
+            # Disable certain tests that rely on curl -k
+            result = self.conn.run(
+                f"sed -i {self.path}/tests/Makefile.am -e 's/$(TEST) $(TEST_Q)/$(TEST) $(TEST_Q) !46 !310 !311 !312 !1026/g'",
+                warn=True)
             with self.conn.cd('cvr'):
-                result = self.conn.run('../configure --disable-shared --enable-debug --enable-maintainer-mode '
-                                       '--enable-code-coverage --with-openssl && make -sj  CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS="-lgcov --coverage"', warn=True)
+                result = self.conn.run('../configure --disable-shared --enable-debug --enable-maintainer-mode --enable-manual '
+                                       '--enable-code-coverage --with-openssl CFLAGS="-fprofile-arcs -ftest-coverage -g -O0" LDFLAGS="-lgcov --coverage" && make -sj', warn=True)
                 if result.failed:
                     self.compileError = True
 
@@ -41,7 +45,6 @@ class Curl(Container):
         # if compile failed, skip this step
         if not self.compileError and not self.emptyCommit:
             with self.conn.cd(self.source_path):
-                # make TFLAGS=-n test-nonflaky for later revisions, but will do make test for general coverage
                 result = self.conn.run(f"export USER=root && timeout {self.timeout} make test", warn=True)
                 if result.failed:
                     self.maketestError = result.return_code
