@@ -29,9 +29,9 @@ class Curl(Container):
         with self.conn.cd(self.path):
             # create a directory for the coverage build (cvr)
             result = self.conn.run('autoreconf -fi && mkdir -p cvr', warn=True)
-            # Disable certain tests that rely on curl -k
+            # Disable certain tests that rely on curl -k and broken tests (1316, usually disabled in 82a4d53)
             result = self.conn.run(
-                f"sed -i {self.path}/tests/Makefile.am -e 's/$(TEST) $(TEST_Q)/$(TEST) $(TEST_Q) !46 !310 !311 !312 !1026/g'",
+                f"sed -i {self.path}/tests/Makefile.am -e 's/$(TEST) $(TEST_Q)/$(TEST) $(TEST_Q) !46 !310 !311 !312 !1026 !1316/g'",
                 warn=True)
             with self.conn.cd('cvr'):
                 result = self.conn.run('../configure --disable-shared --enable-debug --enable-maintainer-mode --enable-manual '
