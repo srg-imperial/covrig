@@ -82,7 +82,12 @@ analytics(){
   echo "============================"
   echo "> python3 analytics.py --output $FILENAME --limit $LIMIT --image $IMAGE $REPO $NUM_COMMITS"
   echo "============================"
-  python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" --endatcommit "$FINAL_COMMIT" "$REPO" "$NUM_COMMITS"
+  # If the final commit is not specified, don't provide --endatcommit
+  if [ -z "$FINAL_COMMIT" ]; then
+    python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" "$REPO" "$NUM_COMMITS"
+  else
+    python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" --endatcommit "$FINAL_COMMIT" "$REPO" "$NUM_COMMITS"
+  fi
 }
 export -f analytics
 
