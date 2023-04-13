@@ -48,6 +48,8 @@ if [ -d "$OUT_DIR" ]; then
     exit 1
   fi
   rm -rf "$OUT_DIR"
+  rm -rf "data/""$REPO""_logs"
+  rm -rf "data/""$REPO""_logs.zip"
 fi
 
 # Create the output directory
