@@ -25,7 +25,9 @@ class Git(Container):
     def compile(self):
         """ compile Git """
         with self.conn.cd(self.path):
-            result = self.conn.run("make configure && ./configure && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile", warn=True)
+            # for later versions, need -std=c99
+            # make configure && ./configure && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile
+            result = self.conn.run("make configure && ./configure CFLAGS='-std=c99' && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile", warn=True)
             if result.failed:
                 self.compileError = True
 
