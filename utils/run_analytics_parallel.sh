@@ -25,7 +25,7 @@ fi
 
 # Check we have 3 or 4 args
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
-  echo "Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> [image]"
+  echo "Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> <image> [commit]"
   exit 1
 fi
 

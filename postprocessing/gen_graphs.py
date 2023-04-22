@@ -5,7 +5,7 @@ file_header_raw = "rev,#eloc,coverage,testsize,author,#addedlines,#covlines,#not
 file_header_list = [x.replace('#', '').replace('*', '') for x in file_header_raw.split(',')]
 
 
-def plot_eloc(data, csv_name, save=True):
+def plot_eloc(data, csv_name, save=True, date=False):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
 
@@ -20,7 +20,11 @@ def plot_eloc(data, csv_name, save=True):
     dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
 
     # Plot the eloc data against the dates as small dots
-    plt.plot(dates, eloc_data, '+', markersize=5)
+    if date:
+        plt.plot(dates, eloc_data, '+', markersize=5)
+    else:
+        plt.plot(eloc_data, '+', markersize=5)
+        plt.xlabel('Revision')
     # Label the axes, do not show xticks
     plt.ylabel('ELOC')
     # Title the plot
@@ -28,6 +32,7 @@ def plot_eloc(data, csv_name, save=True):
 
     # Use locator_params to make the y axis have 10 ticks
     plt.locator_params(axis='y', nbins=10)
+    plt.xticks(rotation=45)
 
     # Save the plot
     if save:
@@ -37,7 +42,7 @@ def plot_eloc(data, csv_name, save=True):
     plt.clf()
 
 
-def plot_tloc(data, csv_name, save=True):
+def plot_tloc(data, csv_name, save=True, date=False):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
 
@@ -52,7 +57,11 @@ def plot_tloc(data, csv_name, save=True):
     dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
 
     # Plot the eloc data against the dates as small dots
-    plt.plot(dates, tloc_data, '+', markersize=5, color='red')
+    if date:
+        plt.plot(dates, tloc_data, '+', markersize=5, color='red')
+    else:
+        plt.plot(tloc_data, '+', markersize=5, color='red')
+        plt.xlabel('Revision')
     # Label the axes, do not show xticks
     plt.ylabel('TLOC')
     # Title the plot
@@ -60,6 +69,7 @@ def plot_tloc(data, csv_name, save=True):
 
     # Use locator_params to make the y axis have 10 ticks
     plt.locator_params(axis='y', nbins=10)
+    plt.xticks(rotation=45)
 
     # Save the plot
     if save:
@@ -162,6 +172,8 @@ if __name__ == '__main__':
     # argparse the location of the input file (e.g. remotedata/apr/Apr.csv)
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file', type=str, help='Input file')
+    # add a byDate option so if --date is present, the X axis is time, otherwise it is revision number
+    parser.add_argument('--date', action='store_true', help='Plot by date')
     args = parser.parse_args()
 
     # Get the name of the CSV file (basename)
@@ -171,6 +183,6 @@ if __name__ == '__main__':
 
     data = extract_data(args.input_file)
 
-    plot_eloc(data, csv_name)
-    plot_tloc(data, csv_name)
+    plot_eloc(data, csv_name, date=args.date)
+    plot_tloc(data, csv_name, date=args.date)
     plot_evolution_of_eloc_and_tloc(data, csv_name)
