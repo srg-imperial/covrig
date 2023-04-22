@@ -111,7 +111,7 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True):
         tloc_counter_list.append(tloc_counter)
 
     # Plot the eloc data against the dates as a line
-    plt.plot(eloc_counter_list, color='blue')
+    plt.plot(eloc_counter_list)
     # Plot the tloc data against the dates as a line (red dashed)
     plt.plot(tloc_counter_list, color='red', linestyle='dashed')
 
@@ -147,6 +147,9 @@ def extract_data(input_file):
 
         # Remove the header
         lines = lines[1:]
+
+        # Ignore any lines that begin with a # (i.e. comments)
+        lines = [line for line in lines if not line.startswith('#')]
 
         # Split the lines by comma
         lines = [line.split(',') for line in lines]

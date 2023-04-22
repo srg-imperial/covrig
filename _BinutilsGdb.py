@@ -21,16 +21,15 @@ class BinutilsGdb(Container):
 
         self.tsuite_path = ('binutils/testsuite', )
         self.limit_changes_to = ('binutils', )
-        self.ignore_coverage_from = ('include/*' ,)
+        self.ignore_coverage_from = ('include/*', )
 
     def compile(self):
         """ compile Binutils """
         with self.conn.cd(self.path):
             # We only care about the /binutils directory of the /binutils-gdb repo, so disable the rest (speeds up compilation and reduces dependencies)
-            result = self.conn.run('./configure CFLAGS="-O0 -coverage -Wno-error" LDFLAGS="-coverage" --disable-gdb '
-                                   '--disable-sim --disable-readline --disable-libdecnumber --disable-gprof '
-                                   '--disable-gprofng --disable-gas --disable-elfcpp '
-                                   '--disable-gdbserver --disable-gold && make -j2', warn=True)
+            result = self.conn.run(
+                './configure --disable-doc --disable-gdb --disable-gprof --disable-gprofng && make -j2 CFLAGS=\"-O0 -coverage -Wno-error\" LDFLAGS=\"-coverage\"',
+                warn=True)
             if result.failed:
                 self.compileError = True
 
