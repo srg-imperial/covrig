@@ -36,7 +36,7 @@ def plot_eloc(data, csv_name, save=True, date=False):
 
     # Save the plot
     if save:
-        plt.savefig(f'postprocessing/graphs/{csv_name}-eloc.png', bbox_inches='tight')
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-eloc{"-date" if date else ""}.png', bbox_inches='tight')
 
     # Clear the plot so that the next plot can be made
     plt.clf()
@@ -73,7 +73,7 @@ def plot_tloc(data, csv_name, save=True, date=False):
 
     # Save the plot
     if save:
-        plt.savefig(f'postprocessing/graphs/{csv_name}-tloc.png', bbox_inches='tight')
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-tloc{"-date" if date else ""}.png', bbox_inches='tight')
 
     # Clear the plot so that the next plot can be made
     plt.clf()
@@ -131,7 +131,7 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True):
 
     # Save the plot
     if save:
-        plt.savefig(f'postprocessing/graphs/{csv_name}-evolution.png', bbox_inches='tight')
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-evolution.png', bbox_inches='tight')
 
     # Clear the plot so that the next plot can be made
     plt.clf()
@@ -155,9 +155,19 @@ def extract_data(input_file):
     dates = [line[file_header_list.index('time')] for line in lines]
 
     # Make sure the dates are in order
-    assert dates == sorted(dates)
+    dates_ok = date_check(dates)
 
     return lines
+
+
+def date_check(dates):
+    for i in range(len(dates) - 1):
+        if dates[i] > dates[i + 1]:
+            print(f'Warning: The dates are not in order, {dates[i]} is after {dates[i + 1]}')
+            print(
+                f'Maybe double check the git history using something like "git rev-list --reverse -n 3" on the offending commit to check this is intended.')
+            return False
+    return True
 
 
 if __name__ == '__main__':
@@ -181,8 +191,18 @@ if __name__ == '__main__':
     # Remove the .csv extension
     csv_name = csv_name[:-4]
 
+    # Make the directory /graphs if it doesn't exist
+    if not os.path.exists('postprocessing/graphs'):
+        os.makedirs('postprocessing/graphs')
+
+    # Make the directory for the graphs if it doesn't exist
+    if not os.path.exists(f'postprocessing/graphs/{csv_name}'):
+        os.makedirs(f'postprocessing/graphs/{csv_name}')
+
     data = extract_data(args.input_file)
 
     plot_eloc(data, csv_name, date=args.date)
     plot_tloc(data, csv_name, date=args.date)
     plot_evolution_of_eloc_and_tloc(data, csv_name)
+    print("=====================================================")
+    print(f'Finished plotting {csv_name}. You can find the plots in postprocessing/graphs/{csv_name}')

@@ -14,6 +14,7 @@ from _Lighttpd2 import *
 from _Git import *
 # from _Diffutils import *
 from _Binutils import *
+from _BinutilsGdb import *
 # from _Findutils import *
 from _Dovecot import *
 # from _Squid import *
@@ -170,12 +171,16 @@ def main():
         "zeromq": {"class": Zeromq, "revision": "573d7b0", "n": 500},
         "redis": {"class": Redis, "revision": "347ab78", "n": 500},
         "binutils": {"class": Binutils, "revision": "a0a1bb07", "n": 6000},
+        # In reality only ~2500 commits are relevant (inside binutils/) but binutils-gdb contains many other projects
+        "binutils-gdb": {"class": BinutilsGdb, "revision": "26be601", "n": 36106},
         # "diffutils": {"class": Diffutils, "revision": "b2f1e4b", "n": 350},
         # "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
-        "dovecot": {"class": Dovecot, "revision": "121b017", "n": 1000},  # matches up with mercurial/git-hg commits for ffbf5813, some commits don't work since have external dependencies we can't roll back to (Unicode)
+        # matches up with mercurial/git-hg commits for ffbf5813, some commits don't work since have external dependencies we can't roll back to (Unicode)
+        "dovecot": {"class": Dovecot, "revision": "121b017", "n": 1000},
         # "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},
         "git": {"class": Git, "revision": "d7aced9", "n": 500},
-        "vim": {"class": Vim, "revision": "f751255", "n": 500},  # Jun 2013 revision, v7 last rev is edeb846c
+        # For Vim, Jun 2013 revision, v7 last rev is edeb846c
+        "vim": {"class": Vim, "revision": "f751255", "n": 500},
     }
     try:
         b = benchmarks[args.program]
