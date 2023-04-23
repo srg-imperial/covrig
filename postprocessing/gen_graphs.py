@@ -10,11 +10,8 @@ def plot_eloc(data, csv_name, save=True, date=False):
     data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
 
     # Get the eloc data from data
-    eloc_data = [x[file_header_list.index('eloc')] for x in data]
+    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
     dates = [x[file_header_list.index('time')] for x in data]
-
-    # Make sure eloc_data is a list of ints
-    eloc_data = [int(x) for x in eloc_data]
 
     # Convert the unix timestamps to datetime objects
     dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
@@ -47,11 +44,8 @@ def plot_tloc(data, csv_name, save=True, date=False):
     data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
 
     # Get the eloc data from data
-    tloc_data = [x[file_header_list.index('testsize')] for x in data]
+    tloc_data = [int(x[file_header_list.index('testsize')]) for x in data]
     dates = [x[file_header_list.index('time')] for x in data]
-
-    # Make sure eloc_data is a list of ints
-    tloc_data = [int(x) for x in tloc_data]
 
     # Convert the unix timestamps to datetime objects
     dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
@@ -79,36 +73,47 @@ def plot_tloc(data, csv_name, save=True, date=False):
     plt.clf()
 
 
-def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True):
+def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroone"):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
 
     # Get the eloc data from data
-    eloc_data = [x[file_header_list.index('eloc')] for x in data]
-    tloc_data = [x[file_header_list.index('testsize')] for x in data]
+    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
+    tloc_data = [int(x[file_header_list.index('testsize')]) for x in data]
     dates = [x[file_header_list.index('time')] for x in data]
-
-    # Make sure eloc_data is a list of ints
-    eloc_data = [int(x) for x in eloc_data]
-    tloc_data = [int(x) for x in tloc_data]
 
     # Convert the unix timestamps to datetime objects
     dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
 
-    # for each revision, increment a counter if the eloc is different from the previous revision
-    # for each revision increment another counter if the tloc is different from the previous revision
-    # plot the two counters against the dates
     eloc_counter = 0
     tloc_counter = 0
     eloc_counter_list = []
     tloc_counter_list = []
-    for i in range(len(eloc_data)):
-        if eloc_data[i] != eloc_data[i - 1]:
-            eloc_counter += 1
-        if tloc_data[i] != tloc_data[i - 1]:
-            tloc_counter += 1
-        eloc_counter_list.append(eloc_counter)
-        tloc_counter_list.append(tloc_counter)
+    if graph_mode == "standard":
+        for i in range(len(eloc_data)):
+            if eloc_data[i] > 0:
+                eloc_counter_list.append(eloc_data[i])
+                tloc_counter_list.append(tloc_data[i])
+    elif graph_mode == "zeroone": #zero-one technique, displayed in covrig paper
+        # effectively: for each revision, increment a counter if the eloc is different from the previous revision
+        # for each revision increment another counter if the tloc is different from the previous revision
+        covlines_data = [int(x[file_header_list.index('covlines')]) for x in data]
+        notcovlines_data = [int(x[file_header_list.index('notcovlines')]) for x in data]
+        changed_test_files_data = [int(x[file_header_list.index('changed_test_files')]) for x in data]
+        # Establish vars for the previous eloc and tloc
+        peloc, ptloc = 0, 0
+        for i in range(len(eloc_data)):
+            if eloc_data[i] > 0:
+                if eloc_data[i] != peloc or covlines_data[i] > 0 or notcovlines_data[i] > 0:
+                    eloc_counter += 1
+                if tloc_data[i] != ptloc or changed_test_files_data[i] > 0:
+                    tloc_counter += 1
+                eloc_counter_list.append(eloc_counter)
+                tloc_counter_list.append(tloc_counter)
+                peloc = eloc_data[i]
+                ptloc = tloc_data[i]
+    else:
+        print("Invalid graph mode for eloc/tloc evolution graph")
 
     # Plot the eloc data against the dates as a line
     plt.plot(eloc_counter_list)
@@ -206,6 +211,6 @@ if __name__ == '__main__':
 
     plot_eloc(data, csv_name, date=args.date)
     plot_tloc(data, csv_name, date=args.date)
-    plot_evolution_of_eloc_and_tloc(data, csv_name)
+    plot_evolution_of_eloc_and_tloc(data, csv_name, graph_mode="zeroone")
     print("=====================================================")
     print(f'Finished plotting {csv_name}. You can find the plots in postprocessing/graphs/{csv_name}')
