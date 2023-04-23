@@ -19,6 +19,7 @@ def plot_eloc(data, csv_name, save=True, date=False):
     # Plot the eloc data against the dates as small dots
     if date:
         plt.plot(dates, eloc_data, '+', markersize=5)
+        plt.xticks(rotation=45)
     else:
         plt.plot(eloc_data, '+', markersize=5)
         plt.xlabel('Revision')
@@ -29,7 +30,6 @@ def plot_eloc(data, csv_name, save=True, date=False):
 
     # Use locator_params to make the y axis have 10 ticks
     plt.locator_params(axis='y', nbins=10)
-    plt.xticks(rotation=45)
 
     # Save the plot
     if save:
@@ -53,6 +53,7 @@ def plot_tloc(data, csv_name, save=True, date=False):
     # Plot the eloc data against the dates as small dots
     if date:
         plt.plot(dates, tloc_data, '+', markersize=5, color='red')
+        plt.xticks(rotation=45)
     else:
         plt.plot(tloc_data, '+', markersize=5, color='red')
         plt.xlabel('Revision')
@@ -63,7 +64,6 @@ def plot_tloc(data, csv_name, save=True, date=False):
 
     # Use locator_params to make the y axis have 10 ticks
     plt.locator_params(axis='y', nbins=10)
-    plt.xticks(rotation=45)
 
     # Save the plot
     if save:
@@ -141,6 +141,104 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
     # Clear the plot so that the next plot can be made
     plt.clf()
 
+def plot_coverage(data, csv_name, save=True, date=False):
+    # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
+    data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+
+    # Get the coverage data from data
+    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
+    coverage_data = [int(x[file_header_list.index('coverage')]) for x in data]
+    branch_data = [int(x[file_header_list.index('br')]) for x in data]
+    branch_coverage_data = [int(x[file_header_list.index('brcov')]) for x in data]
+    dates = [x[file_header_list.index('time')] for x in data]
+
+    # Convert the unix timestamps to datetime objects
+    dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
+
+    line_coverage = []
+    br_coverage = []
+    for i in range(len(coverage_data)):
+        if eloc_data[i] > 0:
+            if branch_data[i] > 0:
+                line_coverage.append(coverage_data[i] * 100 / eloc_data[i])
+                br_coverage.append(branch_coverage_data[i] * 100 / branch_data[i])
+            else:
+                line_coverage.append(coverage_data[i] * 100 / eloc_data[i])
+                br_coverage.append(0)
+
+
+    # Plot the eloc data against the dates as small dots
+    if date:
+        plt.plot(dates, line_coverage, '+', markersize=5)
+        plt.plot(dates, br_coverage, 'x', markersize=5, color='red')
+        plt.xticks(rotation=45)
+    else:
+        plt.plot(line_coverage, '+', markersize=5)
+        plt.plot(br_coverage, 'x', markersize=5, color='red')
+        plt.xlabel('Revision')
+
+    # Set the y axis from 0 to 100
+    plt.ylim(bottom=0, top=100)
+
+    # Label the y axis as Coverage
+    plt.ylabel('Coverage (%)')
+
+    # Give the plot a title
+    plt.title(f'Coverage for {csv_name}')
+
+    # Print the legend
+    plt.legend(['Line Coverage', 'Branch Coverage'])
+
+    # Save the plot
+    if save:
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-coverage{"-date" if date else ""}.png',
+                    bbox_inches='tight')
+
+    # Clear the plot so that the next plot can be made
+    plt.clf()
+
+def plot_churn(data, csv_name, save=True, date=False):
+    # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
+    data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+
+    # Get the eloc data from data
+    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
+    dates = [x[file_header_list.index('time')] for x in data]
+
+    # Convert the unix timestamps to datetime objects
+    dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
+
+    # Get covered_lines and not_covered_lines data from data
+    covered_lines_data = [int(x[file_header_list.index('covlines')]) for x in data]
+    not_covered_lines_data = [int(x[file_header_list.index('notcovlines')]) for x in data]
+
+    churn_list = []
+    peloc = 0
+    for i in range(len(eloc_data)):
+        if (covered_lines_data[i] > 0 or not_covered_lines_data[i] > 0) and peloc > 0:
+            churn_list.append(2 * (covered_lines_data[i] + not_covered_lines_data[i]) - (eloc_data[i] - peloc))
+        peloc = eloc_data[i]
+
+    if date:
+        plt.plot(dates, churn_list, '+', markersize=5)
+        plt.xticks(rotation=45)
+    else:
+        plt.plot(churn_list, '+', markersize=5)
+        plt.xlabel('Revision')
+
+    # Label the y axis as Churn
+    plt.ylabel('Churn')
+
+    # Give the plot a title
+    plt.title(f'Churn for {csv_name}')
+
+    # Save the plot
+    if save:
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-churn{"-date" if date else ""}.png',
+                    bbox_inches='tight')
+
+    # Clear the plot so that the next plot can be made
+    plt.clf()
 
 def extract_data(input_file):
     # Take the input file CSV and extract to an internal representation of the data
@@ -212,5 +310,9 @@ if __name__ == '__main__':
     plot_eloc(data, csv_name, date=args.date)
     plot_tloc(data, csv_name, date=args.date)
     plot_evolution_of_eloc_and_tloc(data, csv_name, graph_mode="zeroone")
+
+    plot_coverage(data, csv_name, date=args.date)
+    plot_churn(data, csv_name, date=args.date)
+
     print("=====================================================")
     print(f'Finished plotting {csv_name}. You can find the plots in postprocessing/graphs/{csv_name}')
