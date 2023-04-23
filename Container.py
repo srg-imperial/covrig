@@ -200,12 +200,24 @@ class Container(object):
             self.set_ip()
             self.fabric_setup()
 
-    def halt(self):
+    def halt(self, max_connection_attempts=10):
         if not self.offline:
             """ shutdown the current container """
             print('\n\nHalting the current container...\n\n')
-            self.container.stop()
-            self.container.remove(force=True)
+            tries = 0
+            while tries < max_connection_attempts:
+                try:
+                    self.conn.close()
+                    self.container.stop()
+                    self.container.remove(force=True)
+                    return
+                except Exception as e:
+                    print(f'Failed to stop container: {e}')
+                    tries += 1
+                    if tries < max_connection_attempts:
+                        print(f'Retrying... ({tries})')
+                        time.sleep((1.5 ** tries) / 3)
+            print(f'Error: Maximum number of stop attempts exceeded.')
 
     def get_commits(self, n, ending_at=''):
         """ attach timestamp and author to a given commit """
