@@ -247,6 +247,148 @@ def plot_churn(data, csv_name, save=True, date=False):
     # Clear the plot so that the next plot can be made
     plt.clf()
 
+def plot_patch_coverage(data, csv_name, save=True, bucket_no = 6):
+    # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
+    cleaned_data = clean_data(data)
+
+    # Get the coverage data using eloc_data, coverage_data, branch_data, branch_coverage_data and dates
+    covered_lines_data, not_covered_lines_data = get_columns(cleaned_data, ['covlines', 'notcovlines'])
+
+    # Count the number of revisions that introduce executable lines
+    total_revs_exec = 0
+    for i in range(len(covered_lines_data)):
+        if covered_lines_data[i] + not_covered_lines_data[i] > 0:
+            total_revs_exec += 1
+
+    # Establish buckets for the patch coverage between -1 and 1 and their names
+    bucket_membership = []
+    buckets = [0, 0.25, 0.5, 0.75, 1]
+
+    # Bucket styles
+    covrig_buckets = 4 # [0, 0.25], (0.25, 0.5], (0.5, 0.75], (0.75, 1]
+    large_scale_buckets = 6 # 0, (0, 0.25], (0.25, 0.5], (0.5, 0.75], (0.75, 1), 1 (large scale study)
+
+    bucket_names = ["0%", "(0%, 25%]", "(25%, 50%]", "(50%, 75%]", "(75%, 100%)", "100%"]
+    if bucket_no == covrig_buckets:
+        bucket_names = ["N/A", "[0%, 25%]", "(25%, 50%]", "(50%, 75%]", "(75%, 100%]", "N/A"]
+
+    for i in range(len(covered_lines_data)):
+        # Calculate the patch coverage
+        patch_coverage = covered_lines_data[i] / (covered_lines_data[i] + not_covered_lines_data[i]) if covered_lines_data[i] + not_covered_lines_data[i] > 0 else -1
+        # Find the bucket that the patch coverage falls into
+        bucket = 0
+        if patch_coverage == -1:
+            # i.e. no executable lines and therefore no patch coverage
+            bucket = -1
+        else:
+            if bucket_no == covrig_buckets:
+                # The standard quartile buckets (covrig)
+                while patch_coverage > buckets[bucket]:
+                    bucket += 1
+                if bucket == 0:
+                    # Merge any 0s into the first bucket
+                    bucket = 1
+            elif bucket_no == large_scale_buckets:
+                # Introduce extra buckets for 0 and 1 patch coverage
+                if patch_coverage == 0:
+                    bucket = 0
+                elif patch_coverage == 1:
+                    bucket = 5
+                else:
+                    # Step through the buckets until the patch coverage is less than the bucket
+                    while patch_coverage > buckets[bucket]:
+                        bucket += 1
+            else:
+                print('Invalid bucket number for patch coverage')
+                return
+        bucket_membership.append(bucket)
+
+    # Assert if we are in covrig mode we should not have any 0s or 5s in our bucket membership
+    assert bucket_no != covrig_buckets or (0 not in bucket_membership and 5 not in bucket_membership)
+
+    # Calculate the number of revisions in each bucket
+    bucket_counts = [0] * large_scale_buckets
+    for bucket in bucket_membership:
+        if bucket != -1:
+            bucket_counts[bucket] += 1
+
+    # Calculate the percentage of revisions in each bucket using total_revs_exec
+    bucket_percentages = [x*100 / total_revs_exec for x in bucket_counts]
+
+    # Assert we sum to roughly 100
+    assert 99.9 < sum(bucket_percentages) < 100.1
+
+    # Print out the bucket percentages to 5 decimal places
+    print(f"Patch coverage percentages for {csv_name}: {[round(x, 5) for x in bucket_percentages]}")
+
+    fig = plt.figure(figsize=(11, 11))
+    ax = fig.add_subplot(1, 1, 1)
+    colours = ["#ad302e", "#de5434", "#e9923e", "#f8cc47", "#8bb954", "#428f4d"]
+    if bucket_no == covrig_buckets:
+        colours = ["#ffffff", "#bd2121", "#ffba0f", "#c9ff70", "#4d9b00", "#ffffff"]
+
+    # Plot the data as a stacked vertical bar chart
+    cumulative_total = 0
+    idx = 0
+    for bucket_p in bucket_percentages:
+        ax.bar(0, bucket_p, bottom=cumulative_total, label=bucket_names[idx], width=0.5, color=colours[idx], edgecolor='black', zorder=3)
+        cumulative_total += bucket_p
+        idx += 1
+
+    # Turn off ticks for the x axis
+    plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+    plt.xlim(-1, 1)
+
+    # Label the y axis as Patch Coverage
+    plt.ylabel('Frequency of Patch Coverage (binned)')
+    plt.ylim(0, 100.0001)
+
+    # Give the plot a title
+    plt.title(f'Patch Coverage for {csv_name}')
+
+    # Print the legend with the bucket names [0%, 25%], (25%, 50%], (50%, 75%], (75%, 100%]
+    # or if we are in large scale mode (0%, 25%], (25%, 50%], (50%, 75%], (75%, 100%], 0%, 100%
+
+    # Do plt.legend(bucket_names) but in reverse order
+    handles, labels = ax.get_legend_handles_labels()
+    plt.legend(handles[::-1], labels[::-1])
+
+    # if we are in covrig mode, do not plot the 0% and 100% buckets
+    if bucket_no == covrig_buckets:
+        plt.legend(handles[::-1][1:5], labels[::-1][1:5])
+
+    # Make it a dotted grid
+    ax.grid(linestyle='dotted', zorder=0)
+
+    # Save the plot
+    if save:
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-patch-coverage-{bucket_no}-buckets.png', bbox_inches='tight')
+
+    # Clear the plot so that the next plot can be made
+    plt.clf()
+
+
+
+    # Plot the data as a stacked vertical bar chart
+    # plt.bar(range(bucket_no), bucket_percentages, tick_label=[f'{buckets[i]}-{buckets[i+1]}' for i in range(bucket_no)])
+    #
+    # # Label the y axis as Patch Coverage
+    # plt.ylabel('Frequency of Patch Coverage (binned)')
+    #
+    # # Give the plot a title
+    # plt.title(f'Patch Coverage for {csv_name}')
+    #
+    # # Print the legend
+    # plt.legend()
+    #
+    # # Save the plot
+    # if save:
+    #     plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-patch-coverage-{bucket_no}-buckets.png', bbox_inches='tight')
+    #
+    # # Clear the plot so that the next plot can be made
+    # plt.clf()
+
+
 
 def clean_data(data):
     return [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
@@ -340,6 +482,8 @@ if __name__ == '__main__':
 
     plot_coverage(data, csv_name, date=args.date)
     plot_churn(data, csv_name, date=args.date)
+
+    plot_patch_coverage(data, csv_name, bucket_no=6)
 
     print("=====================================================")
     print(f'Finished plotting {csv_name}. You can find the plots in postprocessing/graphs/{csv_name}')
