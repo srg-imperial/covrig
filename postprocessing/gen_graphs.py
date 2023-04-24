@@ -1,20 +1,44 @@
+# Globals that tell the script the layout of the csv files
+
 # Replace as necessary
 file_header_raw = "rev,#eloc,coverage,testsize,author,#addedlines,#covlines,#notcovlines,patchcoverage,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,time,exit,hunks,ehunks,changed_files,echanged_files,changed_test_files,hunks3,ehunks3,merge,#br,#brcov"
 
 # Remove any # or *s from the file_header after splitting by string
 file_header_list = [x.replace('#', '').replace('*', '') for x in file_header_raw.split(',')]
 
+# Create a map to hold the type of each column
+file_header_type = {
+    'rev': int,
+    'eloc': int,
+    'coverage': float,
+    'testsize': int,
+    'author': str,
+    'addedlines': int,
+    'covlines': int,
+    'notcovlines': int,
+    'patchcoverage': float,
+    'covlinesprevpatches': int,
+    'time': int,
+    'exit': str,
+    'hunks': int,
+    'ehunks': int,
+    'changed_files': int,
+    'echanged_files': int,
+    'changed_test_files': int,
+    'hunks3': int,
+    'ehunks3': int,
+    'merge': int,
+    'br': int,
+    'brcov': int
+}
+
 
 def plot_eloc(data, csv_name, save=True, date=False):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+    cleaned_data = clean_data(data)
 
-    # Get the eloc data from data
-    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
-    dates = [x[file_header_list.index('time')] for x in data]
-
-    # Convert the unix timestamps to datetime objects
-    dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
+    # Use get_columns to get the eloc and time data from data
+    eloc_data, dates = get_columns(cleaned_data, ['eloc', 'time'])
 
     # Plot the eloc data against the dates as small dots
     if date:
@@ -33,7 +57,8 @@ def plot_eloc(data, csv_name, save=True, date=False):
 
     # Save the plot
     if save:
-        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-eloc{"-date" if date else ""}.png', bbox_inches='tight')
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-eloc{"-date" if date else ""}.png',
+                    bbox_inches='tight')
 
     # Clear the plot so that the next plot can be made
     plt.clf()
@@ -41,14 +66,10 @@ def plot_eloc(data, csv_name, save=True, date=False):
 
 def plot_tloc(data, csv_name, save=True, date=False):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+    cleaned_data = clean_data(data)
 
-    # Get the eloc data from data
-    tloc_data = [int(x[file_header_list.index('testsize')]) for x in data]
-    dates = [x[file_header_list.index('time')] for x in data]
-
-    # Convert the unix timestamps to datetime objects
-    dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
+    # Get the tloc and time data from data
+    tloc_data, dates = get_columns(cleaned_data, ['testsize', 'time'])
 
     # Plot the eloc data against the dates as small dots
     if date:
@@ -67,7 +88,8 @@ def plot_tloc(data, csv_name, save=True, date=False):
 
     # Save the plot
     if save:
-        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-tloc{"-date" if date else ""}.png', bbox_inches='tight')
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-tloc{"-date" if date else ""}.png',
+                    bbox_inches='tight')
 
     # Clear the plot so that the next plot can be made
     plt.clf()
@@ -75,15 +97,10 @@ def plot_tloc(data, csv_name, save=True, date=False):
 
 def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroone"):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+    cleaned_data = clean_data(data)
 
-    # Get the eloc data from data
-    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
-    tloc_data = [int(x[file_header_list.index('testsize')]) for x in data]
-    dates = [x[file_header_list.index('time')] for x in data]
-
-    # Convert the unix timestamps to datetime objects
-    dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
+    # Get the eloc_data, tloc_data and time data from data
+    eloc_data, tloc_data, dates = get_columns(cleaned_data, ['eloc', 'testsize', 'time'])
 
     eloc_counter = 0
     tloc_counter = 0
@@ -94,12 +111,11 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
             if eloc_data[i] > 0:
                 eloc_counter_list.append(eloc_data[i])
                 tloc_counter_list.append(tloc_data[i])
-    elif graph_mode == "zeroone": #zero-one technique, displayed in covrig paper
+    elif graph_mode == "zeroone":  # zero-one technique, displayed in covrig paper
         # effectively: for each revision, increment a counter if the eloc is different from the previous revision
         # for each revision increment another counter if the tloc is different from the previous revision
-        covlines_data = [int(x[file_header_list.index('covlines')]) for x in data]
-        notcovlines_data = [int(x[file_header_list.index('notcovlines')]) for x in data]
-        changed_test_files_data = [int(x[file_header_list.index('changed_test_files')]) for x in data]
+        covlines_data, notcovlines_data, changed_test_files_data = get_columns(cleaned_data, ['covlines', 'notcovlines',
+                                                                                              'changed_test_files'])
         # Establish vars for the previous eloc and tloc
         peloc, ptloc = 0, 0
         for i in range(len(eloc_data)):
@@ -141,19 +157,15 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
     # Clear the plot so that the next plot can be made
     plt.clf()
 
+
 def plot_coverage(data, csv_name, save=True, date=False):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+    cleaned_data = clean_data(data)
 
-    # Get the coverage data from data
-    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
-    coverage_data = [int(x[file_header_list.index('coverage')]) for x in data]
-    branch_data = [int(x[file_header_list.index('br')]) for x in data]
-    branch_coverage_data = [int(x[file_header_list.index('brcov')]) for x in data]
-    dates = [x[file_header_list.index('time')] for x in data]
-
-    # Convert the unix timestamps to datetime objects
-    dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
+    # Get the coverage data using eloc_data, coverage_data, branch_data, branch_coverage_data and dates
+    eloc_data, coverage_data, branch_data, branch_coverage_data, dates = get_columns(cleaned_data,
+                                                                                     ['eloc', 'coverage', 'br', 'brcov',
+                                                                                      'time'])
 
     line_coverage = []
     br_coverage = []
@@ -165,7 +177,6 @@ def plot_coverage(data, csv_name, save=True, date=False):
             else:
                 line_coverage.append(coverage_data[i] * 100 / eloc_data[i])
                 br_coverage.append(0)
-
 
     # Plot the eloc data against the dates as small dots
     if date:
@@ -197,21 +208,17 @@ def plot_coverage(data, csv_name, save=True, date=False):
     # Clear the plot so that the next plot can be made
     plt.clf()
 
+
 def plot_churn(data, csv_name, save=True, date=False):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    data = [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+    cleaned_data = clean_data(data)
 
-    # Get the eloc data from data
-    eloc_data = [int(x[file_header_list.index('eloc')]) for x in data]
-    dates = [x[file_header_list.index('time')] for x in data]
+    # use the get_column function to get the data for eloc, covlines, notcovlines, time
+    eloc_data, covered_lines_data, not_covered_lines_data, dates = get_columns(cleaned_data,
+                                                                               ['eloc', 'covlines', 'notcovlines',
+                                                                                'time'])
 
-    # Convert the unix timestamps to datetime objects
-    dates = [datetime.datetime.fromtimestamp(int(x)) for x in dates]
-
-    # Get covered_lines and not_covered_lines data from data
-    covered_lines_data = [int(x[file_header_list.index('covlines')]) for x in data]
-    not_covered_lines_data = [int(x[file_header_list.index('notcovlines')]) for x in data]
-
+    # Calculate the churn for each revision
     churn_list = []
     peloc = 0
     for i in range(len(eloc_data)):
@@ -239,6 +246,26 @@ def plot_churn(data, csv_name, save=True, date=False):
 
     # Clear the plot so that the next plot can be made
     plt.clf()
+
+
+def clean_data(data):
+    return [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+
+
+def get_columns(data, columns):
+    # Get the data from the columns specified and convert to the correct type using file_header_type
+    data_list = []
+    for column in columns:
+        # Get the data from the column
+        column_data = [x[file_header_list.index(column)] for x in data]
+        # Convert the data to the correct type (int, str, float)
+        column_data = [file_header_type[column](x) for x in column_data]
+        if column == 'time':
+            column_data = [datetime.datetime.fromtimestamp(int(x)) for x in column_data]
+        # Add the data to the list
+        data_list.append(column_data)
+    return data_list
+
 
 def extract_data(input_file):
     # Take the input file CSV and extract to an internal representation of the data
