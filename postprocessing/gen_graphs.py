@@ -247,7 +247,8 @@ def plot_churn(data, csv_name, save=True, date=False):
     # Clear the plot so that the next plot can be made
     plt.clf()
 
-def plot_patch_coverage(data, csv_name, save=True, bucket_no = 6):
+
+def plot_patch_coverage(data, csv_name, save=True, bucket_no=6):
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = clean_data(data)
 
@@ -265,8 +266,8 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no = 6):
     buckets = [0, 0.25, 0.5, 0.75, 1]
 
     # Bucket styles
-    covrig_buckets = 4 # [0, 0.25], (0.25, 0.5], (0.5, 0.75], (0.75, 1]
-    large_scale_buckets = 6 # 0, (0, 0.25], (0.25, 0.5], (0.5, 0.75], (0.75, 1), 1 (large scale study)
+    covrig_buckets = 4  # [0, 0.25], (0.25, 0.5], (0.5, 0.75], (0.75, 1]
+    large_scale_buckets = 6  # 0, (0, 0.25], (0.25, 0.5], (0.5, 0.75], (0.75, 1), 1 (large scale study)
 
     bucket_names = ["0%", "(0%, 25%]", "(25%, 50%]", "(50%, 75%]", "(75%, 100%)", "100%"]
     if bucket_no == covrig_buckets:
@@ -274,7 +275,8 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no = 6):
 
     for i in range(len(covered_lines_data)):
         # Calculate the patch coverage
-        patch_coverage = covered_lines_data[i] / (covered_lines_data[i] + not_covered_lines_data[i]) if covered_lines_data[i] + not_covered_lines_data[i] > 0 else -1
+        patch_coverage = covered_lines_data[i] / (covered_lines_data[i] + not_covered_lines_data[i]) if \
+        covered_lines_data[i] + not_covered_lines_data[i] > 0 else -1
         # Find the bucket that the patch coverage falls into
         bucket = 0
         if patch_coverage == -1:
@@ -313,13 +315,13 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no = 6):
             bucket_counts[bucket] += 1
 
     # Calculate the percentage of revisions in each bucket using total_revs_exec
-    bucket_percentages = [x*100 / total_revs_exec for x in bucket_counts]
+    bucket_percentages = [x * 100 / total_revs_exec for x in bucket_counts]
 
     # Assert we sum to roughly 100
     assert 99.9 < sum(bucket_percentages) < 100.1
 
     # Print out the bucket percentages to 5 decimal places
-    print(f"Patch coverage percentages for {csv_name}: {[round(x, 5) for x in bucket_percentages]}")
+    # print(f"Patch coverage percentages for {csv_name}: {[round(x, 5) for x in bucket_percentages]}")
 
     fig = plt.figure(figsize=(11, 11))
     ax = fig.add_subplot(1, 1, 1)
@@ -331,7 +333,8 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no = 6):
     cumulative_total = 0
     idx = 0
     for bucket_p in bucket_percentages:
-        ax.bar(0, bucket_p, bottom=cumulative_total, label=bucket_names[idx], width=0.5, color=colours[idx], edgecolor='black', zorder=3)
+        ax.bar(0, bucket_p, bottom=cumulative_total, label=bucket_names[idx], width=0.5, color=colours[idx],
+               edgecolor='black', zorder=3)
         cumulative_total += bucket_p
         idx += 1
 
@@ -358,36 +361,85 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no = 6):
         plt.legend(handles[::-1][1:5], labels[::-1][1:5])
 
     # Make it a dotted grid
-    ax.grid(linestyle='dotted', zorder=0)
+    ax.grid(linestyle='dotted', zorder=0, axis='y')
 
     # Save the plot
     if save:
-        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-patch-coverage-{bucket_no}-buckets.png', bbox_inches='tight')
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-patch-coverage-{bucket_no}-buckets.png',
+                    bbox_inches='tight')
 
     # Clear the plot so that the next plot can be made
     plt.clf()
 
 
+def plot_patch_type(data, csv_name, save=True):
+    # Clean the data
+    cleaned_data = clean_data(data)
+
+    # Get the columns we want - covered_lines, not_covered_lines, and changed_test_files
+    covered_lines_data, not_covered_lines_data, changed_test_files_data = get_columns(cleaned_data,
+                                                                                      ['covlines',
+                                                                                       'notcovlines',
+                                                                                       'changed_test_files'])
+
+    patch_types = {
+        'Code only': 0,
+        'Code+Test': 0,
+        'Test only': 0,
+        'Other': 0,
+    }
+
+    revs = 0
+    for i in range(len(changed_test_files_data)):
+        # Calculate the patch type
+        if (covered_lines_data[i] > 0 or not_covered_lines_data[i] > 0) and changed_test_files_data[i] == 0:
+            patch_types['Code only'] += 1
+        if covered_lines_data[i] == 0 and not_covered_lines_data[i] == 0 and changed_test_files_data[i] > 0:
+            patch_types['Test only'] += 1
+        if (covered_lines_data[i] > 0 or not_covered_lines_data[i] > 0) and changed_test_files_data[i] > 0:
+            patch_types['Code+Test'] += 1
+        revs += 1
+
+    # "Other" patches are revs - #onlyExecutable - #onlyTest - #testAndExecutable
+    patch_types['Other'] = revs - sum(patch_types.values())
+
+    # Plot our data
+    fig = plt.figure(figsize=(11, 11))
+    ax = fig.add_subplot(1, 1, 1)
+    patch_type_colours = ["#bd2121", "#bf3dff", "#6394ed", "#ededed"]
 
     # Plot the data as a stacked vertical bar chart
-    # plt.bar(range(bucket_no), bucket_percentages, tick_label=[f'{buckets[i]}-{buckets[i+1]}' for i in range(bucket_no)])
-    #
-    # # Label the y axis as Patch Coverage
-    # plt.ylabel('Frequency of Patch Coverage (binned)')
-    #
-    # # Give the plot a title
-    # plt.title(f'Patch Coverage for {csv_name}')
-    #
-    # # Print the legend
-    # plt.legend()
-    #
-    # # Save the plot
-    # if save:
-    #     plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-patch-coverage-{bucket_no}-buckets.png', bbox_inches='tight')
-    #
-    # # Clear the plot so that the next plot can be made
-    # plt.clf()
+    cumulative_total = 0
+    idx = 0
+    for patch_type in patch_types:
+        ax.bar(0, patch_types[patch_type], bottom=cumulative_total, label=patch_type, width=0.5,
+               color=patch_type_colours[idx], edgecolor='black', zorder=3)
+        cumulative_total += patch_types[patch_type]
+        idx += 1
 
+    # Turn off ticks for the x axis
+    plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+    plt.xlim(-1, 1)
+
+    # Label the y axis as Number of Patches
+    plt.ylabel('Number of Patches')
+
+    # Give the plot a title
+    plt.title(f'Patch Types for {csv_name}')
+
+    # Print the legend with the patch type names
+    handles, labels = ax.get_legend_handles_labels()
+    plt.legend(handles[::-1], labels[::-1])
+
+    # Make it a dotted grid
+    ax.grid(linestyle='dotted', zorder=0, axis='y')
+
+    # Save the plot
+    if save:
+        plt.savefig(f'postprocessing/graphs/{csv_name}/{csv_name}-patch-types.png', bbox_inches='tight')
+
+    # Clear the plot so that the next plot can be made
+    plt.clf()
 
 
 def clean_data(data):
@@ -483,7 +535,8 @@ if __name__ == '__main__':
     plot_coverage(data, csv_name, date=args.date)
     plot_churn(data, csv_name, date=args.date)
 
-    plot_patch_coverage(data, csv_name, bucket_no=6)
+    plot_patch_coverage(data, csv_name, bucket_no=4)
+    plot_patch_type(data, csv_name)
 
     print("=====================================================")
     print(f'Finished plotting {csv_name}. You can find the plots in postprocessing/graphs/{csv_name}')
