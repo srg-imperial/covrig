@@ -17,7 +17,7 @@ class Redis(Container):
             self.path = '/home/redis'
             self.source_path = '/home/redis/src'
             # set timeout (in seconds) for the test suite to run
-            self.timeout = 600
+            self.timeout = 1200
 
         self.tsuite_path = ('tests',)
         self.ignore_coverage_from = ('/usr/include/*', )

@@ -29,7 +29,7 @@ RUN echo "root:root" | chpasswd
 
 RUN adduser --gecos "" --disabled-password regular
 
-RUN apt-get -yq install tcl8.5
+RUN apt-get -yq install tcl8.5 pkg-config
 
 RUN sudo apt-get install -yq --reinstall ca-certificates #probably doesn't need to be sudo since we're root
 
