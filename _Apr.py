@@ -41,4 +41,9 @@ class Apr(Container):
                 result = self.conn.run("make", warn=True)
                 result = self.conn.run(f"timeout {self.timeout} ./testall", warn=True)
                 if result.failed:
-                    self.maketestError = result.return_code
+                    # Makefile error - i.e. could compile but could not run tests
+                    # Treat as a test failure - only really seen for APR (e.g. 0763586)
+                    if result.return_code == 127:
+                        self.maketestError = 2
+                    else:
+                        self.maketestError = result.return_code
