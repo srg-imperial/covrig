@@ -39,7 +39,9 @@ expanded_figsize = (15, 15)
 date_warning_thrown = []
 
 
-def plot_eloc(data, csv_name, save=True, date=False, plot=plt.subplots(figsize=default_figsize)):
+def plot_eloc(data, csv_name, save=True, date=False, plot=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = clean_data(data)
@@ -71,7 +73,9 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=plt.subplots(figsize=d
         plt.close(fig)
 
 
-def plot_tloc(data, csv_name, save=True, date=False, plot=plt.subplots(figsize=default_figsize)):
+def plot_tloc(data, csv_name, save=True, date=False, plot=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = clean_data(data)
@@ -103,7 +107,9 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=plt.subplots(figsize=d
 
 
 def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroone", date=False,
-                                    plot=plt.subplots(figsize=default_figsize)):
+                                    plot=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = clean_data(data)
@@ -180,7 +186,9 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
         plt.close(fig)
 
 
-def plot_coverage(data, csv_name, save=True, date=False, plot=plt.subplots(figsize=default_figsize)):
+def plot_coverage(data, csv_name, save=True, date=False, plot=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = clean_data(data)
@@ -234,7 +242,9 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=plt.subplots(figsi
         plt.close(fig)
 
 
-def plot_churn(data, csv_name, save=True, date=False, plot=plt.subplots(figsize=default_figsize)):
+def plot_churn(data, csv_name, save=True, date=False, plot=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = clean_data(data)
