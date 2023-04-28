@@ -1,37 +1,14 @@
 # Globals that tell the script the layout of the csv files
 from matplotlib import pyplot as plt
-
-# Replace as necessary
-file_header_raw = "rev,#eloc,coverage,testsize,author,#addedlines,#covlines,#notcovlines,patchcoverage,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,#covlinesprevpatches*,time,exit,hunks,ehunks,changed_files,echanged_files,changed_test_files,hunks3,ehunks3,merge,#br,#brcov"
+# Config for the csv files' layout (edit as necessary)
+import internal.csv_config as config
+import internal.csv_utils as utils
 
 # Remove any # or *s from the file_header after splitting by string
-file_header_list = [x.replace('#', '').replace('*', '') for x in file_header_raw.split(',')]
+file_header_list = config.file_header_list
 
 # Create a map to hold the type of each column
-file_header_type = {
-    'rev': int,
-    'eloc': int,
-    'coverage': float,
-    'testsize': int,
-    'author': str,
-    'addedlines': int,
-    'covlines': int,
-    'notcovlines': int,
-    'patchcoverage': float,
-    'covlinesprevpatches': int,
-    'time': int,
-    'exit': str,
-    'hunks': int,
-    'ehunks': int,
-    'changed_files': int,
-    'echanged_files': int,
-    'changed_test_files': int,
-    'hunks3': int,
-    'ehunks3': int,
-    'merge': int,
-    'br': int,
-    'brcov': int
-}
+file_header_type = config.file_header_type
 
 # Other globals
 output_location = 'postprocessing/graphs/'
@@ -40,15 +17,15 @@ expanded_figsize = (15, 15)
 date_warning_thrown = []
 
 
-def plot_eloc(data, csv_name, save=True, date=False, plot=None):
+def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
-    # Use get_columns to get the eloc and time data from data
-    eloc_data, dates = get_columns(cleaned_data, ['eloc', 'time'])
+    # Use utils.get_columns to get the eloc and time data from data
+    eloc_data, dates = utils.get_columns(cleaned_data, ['eloc', 'time'])
 
     # Plot the eloc data against the dates as small dots
     if date:
@@ -71,21 +48,21 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None):
     # Save the plot
     if save:
         ax.set_title(f'ELOC over time for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-eloc{"-date" if date else ""}.png',
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-eloc{"-date" if date else ""}.png',
                     bbox_inches='tight')
         # Close the figure to save memory (if we're saving, we do not need to keep the figure in memory)
         plt.close(fig)
 
 
-def plot_tloc(data, csv_name, save=True, date=False, plot=None):
+def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
     # Get the tloc and time data from data
-    tloc_data, dates = get_columns(cleaned_data, ['testsize', 'time'])
+    tloc_data, dates = utils.get_columns(cleaned_data, ['testsize', 'time'])
 
     # Plot the eloc data against the dates as small dots
     if date:
@@ -108,21 +85,21 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None):
     # Save the plot
     if save:
         ax.set_title(f'Test LOC over time for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-tloc{"-date" if date else ""}.png',
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-tloc{"-date" if date else ""}.png',
                     bbox_inches='tight')
         plt.close(fig)
 
 
 def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroone", date=False,
-                                    plot=None):
+                                    plot=None, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
     # Get the eloc_data, tloc_data and time data from data
-    eloc_data, tloc_data, dates = get_columns(cleaned_data, ['eloc', 'testsize', 'time'])
+    eloc_data, tloc_data, dates = utils.get_columns(cleaned_data, ['eloc', 'testsize', 'time'])
 
     eloc_counter = 0
     tloc_counter = 0
@@ -138,8 +115,9 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
     elif graph_mode == "zeroone":  # zero-one technique, displayed in covrig paper
         # effectively: for each revision, increment a counter if the eloc is different from the previous revision
         # for each revision increment another counter if the tloc is different from the previous revision
-        covlines_data, notcovlines_data, changed_test_files_data = get_columns(cleaned_data, ['covlines', 'notcovlines',
-                                                                                              'changed_test_files'])
+        covlines_data, notcovlines_data, changed_test_files_data = utils.get_columns(cleaned_data,
+                                                                                     ['covlines', 'notcovlines',
+                                                                                      'changed_test_files'])
         # Establish vars for the previous eloc and tloc
         peloc, ptloc = 0, 0
         for i in range(len(eloc_data)):
@@ -189,22 +167,23 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
     # Save the plot
     if save:
         ax.set_title(f'Co-evolution of executable and test code for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-evolution{"-date" if date else ""}.png',
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-evolution{"-date" if date else ""}.png',
                     bbox_inches='tight')
         plt.close(fig)
 
 
-def plot_coverage(data, csv_name, save=True, date=False, plot=None):
+def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
     # Get the coverage data using eloc_data, coverage_data, branch_data, branch_coverage_data and dates
-    eloc_data, coverage_data, branch_data, branch_coverage_data, dates = get_columns(cleaned_data,
-                                                                                     ['eloc', 'coverage', 'br', 'brcov',
-                                                                                      'time'])
+    eloc_data, coverage_data, branch_data, branch_coverage_data, dates = utils.get_columns(cleaned_data,
+                                                                                           ['eloc', 'coverage', 'br',
+                                                                                            'brcov',
+                                                                                            'time'])
 
     line_coverage = []
     br_coverage = []
@@ -247,22 +226,22 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None):
     # Save the plot
     if save:
         ax.set_title(f'Coverage for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-coverage{"-date" if date else ""}.png',
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-coverage{"-date" if date else ""}.png',
                     bbox_inches='tight')
         plt.close(fig)
 
 
-def plot_churn(data, csv_name, save=True, date=False, plot=None):
+def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
     # use the get_column function to get the data for eloc, covlines, notcovlines, time
-    eloc_data, covered_lines_data, not_covered_lines_data, dates = get_columns(cleaned_data,
-                                                                               ['eloc', 'covlines', 'notcovlines',
-                                                                                'time'])
+    eloc_data, covered_lines_data, not_covered_lines_data, dates = utils.get_columns(cleaned_data,
+                                                                                     ['eloc', 'covlines', 'notcovlines',
+                                                                                      'time'])
 
     # Calculate the churn for each revision
     churn_list = []
@@ -291,20 +270,20 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None):
     # Save the plot
     if save:
         ax.set_title(f'Churn for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-churn{"-date" if date else ""}.png',
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-churn{"-date" if date else ""}.png',
                     bbox_inches='tight')
         plt.close(fig)
 
 
-def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False):
+def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
     # Get the coverage data using eloc_data, coverage_data, branch_data, branch_coverage_data and dates
-    covered_lines_data, not_covered_lines_data = get_columns(cleaned_data, ['covlines', 'notcovlines'])
+    covered_lines_data, not_covered_lines_data = utils.get_columns(cleaned_data, ['covlines', 'notcovlines'])
 
     # Count the number of revisions that introduce executable lines
     total_revs_exec = 0
@@ -424,23 +403,23 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     # Save the plot
     if save:
         ax.set_title(f'Patch Coverage for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-patch-coverage-{bucket_no}-buckets.png',
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-patch-coverage-{bucket_no}-buckets.png',
                     bbox_inches='tight')
         plt.close(fig)
 
 
-def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False):
+def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
     # Get the columns we want - covered_lines, not_covered_lines, and changed_test_files
-    covered_lines_data, not_covered_lines_data, changed_test_files_data = get_columns(cleaned_data,
-                                                                                      ['covlines',
-                                                                                       'notcovlines',
-                                                                                       'changed_test_files'])
+    covered_lines_data, not_covered_lines_data, changed_test_files_data = utils.get_columns(cleaned_data,
+                                                                                            ['covlines',
+                                                                                             'notcovlines',
+                                                                                             'changed_test_files'])
 
     patch_types = {
         'Code only': 0,
@@ -501,18 +480,18 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False)
     # Save the plot
     if save:
         ax.set_title(f'Patch Types for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-patch-types.png', bbox_inches='tight')
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-patch-types.png', bbox_inches='tight')
         plt.close(fig)
 
 
-def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5):
+def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
-    cleaned_data = clean_data(data)
+    cleaned_data = utils.clean_data(data)
 
-    author, added_lines, dates = get_columns(cleaned_data, ['author', 'addedlines', 'time'])
+    author, added_lines, dates = utils.get_columns(cleaned_data, ['author', 'addedlines', 'time'])
 
     # Get the unique authors
     unique_authors = list(set(author))
@@ -575,19 +554,19 @@ def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5):
 
     # Save the plot
     if save:
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-author-dist.png', bbox_inches='tight')
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-author-dist.png', bbox_inches='tight')
         plt.close(fig)
 
 
-def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple=False):
+def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
     # This time, don't clean the data of compileErrors
-    cleaned_data = clean_data(data, omit=['EmptyCommit', 'NoCoverage'])
+    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage'])
 
     # Get the columns we want - covered_lines, not_covered_lines, and changed_test_files
-    exit_status_data, dates = get_columns(cleaned_data, ['exit', 'time'])
+    exit_status_data, dates = utils.get_columns(cleaned_data, ['exit', 'time'])
 
     # Get the unique exit statuses
     unique_exit_statuses = ["OK", "SomeTestFailed", "TimedOut", "compileError"]
@@ -646,65 +625,16 @@ def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple
 
     # Save the plot
     if save:
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-exit-status-rates.png', bbox_inches='tight')
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-exit-status-rates.png',
+                    bbox_inches='tight')
         plt.close(fig)
 
 
-def clean_data(data, omit=None):
-    if omit is None:
-        omit = ['EmptyCommit', 'NoCoverage', 'compileError']
-    return [x for x in data if x[file_header_list.index('exit')] not in omit]
+def date_check(args: dict):
+    # Extract the arguments
+    csv_name = args['csv_name']
+    dates = args['dates']
 
-
-def get_columns(data, columns):
-    # Get the data from the columns specified and convert to the correct type using file_header_type
-    data_list = []
-    for column in columns:
-        # Get the data from the column
-        column_data = [x[file_header_list.index(column)] for x in data]
-        # Convert the data to the correct type (int, str, float)
-        column_data = [file_header_type[column](x) for x in column_data]
-        if column == 'time':
-            column_data = [datetime.datetime.fromtimestamp(int(x)) for x in column_data]
-        # Add the data to the list
-        data_list.append(column_data)
-    return data_list
-
-
-def extract_data(input_file, csv_name):
-    # Take the input file CSV and extract to an internal representation of the data
-
-    # Open the file
-    with open(input_file, 'r') as f:
-        # Read the file
-        lines = f.readlines()
-
-        # Remove the header
-        lines = lines[1:]
-
-        # Ignore any lines that begin with a # (i.e. comments)
-        lines = [line for line in lines if not line.startswith('#')]
-
-        # Split the lines by comma
-        lines = [line.split(',') for line in lines]
-
-        # Skip any lines that don't have the correct number of columns
-        lines = [line for line in lines if len(line) == len(file_header_list)]
-
-        if len(lines) == 0:
-            print(f'Warning: {csv_name} is missing columns, skipping...')
-            return None
-
-    # Perform a sanity check on the data, that the timestamps are in order (low to high)
-    dates = [line[file_header_list.index('time')] for line in lines]
-
-    # Make sure the dates are in order
-    dates_ok = date_check(dates, csv_name)
-
-    return lines
-
-
-def date_check(dates, csv_name):
     for i in range(len(dates) - 1):
         if dates[i] > dates[i + 1] and csv_name not in date_warning_thrown:
             print(f'Warning: The dates for {csv_name} are not in order, {dates[i]} is after {dates[i + 1]} '
@@ -718,21 +648,23 @@ def date_check(dates, csv_name):
     return True
 
 
-def plot_all_individual(data, csv_name, date):
+def plot_all_individual(data, csv_name, date, savedir=None):
+    if savedir is None:
+        savedir = args.input
     # Plot the individual data
-    plot_eloc(data, csv_name, date=date)
-    plot_tloc(data, csv_name, date=date)
-    plot_evolution_of_eloc_and_tloc(data, csv_name, graph_mode="zeroone")
-    plot_coverage(data, csv_name, date=date)
+    plot_eloc(data, csv_name, date=date, savedir=savedir)
+    plot_tloc(data, csv_name, date=date, savedir=savedir)
+    plot_evolution_of_eloc_and_tloc(data, csv_name, graph_mode="zeroone", savedir=savedir)
+    plot_coverage(data, csv_name, date=date, savedir=savedir)
 
-    plot_patch_coverage(data, csv_name, bucket_no=4)
-    plot_patch_coverage(data, csv_name, bucket_no=6)
-    plot_patch_type(data, csv_name)
+    plot_patch_coverage(data, csv_name, bucket_no=4, savedir=savedir)
+    plot_patch_coverage(data, csv_name, bucket_no=6, savedir=savedir)
+    plot_patch_type(data, csv_name, savedir=savedir)
 
-    plot_exit_status_rates(data, csv_name)
+    plot_exit_status_rates(data, csv_name, savedir=savedir)
 
-    plot_churn(data, csv_name, date=date)
-    plot_author_dist(data, csv_name, date=date, limit=2)
+    plot_churn(data, csv_name, date=date, savedir=savedir)
+    plot_author_dist(data, csv_name, date=date, limit=2, savedir=savedir)
 
 
 def plot_all_multiple(paths, csv_names, date):
@@ -761,7 +693,7 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
     fig, axs = plt.subplots(rows, columns, figsize=size)
     idxs = (0, 0)
     for i in range(len(csv_names)):
-        csv_data = extract_data(f'{paths[i]}', csv_names[i])
+        csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
         if csv_data is not None:
             metric(csv_data, csv_names[i], plot=(fig, axs[idxs]), save=False, **kwargs)
             # Wrap around the indexs or increment
@@ -780,7 +712,7 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     """ Plot a metric for multiple CSVs on the same graph of a figure. """
     fig, axs = plt.subplots(figsize=expanded_figsize)
     for i in range(len(csv_names)):
-        csv_data = extract_data(f'{paths[i]}', csv_names[i])
+        csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
         if csv_data is not None:
             metric(csv_data, csv_names[i], plot=(fig, axs), save=False, pos=i, multiple=True, **kwargs)
 
@@ -795,7 +727,6 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
 
 
 if __name__ == '__main__':
-    # TODO: Add an option to specify whether our X axis is time or revision number
     import os
     import argparse
     import math
@@ -829,7 +760,8 @@ if __name__ == '__main__':
 
         # TODO: remove when data fixed
         # Remove the following CSV files from the list since they are either not complete or lack fields
-        excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv', 'remotedata/binutils/Binutils.csv']
+        excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
+                          'remotedata/binutils/Binutils.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:
@@ -868,7 +800,7 @@ if __name__ == '__main__':
             if not os.path.exists(f'postprocessing/graphs/{args.input}/{csv_names[i]}'):
                 os.makedirs(f'postprocessing/graphs/{args.input}/{csv_names[i]}')
 
-            csv_data = extract_data(f'{paths[i]}', csv_names[i])
+            csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
             if csv_data is not None:
                 plot_all_individual(csv_data, csv_names[i], date=args.date)
                 print(
@@ -895,7 +827,8 @@ if __name__ == '__main__':
     else:
         # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
         if os.path.isdir(args.input):
-            raise IsADirectoryError(f'Input {args.input} is a directory (single input should be a file, try using --dir)')
+            raise IsADirectoryError(
+                f'Input {args.input} is a directory (single input should be a file, try using --dir)')
         if not os.path.isfile(args.input):
             raise FileNotFoundError(f'Input {args.input} is not a file')
         if not args.input.endswith('.csv'):
@@ -903,6 +836,13 @@ if __name__ == '__main__':
 
         # Get the name of the CSV file (basename)
         csv_name = os.path.basename(args.input)
+        directory = os.path.dirname(args.input)
+
+        # only keep the last part of the directory
+        if len(directory.split('/')) > 1:
+            directory = directory.split('/')[-2]
+        else:
+            directory = directory.split('/')[-1]
         # Remove the .csv extension
         csv_name = csv_name[:-4]
 
@@ -911,26 +851,31 @@ if __name__ == '__main__':
             os.makedirs('postprocessing/graphs')
 
         # Make the directory /graphs/{args.input} if it doesn't exist
-        if not os.path.exists(f'postprocessing/graphs/{args.input}'):
-            os.makedirs(f'postprocessing/graphs/{args.input}')
+        if not os.path.exists(f'postprocessing/graphs/{directory}'):
+            os.makedirs(f'postprocessing/graphs/{directory}')
 
         # Make the directory for the graphs if it doesn't exist
-        if not os.path.exists(f'postprocessing/graphs/{args.input}/{csv_name}'):
-            os.makedirs(f'postprocessing/graphs/{args.input}/{csv_name}')
+        if not os.path.exists(f'postprocessing/graphs/{directory}/{csv_name}'):
+            os.makedirs(f'postprocessing/graphs/{directory}/{csv_name}')
 
-        data = extract_data(args.input, csv_name)
+        data = utils.extract_data(args.input, csv_name, callback=date_check)
 
-        plot_all_individual(data, csv_name, date=args.date)
+        plot_all_individual(data, csv_name, date=args.date, savedir=directory)
 
         print("=====================================================")
         print(f'Finished plotting {csv_name}. You can find the plots in graphs/{args.input}/{csv_name}')
 
+    if args.dir:
+        path = args.input
+    else:
+        path = directory
+
     # Create a directory for the graphs if it doesn't exist
-    if not os.path.exists(f'graphs/{args.input}'):
-        os.makedirs(f'graphs/{args.input}')
+    if not os.path.exists(f'graphs/{path}'):
+        os.makedirs(f'graphs/{path}')
 
     # Move all the png files to the graphs directory
-    for file in glob.glob(f'postprocessing/graphs/{args.input}/*/*.png'):
+    for file in glob.glob(f'postprocessing/graphs/{path}/*/*.png'):
         # Get the name of the file and the directory it is in
         filename = os.path.basename(file)
         directory = os.path.dirname(file)
@@ -939,26 +884,26 @@ if __name__ == '__main__':
         directory = directory.split('/')[-1]
 
         # Create the directory in the graphs directory if it doesn't exist
-        if not os.path.exists(f'graphs/{args.input}/{directory}'):
-            os.makedirs(f'graphs/{args.input}/{directory}')
+        if not os.path.exists(f'graphs/{path}/{directory}'):
+            os.makedirs(f'graphs/{path}/{directory}')
 
         # Move the file to the graphs directory
-        shutil.move(file, f'graphs/{args.input}/{directory}/{filename}')
+        shutil.move(file, f'graphs/{path}/{directory}/{filename}')
 
-        # Remove all empty directories in the postprocessing/graphs/{args.input} directory
-        if not os.listdir(f'postprocessing/graphs/{args.input}/{directory}'):
-            os.rmdir(f'postprocessing/graphs/{args.input}/{directory}')
+        # Remove all empty directories in the postprocessing/graphs/{path} directory
+        if not os.listdir(f'postprocessing/graphs/{path}/{directory}'):
+            os.rmdir(f'postprocessing/graphs/{path}/{directory}')
 
     # Move all the combined png files to the graphs directory
-    for file in glob.glob(f'postprocessing/graphs/{args.input}/*.png'):
+    for file in glob.glob(f'postprocessing/graphs/{path}/*.png'):
         # Get the name of the file and the directory it is in
         filename = os.path.basename(file)
 
         # Move the file to the graphs directory
-        shutil.move(file, f'graphs/{args.input}/{filename}')
+        shutil.move(file, f'graphs/{path}/{filename}')
 
-    # Remove postprocessing/graphs/{args.input} directory if it is empty
-    if not os.listdir(f'postprocessing/graphs/{args.input}'):
-        os.rmdir(f'postprocessing/graphs/{args.input}')
+    # Remove postprocessing/graphs/{path} directory if it is empty
+    if not os.listdir(f'postprocessing/graphs/{path}'):
+        os.rmdir(f'postprocessing/graphs/{path}')
 
     print("All done!")
