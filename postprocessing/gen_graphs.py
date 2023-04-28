@@ -34,6 +34,7 @@ file_header_type = {
 }
 
 # Other globals
+output_location = 'postprocessing/graphs/'
 default_figsize = (11, 11)
 expanded_figsize = (15, 15)
 date_warning_thrown = []
@@ -53,11 +54,14 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None):
     if date:
         ax.plot(dates, eloc_data, '+', markersize=5)
         ax.tick_params(axis='x', rotation=45)
+        ax.set_xlim(dates[0], dates[-1])
     else:
         ax.plot(eloc_data, '+', markersize=5)
         ax.set_xlabel('Revision')
+        ax.set_xlim(0, len(eloc_data))
     # Label the axes, do not show xticks
     ax.set_ylabel('ELOC')
+    ax.set_ylim(0, math.ceil(max(eloc_data) / 500) * 500)
     # Title the plot
     ax.set_title(f'{csv_name}')
 
@@ -87,11 +91,14 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None):
     if date:
         ax.plot(dates, tloc_data, '+', markersize=5, color='red')
         ax.tick_params(axis='x', rotation=45)
+        ax.set_xlim(left=dates[0], right=dates[-1])
     else:
         ax.plot(tloc_data, '+', markersize=5, color='red')
         ax.set_xlabel('Revision')
+        ax.set_xlim(left=0, right=len(tloc_data))
     # Label the axes, do not show xticks
     ax.set_ylabel('TLOC')
+    ax.set_ylim(bottom=0, top=math.ceil(max(tloc_data) / 100) * 100)
     # Title the plot
     ax.set_title(f'{csv_name}')
 
@@ -182,7 +189,8 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
     # Save the plot
     if save:
         ax.set_title(f'Co-evolution of executable and test code for {csv_name}')
-        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-evolution{"-date" if date else ""}.png', bbox_inches='tight')
+        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-evolution{"-date" if date else ""}.png',
+                    bbox_inches='tight')
         plt.close(fig)
 
 
@@ -217,10 +225,12 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None):
         ax.plot(corresponding_dates, line_coverage, '+', markersize=5)
         ax.plot(corresponding_dates, br_coverage, 'x', markersize=5, color='red')
         ax.tick_params(axis='x', rotation=45)
+        ax.set_xlim(left=dates[0], right=dates[-1])
     else:
         ax.plot(line_coverage, '+', markersize=5)
         ax.plot(br_coverage, 'x', markersize=5, color='red')
         ax.set_xlabel('Revision')
+        ax.set_xlim(left=0, right=len(dates))
 
     # Set the y axis from 0 to 100
     ax.set_ylim(bottom=0, top=100)
@@ -265,7 +275,7 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None):
         peloc = eloc_data[i]
 
     if date:
-        corresponding_dates = [ dates[i] for i in idxs ]
+        corresponding_dates = [dates[i] for i in idxs]
         ax.plot(corresponding_dates, churn_list, '+', markersize=5)
         ax.tick_params(axis='x', rotation=45)
     else:
@@ -372,7 +382,8 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     cumulative_total = 0
     idx = 0
     for bucket_p in bucket_percentages:
-        ax.bar(csv_name if multiple else 0, bucket_p, bottom=cumulative_total, label=bucket_names[idx], width=0.5, color=colours[idx],
+        ax.bar(csv_name if multiple else 0, bucket_p, bottom=cumulative_total, label=bucket_names[idx], width=0.5,
+               color=colours[idx],
                edgecolor='black', zorder=3)
         cumulative_total += bucket_p
         idx += 1
@@ -459,7 +470,8 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False)
     cumulative_total = 0
     idx = 0
     for patch_type in patch_types:
-        ax.bar(csv_name if multiple else 0, patch_types[patch_type], bottom=cumulative_total, label=patch_type, width=0.5,
+        ax.bar(csv_name if multiple else 0, patch_types[patch_type], bottom=cumulative_total, label=patch_type,
+               width=0.5,
                color=patch_type_colours[idx], edgecolor='black', zorder=3)
         cumulative_total += patch_types[patch_type]
         idx += 1
@@ -481,7 +493,7 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False)
     # Print the legend with the patch type names
     if pos == 0:
         handles, labels = ax.get_legend_handles_labels()
-        plt.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc='upper left')
 
     # Make it a dotted grid
     ax.grid(linestyle='dotted', zorder=0, axis='y')
@@ -493,8 +505,155 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False)
         plt.close(fig)
 
 
-def clean_data(data):
-    return [x for x in data if x[file_header_list.index('exit')] not in ['EmptyCommit', 'NoCoverage', 'compileError']]
+def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+    # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
+    cleaned_data = clean_data(data)
+
+    author, added_lines, dates = get_columns(cleaned_data, ['author', 'addedlines', 'time'])
+
+    # Get the unique authors
+    unique_authors = list(set(author))
+
+    # Get the number of authors
+    num_authors = len(unique_authors)
+
+    # Get the number of commits
+    num_commits = len(author)
+
+    # Get the number of commits per author
+    commits_per_author = {}
+    lines_added_per_author = {}
+    for i in range(num_authors):
+        commits_per_author[unique_authors[i]] = 0
+        lines_added_per_author[unique_authors[i]] = 0
+    for i in range(num_commits):
+        commits_per_author[author[i]] += 1
+        lines_added_per_author[author[i]] += added_lines[i]
+
+    # look at dictionary and remove authors with less than <limit> commits
+    for key in list(commits_per_author.keys()):
+        if commits_per_author[key] < limit:
+            del commits_per_author[key]
+            del lines_added_per_author[key]
+
+    # # order the authors by number of commits
+    # commits_per_author = dict(sorted(commits_per_author.items(), key=lambda item: item[1], reverse=True))
+    #
+    # # plot the histogram of author on the x axis and number of commits on the y axis
+    # ax.bar(commits_per_author.keys(), commits_per_author.values(), edgecolor='black', zorder=3)
+
+    # calculate the average number of lines per commit for each author
+    for key in lines_added_per_author.keys():
+        lines_added_per_author[key] = lines_added_per_author[key] / commits_per_author[key]
+
+    # order the authors by number of commits
+    lines_added_per_author = dict(sorted(lines_added_per_author.items(), key=lambda item: item[1], reverse=True))
+
+    # plot the histogram of author on the x axis and number of commits on the y axis
+    ax.bar(lines_added_per_author.keys(), lines_added_per_author.values(), edgecolor='black', zorder=3)
+
+    # Label the x axis as Author
+    ax.set_xlabel('Author')
+
+    # Rotate the x axis labels
+    plt.xticks(rotation=90)
+
+    # # Label the y axis as Number of Commits
+    # ax.set_ylabel('Number of Commits')
+
+    # Label the y axis
+    ax.set_ylabel('Number of Lines Added')
+
+    # # Give the plot a title
+    # ax.set_title(f'Number of Commits per Author for {csv_name}')
+
+    # Give the plot a title
+    ax.set_title(f'Number of Lines Added per Author for {csv_name}')
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-author-dist.png', bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple=False):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+    # This time, don't clean the data of compileErrors
+    cleaned_data = clean_data(data, omit=['EmptyCommit', 'NoCoverage'])
+
+    # Get the columns we want - covered_lines, not_covered_lines, and changed_test_files
+    exit_status_data, dates = get_columns(cleaned_data, ['exit', 'time'])
+
+    # Get the unique exit statuses
+    unique_exit_statuses = ["OK", "SomeTestFailed", "TimedOut", "compileError"]
+
+    # Get the number of exit statuses
+    num_exit_statuses = len(unique_exit_statuses)
+
+    # Get the number of commits
+    num_commits = len(exit_status_data)
+
+    # Get the number of commits per exit status
+    commits_per_exit_status = {}
+    for i in range(num_exit_statuses):
+        commits_per_exit_status[unique_exit_statuses[i]] = 0
+    for i in range(num_commits):
+        commits_per_exit_status[exit_status_data[i]] += 1
+
+    # Plot our data
+    exit_status_colours = ["#428f4d", "#de5434", "#cccccc", "#ad302e"]
+
+    # Calculate the percentage of commits for each exit status
+    total_commits = sum(commits_per_exit_status.values())
+    for exit_status in commits_per_exit_status.keys():
+        commits_per_exit_status[exit_status] = commits_per_exit_status[exit_status] / total_commits * 100
+
+    # Plot the data as a stacked vertical bar chart
+    cumulative_total = 0
+    idx = 0
+    for exit_status in commits_per_exit_status.keys():
+        ax.bar(csv_name if multiple else 0, commits_per_exit_status[exit_status], bottom=cumulative_total,
+               label=exit_status, color=exit_status_colours[idx], edgecolor='black', zorder=3)
+        cumulative_total += commits_per_exit_status[exit_status]
+        idx += 1
+
+    # Turn off ticks for the x axis
+    if not multiple:
+        ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+        ax.set_xlim(-1, 1)
+
+    # Label the y axis as Number of Commits
+    ax.set_ylabel('Number of Commits')
+
+    # Give the plot a title
+    if not multiple:
+        ax.set_title(f'Number of Commits per Exit Status for {csv_name}')
+    else:
+        ax.set_title(f'Number of Commits per Exit Status')
+
+    if pos == 0:
+        # Add a legend
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles[::-1], labels[::-1], loc='upper left', bbox_to_anchor=(1, 1), title='Exit Statuses')
+
+    # Make it a dotted grid
+    ax.grid(linestyle='dotted', zorder=0, axis='y')
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{args.input}/{csv_name}/{csv_name}-exit-status-rates.png', bbox_inches='tight')
+        plt.close(fig)
+
+
+def clean_data(data, omit=None):
+    if omit is None:
+        omit = ['EmptyCommit', 'NoCoverage', 'compileError']
+    return [x for x in data if x[file_header_list.index('exit')] not in omit]
 
 
 def get_columns(data, columns):
@@ -570,7 +729,10 @@ def plot_all_individual(data, csv_name, date):
     plot_patch_coverage(data, csv_name, bucket_no=6)
     plot_patch_type(data, csv_name)
 
+    plot_exit_status_rates(data, csv_name)
+
     plot_churn(data, csv_name, date=date)
+    plot_author_dist(data, csv_name, date=date, limit=2)
 
 
 def plot_all_multiple(paths, csv_names, date):
@@ -584,6 +746,8 @@ def plot_all_multiple(paths, csv_names, date):
     plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=4)
     plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6)
     plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names)
+
+    plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names)
 
 
 def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
@@ -609,7 +773,7 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
     # Check if kwargs contains date, if so, add it to the filename
     date = kwargs.get('date', False)
     fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}.png', bbox_inches='tight')
-    print(f'Finished plotting combined {outname}. You can find the plots in postprocessing/graphs/{args.input}')
+    print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
 
 
 def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
@@ -623,8 +787,11 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     # Check if kwargs contains date, if so, add it to the filename
     date = kwargs.get('date', False)
     bucket_no = kwargs.get('bucket_no', None)
-    fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}{bucket_no if bucket_no is not None else ""}.png', bbox_inches='tight')
-    print(f'Finished plotting combined {outname}{"-date" if date else ""}. You can find the plots in postprocessing/graphs/{args.input}')
+    fig.savefig(
+        f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}{bucket_no if bucket_no is not None else ""}.png',
+        bbox_inches='tight')
+    print(
+        f'Finished plotting combined {outname}{"-date" if date else ""}. You can find the plots in graphs/{args.input}')
 
 
 if __name__ == '__main__':
@@ -648,14 +815,30 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.dir:
+        # Make sure the input is a directory
+        if not os.path.isdir(args.input):
+            raise NotADirectoryError(f'{args.input} is not a directory')
+
         # Get the names of the CSV files (basenames)
         paths = glob.glob(f'{args.input}/*/*.csv')
+
+        # Add to paths a level up
+        if len(paths) == 0:
+            paths += glob.glob(f'{args.input}/*.csv')
 
         # TODO: remove when data fixed
         # Remove the following CSV files from the list since they are either not complete or lack fields (last two are missing br and brcov)
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv']
 
+        # Make sure we have at least one CSV file
+        if len(paths) == 0:
+            raise FileNotFoundError(f'No CSV files found in {args.input}')
+
         paths = [x for x in paths if x not in excluded_paths]
+
+        # Make sure we have at least one valid CSV file
+        if len(paths) == 0:
+            raise FileNotFoundError(f'No non-excepted CSV files found in {args.input}')
 
         csv_names = [os.path.basename(x) for x in paths]
 
@@ -688,7 +871,7 @@ if __name__ == '__main__':
             if csv_data is not None:
                 plot_all_individual(csv_data, csv_names[i], date=args.date)
                 print(
-                    f'Finished plotting {csv_names[i]}. You can find the plots in postprocessing/graphs/{args.input}/{csv_names[i]}')
+                    f'Finished plotting {csv_names[i]}. You can find the plots in graphs/{args.input}/{csv_names[i]}')
             else:
                 # Replace paths[i] and csv_names[i] with None so that they are not plotted
                 paths[i] = None
@@ -709,6 +892,14 @@ if __name__ == '__main__':
         plot_all_multiple(paths, csv_names, date=args.date)
 
     else:
+        # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
+        if os.path.isdir(args.input):
+            raise IsADirectoryError(f'Input {args.input} is a directory (single input should be a file, try using --dir)')
+        if not os.path.isfile(args.input):
+            raise FileNotFoundError(f'Input {args.input} is not a file')
+        if not args.input.endswith('.csv'):
+            raise TypeError(f'File {args.input} is not a CSV file')
+
         # Get the name of the CSV file (basename)
         csv_name = os.path.basename(args.input)
         # Remove the .csv extension
@@ -731,6 +922,13 @@ if __name__ == '__main__':
         plot_all_individual(data, csv_name, date=args.date)
 
         print("=====================================================")
-        print(f'Finished plotting {csv_name}. You can find the plots in postprocessing/graphs/{args.input}/{csv_name}')
+        print(f'Finished plotting {csv_name}. You can find the plots in graphs/{args.input}/{csv_name}')
+
+    # Create a directory for the graphs if it doesn't exist
+    if not os.path.exists(f'graphs/{args.input}'):
+        os.makedirs(f'graphs/{args.input}')
+
+    # Move all the graphs to the graphs folder
+    os.system(f'mv postprocessing/graphs/{args.input} graphs/{args.input}')
 
     print("All done!")

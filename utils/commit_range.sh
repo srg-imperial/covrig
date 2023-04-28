@@ -13,6 +13,14 @@ if [ $JUMP -lt 1 ]; then
     exit 1
 fi
 
+# Make sure we are in a git repo
+if [ ! -d .git ]; then
+    echo "Not in a git repo"
+    exit 1
+fi
+
+# Print the name of the git repo we are in
+echo "Looking at commits in repo: $(basename $(git rev-parse --show-toplevel))"
 
 # Get all commit hashes in the current branch
 git rev-list --first-parent HEAD > /tmp/commit_hashes
@@ -27,4 +35,4 @@ OUTPUT_HASH=$(sed -n "$(($LINE_NUMBER - $JUMP + 1))p" /tmp/commit_hashes)
 echo To analyze $JUMP revisions including $INPUT_HASH as the first, use $OUTPUT_HASH
 
 # Remove the temporary file
-#rm /tmp/commit_hashes
+rm /tmp/commit_hashes
