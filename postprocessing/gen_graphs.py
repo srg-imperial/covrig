@@ -34,6 +34,7 @@ file_header_type = {
 }
 
 # Other globals
+output_location = 'postprocessing/graphs/'
 default_figsize = (11, 11)
 expanded_figsize = (15, 15)
 date_warning_thrown = []
@@ -772,7 +773,7 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
     # Check if kwargs contains date, if so, add it to the filename
     date = kwargs.get('date', False)
     fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}.png', bbox_inches='tight')
-    print(f'Finished plotting combined {outname}. You can find the plots in postprocessing/graphs/{args.input}')
+    print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
 
 
 def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
@@ -790,7 +791,7 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
         f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}{bucket_no if bucket_no is not None else ""}.png',
         bbox_inches='tight')
     print(
-        f'Finished plotting combined {outname}{"-date" if date else ""}. You can find the plots in postprocessing/graphs/{args.input}')
+        f'Finished plotting combined {outname}{"-date" if date else ""}. You can find the plots in graphs/{args.input}')
 
 
 if __name__ == '__main__':
@@ -814,14 +815,30 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.dir:
+        # Make sure the input is a directory
+        if not os.path.isdir(args.input):
+            raise NotADirectoryError(f'{args.input} is not a directory')
+
         # Get the names of the CSV files (basenames)
         paths = glob.glob(f'{args.input}/*/*.csv')
+
+        # Add to paths a level up
+        if len(paths) == 0:
+            paths += glob.glob(f'{args.input}/*.csv')
 
         # TODO: remove when data fixed
         # Remove the following CSV files from the list since they are either not complete or lack fields (last two are missing br and brcov)
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv']
 
+        # Make sure we have at least one CSV file
+        if len(paths) == 0:
+            raise FileNotFoundError(f'No CSV files found in {args.input}')
+
         paths = [x for x in paths if x not in excluded_paths]
+
+        # Make sure we have at least one valid CSV file
+        if len(paths) == 0:
+            raise FileNotFoundError(f'No non-excepted CSV files found in {args.input}')
 
         csv_names = [os.path.basename(x) for x in paths]
 
@@ -854,7 +871,7 @@ if __name__ == '__main__':
             if csv_data is not None:
                 plot_all_individual(csv_data, csv_names[i], date=args.date)
                 print(
-                    f'Finished plotting {csv_names[i]}. You can find the plots in postprocessing/graphs/{args.input}/{csv_names[i]}')
+                    f'Finished plotting {csv_names[i]}. You can find the plots in graphs/{args.input}/{csv_names[i]}')
             else:
                 # Replace paths[i] and csv_names[i] with None so that they are not plotted
                 paths[i] = None
@@ -875,6 +892,14 @@ if __name__ == '__main__':
         plot_all_multiple(paths, csv_names, date=args.date)
 
     else:
+        # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
+        if os.path.isdir(args.input):
+            raise IsADirectoryError(f'Input {args.input} is a directory (single input should be a file, try using --dir)')
+        if not os.path.isfile(args.input):
+            raise FileNotFoundError(f'Input {args.input} is not a file')
+        if not args.input.endswith('.csv'):
+            raise TypeError(f'File {args.input} is not a CSV file')
+
         # Get the name of the CSV file (basename)
         csv_name = os.path.basename(args.input)
         # Remove the .csv extension
@@ -897,6 +922,13 @@ if __name__ == '__main__':
         plot_all_individual(data, csv_name, date=args.date)
 
         print("=====================================================")
-        print(f'Finished plotting {csv_name}. You can find the plots in postprocessing/graphs/{args.input}/{csv_name}')
+        print(f'Finished plotting {csv_name}. You can find the plots in graphs/{args.input}/{csv_name}')
+
+    # Create a directory for the graphs if it doesn't exist
+    if not os.path.exists(f'graphs/{args.input}'):
+        os.makedirs(f'graphs/{args.input}')
+
+    # Move all the graphs to the graphs folder
+    os.system(f'mv postprocessing/graphs/{args.input} graphs/{args.input}')
 
     print("All done!")
