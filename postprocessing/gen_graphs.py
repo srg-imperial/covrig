@@ -801,6 +801,7 @@ if __name__ == '__main__':
     import math
     import datetime
     import glob
+    import shutil
 
     # argparse the location of the input file (e.g. remotedata/apr/Apr.csv)
     parser = argparse.ArgumentParser()
@@ -827,8 +828,8 @@ if __name__ == '__main__':
             paths += glob.glob(f'{args.input}/*.csv')
 
         # TODO: remove when data fixed
-        # Remove the following CSV files from the list since they are either not complete or lack fields (last two are missing br and brcov)
-        excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv']
+        # Remove the following CSV files from the list since they are either not complete or lack fields
+        excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv', 'remotedata/binutils/Binutils.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:
@@ -928,7 +929,36 @@ if __name__ == '__main__':
     if not os.path.exists(f'graphs/{args.input}'):
         os.makedirs(f'graphs/{args.input}')
 
-    # Move all the graphs to the graphs folder
-    os.system(f'mv postprocessing/graphs/{args.input} graphs/{args.input}')
+    # Move all the png files to the graphs directory
+    for file in glob.glob(f'postprocessing/graphs/{args.input}/*/*.png'):
+        # Get the name of the file and the directory it is in
+        filename = os.path.basename(file)
+        directory = os.path.dirname(file)
+
+        # only keep the last part of the directory
+        directory = directory.split('/')[-1]
+
+        # Create the directory in the graphs directory if it doesn't exist
+        if not os.path.exists(f'graphs/{args.input}/{directory}'):
+            os.makedirs(f'graphs/{args.input}/{directory}')
+
+        # Move the file to the graphs directory
+        shutil.move(file, f'graphs/{args.input}/{directory}/{filename}')
+
+        # Remove all empty directories in the postprocessing/graphs/{args.input} directory
+        if not os.listdir(f'postprocessing/graphs/{args.input}/{directory}'):
+            os.rmdir(f'postprocessing/graphs/{args.input}/{directory}')
+
+    # Move all the combined png files to the graphs directory
+    for file in glob.glob(f'postprocessing/graphs/{args.input}/*.png'):
+        # Get the name of the file and the directory it is in
+        filename = os.path.basename(file)
+
+        # Move the file to the graphs directory
+        shutil.move(file, f'graphs/{args.input}/{filename}')
+
+    # Remove postprocessing/graphs/{args.input} directory if it is empty
+    if not os.listdir(f'postprocessing/graphs/{args.input}'):
+        os.rmdir(f'postprocessing/graphs/{args.input}')
 
     print("All done!")
