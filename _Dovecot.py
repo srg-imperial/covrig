@@ -12,7 +12,7 @@ class Dovecot(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/dovecot'", capture=True)
+            self.path = self.omnirun("realpath 'repos/dovecot'").stdout.strip()
         else:
             self.path = '/home/dovecot'
             self.source_path = '/home/dovecot/src'

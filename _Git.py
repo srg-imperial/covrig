@@ -12,7 +12,7 @@ class Git(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/git'", capture=True)
+            self.path = self.omnirun("realpath 'repos/git'").stdout.strip()
         else:
             self.path = '/home/git'
             self.source_path = '/home/git'

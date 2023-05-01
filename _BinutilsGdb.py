@@ -12,7 +12,7 @@ class BinutilsGdb(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/binutils'", capture=True)
+            self.path = self.omnirun("realpath 'repos/binutils'").stdout.strip()
         else:
             self.path = '/home/binutils'
             self.source_path = '/home/binutils/binutils'

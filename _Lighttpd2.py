@@ -1,3 +1,5 @@
+import subprocess
+
 from fabric import Connection
 
 # Analytics modules
@@ -12,7 +14,7 @@ class Lighttpd2(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/lighttpd2'", capture=True).stdout.strip()
+            self.path = self.omnirun("realpath 'repos/lighttpd2'").stdout.strip()
         else:
             self.path = '/home/lighttpd2'
             self.source_path = '/home/lighttpd2/src'

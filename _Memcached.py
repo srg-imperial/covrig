@@ -14,7 +14,7 @@ class Memcached(Container):
         Container.__init__(self, _image, _user, _pwd)
         # set variables
         if self.offline:
-            self.path = self.local("realpath 'repos/memcached'").stdout.strip()
+            self.path = self.omnirun("realpath 'repos/memcached'").stdout.strip()
         else:
             self.path = '/home/memcached'
             self.source_path = '/home/memcached'

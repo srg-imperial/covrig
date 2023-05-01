@@ -12,7 +12,7 @@ class Redis(Container):
 
         # set variables
         if self.offline:
-            self.path = self.local("realpath 'repos/redis'").stdout.strip()
+            self.path = self.omnirun("realpath 'repos/redis'").stdout.strip()
         else:
             self.path = '/home/redis'
             self.source_path = '/home/redis/src'
