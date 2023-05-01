@@ -11,12 +11,12 @@ RUN apt-get update && apt-get install -y \
 	curl \
 	openssh-server \
     lcov \
-    cloc \
     realpath \
     psmisc \
 	--no-install-recommends
 
 RUN cd /tmp && curl -L https://ftp.gnu.org/gnu/automake/automake-1.11.1.tar.gz --insecure | tar xz && cd automake-* && ./configure --prefix=/usr && make install
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
 RUN cd /tmp && curl -L https://pkgconfig.freedesktop.org/releases/pkg-config-0.28.tar.gz --insecure | tar xz && cd pkg-config-* && ./configure --prefix=/usr \
             --with-internal-glib \
             --disable-host-tool  \
