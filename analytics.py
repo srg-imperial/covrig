@@ -188,6 +188,7 @@ def main():
         outputfile = b["class"].__name__
         if args.offline:
             outputfile += "Offline"
+            print('running offline, requires previous coverage information (data/<program>/coverage-<revision>.tar.bz2)')
 
         output = "data/%s/%s.csv" % (outputfolder, outputfile)
         lastrev = None

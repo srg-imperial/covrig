@@ -14,7 +14,7 @@ class Apr(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/apr'", capture=True)
+            self.path = self.omnirun("realpath 'repos/apr'").stdout.strip()
         else:
             self.path = '/home/apr'
             self.source_path = '/home/apr'

@@ -14,7 +14,7 @@ class Curl(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/curl'", capture=True)
+            self.path = self.omnirun("realpath 'repos/curl'").stdout.strip()
         else:
             self.path = '/home/curl'
             self.source_path = '/home/curl/cvr'

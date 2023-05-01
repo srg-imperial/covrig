@@ -6,6 +6,23 @@ Analytics
 - Added more examples for containers
 - Added support for differential coverage calculation
 - Rewrote and extended postprocessing graph generation
+- Wrote basic tests for `analytics.py`
+-----
+Building
+-----
+To build the project, you will need:
+- Python 3.8 or higher
+- Docker (see https://docs.docker.com/engine/install/ubuntu/)
+- Python packages: [docker-py](https://pypi.org/project/docker-py/), [fabric 2.7.1](https://pypi.org/project/fabric/2.7.1/), and [matplotlib](https://pypi.org/project/matplotlib/)
+- LCOV (latest unstable release from https://github.com/linux-test-project/lcov.git) needed for differential coverage
+
+Once these dependencies are installed, you will need to generate an ssh keypair to connect to the VMs.
+Keep the private key in your `.ssh` directory and replace the `id_rsa` files in each `containers/<repo>` with your public key.
+
+To build a container, run this from the root of the repo:
+```
+docker build -t <image_name>:<tag> -f containers/<repo>/Dockerfile containers/<repo>
+```
 
 -----
 Usage
@@ -15,6 +32,10 @@ python3 analytics.py <benchmark>
 ```
 
 Base benchmarks consist of lighttpd, redis, memcached, zeromq, binutils and git circa 2013.
+
+Newly added benchmarks include apr, curl and vim.
+
+The format for these containers is relatively simple. The `Dockerfile` contains the instructions for building the container.
 
 The full options are
 
@@ -37,6 +58,11 @@ optional arguments:
   --endatcommit COMMIT  end processing at commit. Useful for debugging
                         (e.g. python3 analytics.py --endatcommit a1b2c3d redis 1 can help debug issues with a certain commit)
                         Determining what commit to end at if you know the commit to start at can be found using the script `utils/commit_range.sh`          
+
+examples:
+  python3 analytics.py redis 100
+  python3 analytics.py --offline redis 100
+  python3 analytics.py --image redis:latest --endatcommit a1b2c3d redis 1
 ```
 
 ---
@@ -126,3 +152,9 @@ Scenario: I have a list of revisions. How do I get more interesting information 
 Solution: As before, but use the `postprocessing/faultcoverage-multiple.sh` script.
 
 This can be used to analyse buggy code coverage. Running this on a list of bug fixing revisions is intuitively similar to running the previous script on a list of revisions introducing the respective bugs.
+
+---
+Tests
+---
+You can find the tests used by the Github CI in `tests/`. These can be run locally with `runtests.sh`.
+

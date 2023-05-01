@@ -12,7 +12,7 @@ class Zeromq(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/zeromq4-x'", capture=True)
+            self.path = self.omnirun("realpath 'repos/zeromq4-x'").stdout.strip()
         else:
             self.path = '/home/zeromq4-x'
             self.source_path = '/home/zeromq4-x/src'

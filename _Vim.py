@@ -12,7 +12,7 @@ class Vim(Container):
 
         # set variables
         if self.offline:
-            self.path = self.conn.local("realpath 'repos/vim'", capture=True)
+            self.path = self.omnirun("realpath 'repos/vim'").stdout.strip()
         else:
             self.path = '/home/vim'
             self.source_path = '/home/vim/src'
