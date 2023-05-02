@@ -50,20 +50,17 @@ jobs:
         run: sudo apt-get install -y cloc lcov && cloc --version && lcov --version
         
       - name: Copy private ssh key to .ssh
-#           working-directory: 
-        run: pwd && mkdir -p ~/.ssh && echo $PRIVATE_SSH_KEY >> ~/.ssh/id_rsa && ls ~/.ssh
+        run: pwd && mkdir -p ~/.ssh && echo "$PRIVATE_SSH_KEY" > ~/.ssh/id_rsa && ls ~/.ssh
         env:
           PRIVATE_SSH_KEY: ${{ secrets.SSH_KEY }}
           
-      - run: cat ~/.ssh/id_rsa
-          
-#       - name: Clone Lighttpd2 (Test repo)
-#         run: git clone https://git.lighttpd.net/lighttpd/lighttpd2.git repos/lighttpd2
+      - name: Clone Lighttpd2 (Test repo)
+        run: git clone https://git.lighttpd.net/lighttpd/lighttpd2.git repos/lighttpd2
 
-#       - name: Run tests
-#         run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
+      - name: Run tests
+        run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
         
-#       - name: Display logs on failure
-#         if: failure()
-#         run: cat tests/logs/tests-offline.log && cat tests/logs/tests-online.log
+      - name: Display logs on failure
+        if: failure()
+        run: cat tests/logs/tests-offline.log && cat tests/logs/tests-online.log
 
