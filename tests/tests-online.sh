@@ -4,6 +4,12 @@ NUM=$1
 # TEST ONLINE
 # ====================
 
+# Check if repos/lighttpd2 exists
+if [ ! -d repos/lighttpd2 ]; then
+    echo "Failed, repos/lighttpd2 does not exist"
+    exit 1
+fi
+
 # Create data/lighttpd2 directory if it doesn't exist
 mkdir -p data/lighttpd2
 
@@ -15,7 +21,7 @@ LOGFILE=tests/logs/"$(basename "$0" .sh)".log
 
 echo "Building docker image for lighttpd2..."
 # Create a docker image for lighttpd2 (storage ~450MB)
-docker build -t lighttpd2:14 -f containers/lighttpd2/Dockerfile containers/lighttpd2
+docker build --quiet -t lighttpd2:14 -f containers/lighttpd2/Dockerfile containers/lighttpd2
 
 echo -n "#${NUM} Covrig online test: "
 python3 analytics.py --output lighttpd2 --image lighttpd2:14 --endatcommit 0d40b25 lighttpd2 1 &> ${LOGFILE} & pid=$!

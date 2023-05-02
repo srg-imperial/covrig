@@ -4,6 +4,13 @@ NUM=$1
 # TEST OFFLINE
 # ====================
 
+# Check if repos/lighttpd2 exists
+if [ ! -d repos/lighttpd2 ]; then
+    # Should be done by build script on GitHub Actions
+    echo "Failed, repos/lighttpd2 does not exist"
+    exit 1
+fi
+
 # Create data/lighttpd2 directory if it doesn't exist
 mkdir -p data/lighttpd2
 
