@@ -46,6 +46,9 @@ jobs:
       - name: Install GNU parallel
         run: sudo apt-get install -y parallel
         
+      - name: Install lcov and cloc
+        run: sudo apt-get install -y cloc lcov && cloc --version && lcov --version
+        
       - name: Copy private ssh key to .ssh
 #           working-directory: 
         run: pwd && mkdir -p ~/.ssh && echo $PRIVATE_SSH_KEY >> ~/.ssh/id_rsa && ls ~/.ssh
