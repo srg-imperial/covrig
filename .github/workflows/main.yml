@@ -13,10 +13,10 @@ jobs:
         run: pwd && echo "Hello"
       
       - name: Checkout
-      - uses: actions/checkout@v3
+        uses: actions/checkout@v3
       
       - name: Set up Python 3.10
-      - uses: actions/setup-python@v4
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           architecture: 'x64'
@@ -27,15 +27,18 @@ jobs:
       - name: Install Python requirements
         run: pip install -r fabric==2.7.1 docker
         
-      - name: Set up docker
-      - uses: docker-practice/actions-setup-docker@master
+      - name: Set up docker (1)
+        uses: docker-practice/actions-setup-docker@master
         timeout-minutes: 12
-      - run: |
+      
+      - name: Set up docker (2)
+        run: |
           set -x
 
           docker version
 
           docker run --rm hello-world
+      
       - name: Install GNU parallel
         run: sudo apt-get install -y parallel
         
