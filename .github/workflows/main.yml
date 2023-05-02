@@ -51,6 +51,9 @@ jobs:
         run: pwd && mkdir -p ~/.ssh && echo $PRIVATE_SSH_KEY >> ~/.ssh/id_rsa && ls ~/.ssh
         env:
           PRIVATE_SSH_KEY: ${{ secrets.SSH_KEY }}
+          
+      - name: Clone Lighttpd2 (Test repo)
+        run: git clone https://git.lighttpd.net/lighttpd/lighttpd2.git repos/lighttpd2
 
       - name: Run tests
         run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
