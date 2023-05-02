@@ -1,0 +1,48 @@
+name: run-tests
+run-name: Tests run by @${{ github.actor }}
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: init
+        run: pwd && echo "Hello"
+      
+      - name: Checkout
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python 3.10
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          architecture: 'x64'
+      
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+        
+      - name: Install Python requirements
+        run: pip install -r fabric==2.7.1 docker
+        
+      - name: Set up docker
+      - uses: docker-practice/actions-setup-docker@master
+        timeout-minutes: 12
+      - run: |
+          set -x
+
+          docker version
+
+          docker run --rm hello-world
+      - name: Install GNU parallel
+        run: sudo apt-get install -y parallel
+        
+      - name: Copy private ssh key to .ssh
+#           working-directory: 
+        run: pwd && mkdir -p .ssh && ${{ secrets.SSH_KEY }} > .ssh/id_rsa
+
+      - name: Run tests
+        run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
+
