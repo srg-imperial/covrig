@@ -57,5 +57,5 @@ jobs:
         
       - name: Display logs on failure
         if: failure()
-        run: cat tests/tests-offline.log && cat tests/tests-online.log
+        run: cat tests/logs/tests-offline.log && cat tests/logs/tests-online.log
 
