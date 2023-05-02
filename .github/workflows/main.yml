@@ -30,7 +30,7 @@ jobs:
         run: python -c "import sys; print(sys.version)"
         
       - name: Install Python requirements
-        run: pip install -r fabric==2.7.1 docker
+        run: pip install fabric==2.7.1 docker
         
       - name: Set up docker (1)
         uses: docker-practice/actions-setup-docker@master
