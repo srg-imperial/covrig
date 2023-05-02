@@ -1,10 +1,14 @@
-name: run-tests
+name: Run tests
 run-name: Tests run by @${{ github.actor }}
 on:
+  workflow_dispatch: {}
   pull_request:
     branches:
       - master
-  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,10 +17,10 @@ jobs:
         run: pwd && echo "Hello"
       
       - name: Checkout
-      - uses: actions/checkout@v3
+        uses: actions/checkout@v3
       
       - name: Set up Python 3.10
-      - uses: actions/setup-python@v4
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           architecture: 'x64'
@@ -25,24 +29,38 @@ jobs:
         run: python -c "import sys; print(sys.version)"
         
       - name: Install Python requirements
-        run: pip install -r fabric==2.7.1 docker
+        run: pip install fabric==2.7.1 docker
         
-      - name: Set up docker
-      - uses: docker-practice/actions-setup-docker@master
+      - name: Set up docker (1)
+        uses: docker-practice/actions-setup-docker@master
         timeout-minutes: 12
-      - run: |
+      
+      - name: Set up docker (2)
+        run: |
           set -x
 
           docker version
 
           docker run --rm hello-world
+      
       - name: Install GNU parallel
         run: sudo apt-get install -y parallel
         
+      - name: Install lcov and cloc
+        run: sudo apt-get install -y cloc lcov && cloc --version && lcov --version
+        
       - name: Copy private ssh key to .ssh
-#           working-directory: 
-        run: pwd && mkdir -p .ssh && ${{ secrets.SSH_KEY }} > .ssh/id_rsa
+        run: pwd && mkdir -p ~/.ssh && echo "$PRIVATE_SSH_KEY" > ~/.ssh/id_rsa && ls ~/.ssh
+        env:
+          PRIVATE_SSH_KEY: ${{ secrets.SSH_KEY }}
+          
+      - name: Clone Lighttpd2 (Test repo)
+        run: git clone https://git.lighttpd.net/lighttpd/lighttpd2.git repos/lighttpd2
 
       - name: Run tests
         run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
+        
+      - name: Display logs on failure
+        if: failure()
+        run: cat tests/logs/tests-offline.log && cat tests/logs/tests-online.log
 
