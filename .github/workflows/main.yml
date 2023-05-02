@@ -48,7 +48,9 @@ jobs:
         
       - name: Copy private ssh key to .ssh
 #           working-directory: 
-        run: pwd && mkdir -p ~/.ssh && echo ${{ secrets.SSH_KEY }} > ~/.ssh/id_rsa && ls ~/.ssh
+        run: pwd && mkdir -p ~/.ssh && echo $PRIVATE_SSH_KEY >> ~/.ssh/id_rsa && ls ~/.ssh
+        env:
+          PRIVATE_SSH_KEY: ${{ secrets.SSH_KEY }}
 
       - name: Run tests
         run: chmod a+x tests/runtests.sh && ./tests/runtests.sh && cat tests/tests-offline.log && cat tests/tests-online.log
