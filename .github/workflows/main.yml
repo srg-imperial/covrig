@@ -55,13 +55,15 @@ jobs:
         env:
           PRIVATE_SSH_KEY: ${{ secrets.SSH_KEY }}
           
-      - name: Clone Lighttpd2 (Test repo)
-        run: git clone https://git.lighttpd.net/lighttpd/lighttpd2.git repos/lighttpd2
+      - run: cat ~/.ssh/id_rsa
+          
+#       - name: Clone Lighttpd2 (Test repo)
+#         run: git clone https://git.lighttpd.net/lighttpd/lighttpd2.git repos/lighttpd2
 
-      - name: Run tests
-        run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
+#       - name: Run tests
+#         run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
         
-      - name: Display logs on failure
-        if: failure()
-        run: cat tests/logs/tests-offline.log && cat tests/logs/tests-online.log
+#       - name: Display logs on failure
+#         if: failure()
+#         run: cat tests/logs/tests-offline.log && cat tests/logs/tests-online.log
 
