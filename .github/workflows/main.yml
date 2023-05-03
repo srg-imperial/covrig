@@ -5,17 +5,17 @@ on:
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - master
 #   push:
 #     branches:
 #       - dev
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
     steps:
-      - name: init
-        run: pwd && echo "Hello"
-      
       - name: Checkout
         uses: actions/checkout@v3
       
@@ -46,16 +46,19 @@ jobs:
       - name: Install GNU parallel
         run: sudo apt-get install -y parallel
         
-      - name: Install lcov and cloc
-        run: sudo apt-get install -y cloc lcov && cloc --version && lcov --version
+      - name: Install lcov
+        run: sudo apt-get install -y lcov
+
+      - name: Install cloc
+        run: cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && curl -L https://bugs.archlinux.org/task/45494?getfile=13174 > cloc.1.64.patch && patch -p1 < cloc.1.64.patch && sudo make install
         
       - name: Copy private ssh key to .ssh
         run: pwd && mkdir -p ~/.ssh && echo "$PRIVATE_SSH_KEY" > ~/.ssh/id_rsa && ls ~/.ssh
         env:
           PRIVATE_SSH_KEY: ${{ secrets.SSH_KEY }}
           
-      - name: Clone Lighttpd2 (Test repo)
-        run: git clone https://git.lighttpd.net/lighttpd/lighttpd2.git repos/lighttpd2
+      - name: Clone Binutils (Test repo)
+        run: git clone git://sourceware.org/git/binutils.git repos/binutils
 
       - name: Run tests
         run: chmod a+x tests/runtests.sh && ./tests/runtests.sh
