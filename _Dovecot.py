@@ -1,5 +1,6 @@
-from fabric.api import *
+from fabric import Connection
 
+# Analytics modules
 from Container import Container
 
 
@@ -10,11 +11,11 @@ class Dovecot(Container):
         Container.__init__(self, _image, _user, _pwd)
 
         # set variables
-        if (self.offline):
-            self.path = local("realpath 'repos/dovecot-2.2'", capture=True)
+        if self.offline:
+            self.path = self.omnirun("realpath 'repos/dovecot'").stdout.strip()
         else:
-            self.path = '/home/dovecot-2.2'
-            self.source_path = '/home/dovecot-2.2/src'
+            self.path = '/home/dovecot'
+            self.source_path = '/home/dovecot/src'
             # set timeout (in seconds) for the test suite to run
             self.timeout = 200
 
@@ -32,26 +33,24 @@ class Dovecot(Container):
             'src/lib-index/test-*',
             'src/lib-http/test-*',
         )
- 
-  
+
+
     def compile(self):
         """ compile Dovecot """
-        with cd(self.path):
-           with settings(warn_only=True):
-               result = run("sh autogen.sh && " +
-                            "sh configure CFLAGS='--coverage -O0' LDFLAGS='--coverage' && " +
-                            "make -j`grep -c '^processor' /proc/cpuinfo`")
-               if result.failed:
-                   self.compileError = True
+        with self.conn.cd(self.path):
+            self.conn.run("sed -i \"/^\s\swget/ s/$/ --no-check-certificate/\" autogen.sh")
+            result = self.conn.run("sh autogen.sh && " +
+                         "sh configure CFLAGS='--coverage -O0' LDFLAGS='--coverage' && " +
+                         "make -j`grep -c '^processor' /proc/cpuinfo`", warn=True)
+            if result.failed:
+                self.compileError = True
 
     def make_test(self):
         super(Dovecot, self).make_test()
         """ run the test suite """
         # if compile failed, skip this step
-        if self.compileError == False: 
-            with cd(self.path):
-                with settings(warn_only=True):
-                    result = run("timeout " + str(self.timeout) +
-                                 " make check")
-                    if result.failed:
-                        self.maketestError = result.return_code
+        if not self.compileError:
+            with self.conn.cd(self.path):
+                result = self.conn.run("timeout " + str(self.timeout) + " make check")
+                if result.failed:
+                    self.maketestError = result.return_code

@@ -34,7 +34,7 @@ for (( B=10; B<20; B++ )); do
 done
 
 gnuplot << EOF
-  set term postscript eps enhanced
+  set term postscript eps enhanced color
   set output "$OUTPUT.1.eps"
   set style fill solid border -1
   #set xrange [ -0.5 : ]

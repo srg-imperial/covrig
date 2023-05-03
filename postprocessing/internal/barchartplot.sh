@@ -22,7 +22,7 @@ else
 fi
 
 gnuplot << EOF
-  set term postscript eps enhanced
+  set term postscript eps enhanced color
   set style histogram rowstacked
   set style data histograms
   set output "$OUTPUT.1.eps"

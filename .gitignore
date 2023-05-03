@@ -1,3 +1,14 @@
 *#
 *.pyc
 *.xml
+*.tar.bz2
+
+# Ignore archive directories
+jun2015data/
+remotedata/
+
+# Ignore the data directory
+data/
+
+# Ignore tests/logs directory
+tests/logs/

@@ -1,0 +1,7 @@
+Docker image commit boundaries for lighttpd2
+============================================
+(Unknown before cae0c15, compile errors before a3b7ce7 anyway)
+First section for lighttpd2 has a base of Ubuntu 14, and is 400 revisions, up to 0d40b25 (old data) and beyond until f144349.
+Second section is Ubuntu 16, and is 66 revisions until 98ea1dc.
+Third section is Ubuntu 22, and is 35 revisions until 1058654.
+Date range is from Aug 2010 to Jan 2023 with 571 revisions total.

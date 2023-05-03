@@ -1,5 +1,7 @@
 FROM ubuntu:12.04
 
+RUN sed -i s/archive/old-releases/g etc/apt/sources.list
+
 RUN apt-get update && apt-get install -y \
 	sudo \
 	build-essential \
@@ -7,13 +9,13 @@ RUN apt-get update && apt-get install -y \
 	automake \
 	libtool \
 	git \
-	hg \
 	curl \
 	openssh-server \
+    realpath \
 	--no-install-recommends
 
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
-RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.60/cloc-1.60.tar.gz | tar xz && cd cloc-* && make install
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
 
 RUN mkdir -p /var/run/sshd
 
@@ -22,11 +24,15 @@ ADD id_rsa.pub /root/.ssh/authorized_keys
 RUN chown -R root:root /root/.ssh
 RUN chmod -R 700 /root/.ssh
 
-RUN echo "root:root" | chpasswd
+RUN apt-get install -yq \
+    libxml2-dev
 
-RUN cd /tmp && https://github.com/cosmin/git-hg.git && cd git-hg && make && make install
+RUN apt-get install -yq --reinstall ca-certificates # Needed for higher ubuntu versions (e.g. 20)
 
-RUN git-hg clone https://vim.googlecode.com/hg/ /home/vim
+RUN git clone https://github.com/apache/apr.git /home/apr
+
+RUN cd /home/apr && touch libtoolT
+RUN cd /usr/include/libxml2 && cp -R libxml/ ../
 ADD measure-cov.sh /root/
 
 EXPOSE 22

@@ -1,4 +1,4 @@
-FROM ubuntu:12.04
+FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \
 	sudo \
@@ -9,10 +9,12 @@ RUN apt-get update && apt-get install -y \
 	git \
 	curl \
 	openssh-server \
+    lcov \
+    realpath \
 	--no-install-recommends
 
-RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
-RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.60/cloc-1.60.tar.gz | tar xz && cd cloc-* && make install
+#RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
 
 RUN mkdir -p /var/run/sshd
 
@@ -33,6 +35,8 @@ RUN apt-get install -yq \
 	liblua5.1-dev \
 	ragel \
 	python-pycurl
+
+RUN apt-get install -yq --reinstall ca-certificates
 
 RUN git clone https://github.com/lighttpd/lighttpd2.git /home/lighttpd2
 ADD measure-cov.sh /root/
