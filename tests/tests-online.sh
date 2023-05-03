@@ -4,14 +4,14 @@ NUM=$1
 # TEST ONLINE
 # ====================
 
-# Check if repos/lighttpd2 exists
-if [ ! -d repos/lighttpd2 ]; then
-    echo "Failed, repos/lighttpd2 does not exist"
+# Check if repos/binutils exists
+if [ ! -d repos/binutils ]; then
+    echo "Failed, repos/binutils does not exist"
     exit 1
 fi
 
-# Create data/lighttpd2 directory if it doesn't exist
-mkdir -p data/lighttpd2
+# Create data/binutils directory if it doesn't exist
+mkdir -p data/binutils
 
 # Run the tests and make sure it succeeds
 mkdir -p tests/logs
@@ -19,12 +19,12 @@ mkdir -p tests/logs
 # Create a log file for this test named after the filename and remove the extension .sh
 LOGFILE=tests/logs/"$(basename "$0" .sh)".log
 
-echo "Building docker image for lighttpd2..."
-# Create a docker image for lighttpd2 (storage ~450MB)
-docker build --quiet -t lighttpd2:14 -f containers/lighttpd2/Dockerfile containers/lighttpd2
+echo "Building docker image for binutils..."
+# Create a docker image for binutils (storage ~500MB, should take ~1min)
+docker build --quiet -t binutils:12 -f containers/binutils/Dockerfile-12 containers/binutils
 
 echo -n "#${NUM} Covrig online test: "
-python3 analytics.py --output lighttpd2 --image lighttpd2:14 --endatcommit 0d40b25 lighttpd2 1 &> ${LOGFILE} & pid=$!
+python3 analytics.py --output binutils --image binutils:12 --endatcommit 9d10bf2 binutils 1 &> ${LOGFILE} & pid=$!
 
 # Draw a spinner while the tests are running
 # Credit to https://stackoverflow.com/questions/12498304/using-bash-to-display-a-progress-working-indicator (William Pursell)
@@ -44,7 +44,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Make sure the csv file exists
-if [ ! -f data/lighttpd2/Lighttpd2.csv ]; then
+if [ ! -f data/binutils/Binutils.csv ]; then
     echo "#${NUM} Covrig online test: Failed, see ${LOGFILE} for details"
     exit 1
 fi
@@ -59,11 +59,11 @@ NUM=$((NUM+1))
 # ====================
 
 # Inspect the csv file and make sure it's correct
-ONLINE_CORRECT_STRING="0d40b25,25068,13130,2443,Stefan Bühler,2,0,2,0,0,0,0,0,0,0,0,0,0,0,1378821913,OK,2,2,1,1,0,1,1,False,13189,5352"
+ONLINE_CORRECT_STRING="9d10bf2,25267,4138,4212,H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
 # Note: This is the same string as for the offline test - they should be the same
 
 # Get the last line of the csv file using tail and make sure it matches the correct string
-ONLINE_LAST_LINE=$(tail -n 1 data/lighttpd2/Lighttpd2.csv | sed 's/\r//g')
+ONLINE_LAST_LINE=$(tail -n 1 data/binutils/Binutils.csv | sed 's/\r//g')
 echo -n "#${NUM} Covrig online test: "
 if [ "${ONLINE_LAST_LINE}" != "${ONLINE_CORRECT_STRING}" ]; then
     # Compare all the other elements together and make sure they are the same. Start at 1
@@ -90,7 +90,7 @@ if [ "${ONLINE_LAST_LINE}" != "${ONLINE_CORRECT_STRING}" ]; then
             fi
 
             # Check if they are within DELTA of each other
-            DELTA=10
+            DELTA=5
             if [ $((ONLINE_ITH_ELEMENT_CORRECT-DELTA)) -gt ${ONLINE_ITH_ELEMENT} ] || [ $((ONLINE_ITH_ELEMENT_CORRECT+DELTA)) -lt ${ONLINE_ITH_ELEMENT} ]; then
                 echo "Failed"
                 echo -e "Expected: ${ONLINE_CORRECT_STRING}"
@@ -118,7 +118,7 @@ fi
 echo "Succeeded"
 
 # Cleaning up
-rm -rf data/lighttpd2
+rm -rf data/binutils
 rm -rf tests/logs/test-online.log
 
 # All tests passed

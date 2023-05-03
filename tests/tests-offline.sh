@@ -4,18 +4,18 @@ NUM=$1
 # TEST OFFLINE
 # ====================
 
-# Check if repos/lighttpd2 exists
-if [ ! -d repos/lighttpd2 ]; then
+# Check if repos/binutils exists
+if [ ! -d repos/binutils ]; then
     # Should be done by build script on GitHub Actions
-    echo "Failed, repos/lighttpd2 does not exist"
+    echo "Failed, repos/binutils does not exist"
     exit 1
 fi
 
-# Create data/lighttpd2 directory if it doesn't exist
-mkdir -p data/lighttpd2
+# Create data/binutils directory if it doesn't exist
+mkdir -p data/binutils
 
-# Copy the coverage-0d40b25.tar.bz2 (lighttpd2 coverage archive) to data/lighttpd2
-cp tests/data/coverage-0d40b25.tar.bz2 data/lighttpd2
+# Copy the coverage-9d10bf2.tar.bz2 (binutils coverage archive) to data/binutils
+cp tests/data/coverage-9d10bf2.tar.bz2 data/binutils
 
 # Run the tests and make sure it succeeds
 mkdir -p tests/logs
@@ -24,14 +24,14 @@ mkdir -p tests/logs
 LOGFILE=tests/logs/"$(basename "$0" .sh)".log
 
 echo -n "#${NUM} Covrig offline test: "
-python3 analytics.py --output lighttpd2 --offline --endatcommit 0d40b25 lighttpd2 1 &> ${LOGFILE}
+python3 analytics.py --output binutils --offline --endatcommit 9d10bf2 binutils 1 &> ${LOGFILE}
 if [ $? -ne 0 ]; then
     echo "Failed, see ${LOGFILE} for details"
     exit 1
 fi
 
 # Make sure the csv file exists
-if [ ! -f data/lighttpd2/Lighttpd2Offline.csv ]; then
+if [ ! -f data/binutils/BinutilsOffline.csv ]; then
     echo "Failed, see ${LOGFILE} for details"
     exit 1
 fi
@@ -46,10 +46,10 @@ NUM=$((NUM+1))
 # ====================
 
 # Inspect the csv file and make sure it's correct
-OFFLINE_CORRECT_STRING="0d40b25,25068,13130,2443,Stefan Bühler,2,0,2,0,0,0,0,0,0,0,0,0,0,0,1378821913,OK,2,2,1,1,0,1,1,False,13189,5352"
+OFFLINE_CORRECT_STRING="9d10bf2,25267,4138,4212,H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
 
 # Get the last line of the csv file using tail and make sure it matches the correct string
-OFFLINE_LAST_LINE=$(tail -n 1 data/lighttpd2/Lighttpd2Offline.csv | sed 's/\r//g')
+OFFLINE_LAST_LINE=$(tail -n 1 data/binutils/BinutilsOffline.csv | sed 's/\r//g')
 echo -n "#${NUM} Covrig offline test: "
 if [ "${OFFLINE_LAST_LINE}" != "${OFFLINE_CORRECT_STRING}" ]; then
     echo "Failed"
@@ -62,7 +62,7 @@ fi
 echo "Succeeded"
 
 # Cleaning up
-rm -rf data/lighttpd2
+rm -rf data/binutils
 rm -rf tests/logs/test-offline.log
 
 # All tests passed
