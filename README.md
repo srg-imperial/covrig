@@ -1,4 +1,4 @@
-# Covrig [![Run tests](https://github.com/tomfbailey/covrig/actions/workflows/main.yml/badge.svg)](https://github.com/tomfbailey/covrig/actions/workflows/main.yml)
+# Covrig [![Run tests](https://github.com/srg-imperial/covrig/actions/workflows/main.yml/badge.svg)](https://github.com/srg-imperial/covrig/actions/workflows/main.yml)
     
 
 
