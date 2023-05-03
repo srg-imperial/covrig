@@ -1,15 +1,19 @@
-Analytics
-=========
+# Covrig [![Run tests](https://github.com/tomfbailey/covrig/actions/workflows/main.yml/badge.svg)](https://github.com/tomfbailey/covrig/actions/workflows/main.yml)
+    
+
+
+### What is Covrig?
+
+Covrig is a flexible infrastructure that can be used to run each version of a system in isolation to collect static and dynamic software metrics (code coverage, lines of code), originally developed by Paul Marinescu and Petr Hosek at Imperial College London.
 
 ### Changelog (April 2023)
 - Upgraded to python3 3 (incl. deps)
 - Added more examples for containers
 - Added support for differential coverage calculation
 - Rewrote and extended postprocessing graph generation
-- Wrote basic tests for `analytics.py`
+- Wrote basic tests for `analytics.py` and Github CI
 -----
-Building
------
+### Building
 To build the project, you will need:
 - Python 3.8 or higher
 - Docker (see https://docs.docker.com/engine/install/ubuntu/)
@@ -25,8 +29,7 @@ docker build -t <image_name>:<tag> -f containers/<repo>/Dockerfile containers/<r
 ```
 
 -----
-Usage
------
+### Usage
 ```
 python3 analytics.py <benchmark>
 ```
@@ -80,6 +83,7 @@ Scenario: `python3 analytics.py redis` was interrupted (bug in the code, power f
 
 Solution: `python3 analytics.py --resume redis`. For accurate latent patch coverage info, also run `python3 analytics.py --offline redis`
 (Note: will not work with `--endatcommit` option)
+
 ---
 
 Scenario: `python3 analytics.py zeromq 300` executed correctly but you realised that you need to analyse 500 revisions
@@ -156,5 +160,5 @@ This can be used to analyse buggy code coverage. Running this on a list of bug f
 ---
 Tests
 ---
-You can find the tests used by the Github CI in `tests/`. These can be run locally with `runtests.sh`.
+You can find the tests used by the Github CI in `tests/`. These can be run locally with `./tests/runtests.sh`.
 
