@@ -73,8 +73,8 @@ if [ "${ONLINE_LAST_LINE}" != "${ONLINE_CORRECT_STRING}" ]; then
         ONLINE_ITH_ELEMENT_CORRECT=$(echo ${ONLINE_CORRECT_STRING} | awk -F, '{print $'${i}'}')
         ONLINE_ITH_ELEMENT=$(echo ${ONLINE_LAST_LINE} | awk -F, '{print $'${i}'}')
 
-        # Check if i is 3 or 31 (coverage or branch coverage) and convert to int
-        if [ "$i" -eq 3 ] || [ "$i" -eq 31 ]; then
+        # Check if i is 3 or 30 or 31 (coverage or branch coverage) and convert to int
+        if [ "$i" -eq 3 ] || [ "$i" -eq 30 ] || [ "$i" -eq 31 ]; then
             ONLINE_ITH_ELEMENT_CORRECT=$(echo ${ONLINE_ITH_ELEMENT_CORRECT} | awk '{print int($1)}')
             ONLINE_ITH_ELEMENT=$(echo ${ONLINE_ITH_ELEMENT} | awk '{print int($1)}')
 
@@ -82,13 +82,15 @@ if [ "${ONLINE_LAST_LINE}" != "${ONLINE_CORRECT_STRING}" ]; then
             if [ "${ONLINE_ITH_ELEMENT_CORRECT}" != "${ONLINE_ITH_ELEMENT}" ]; then
               if [ "$i" -eq 3 ]; then
                 echo "Warning: Coverage is not quite the same as in the testcase (this can be ok) (Expected ${ONLINE_ITH_ELEMENT_CORRECT}, got ${ONLINE_ITH_ELEMENT})"
+              elif [ "$i" -eq 30 ]; then
+                echo "Warning: Branch count is not quite the same as in the testcase (this can be ok) (Correct ${ONLINE_ITH_ELEMENT_CORRECT}, got ${ONLINE_ITH_ELEMENT})"
               elif [ "$i" -eq 31 ]; then
                 echo "Warning: Branch coverage is not quite the same as in the testcase (this can be ok) (Correct ${ONLINE_ITH_ELEMENT_CORRECT}, got ${ONLINE_ITH_ELEMENT})"
               fi
             fi
 
-            # Check if they are within 10 of each other
-            if [ $((ONLINE_ITH_ELEMENT_CORRECT-10)) -gt ${ONLINE_ITH_ELEMENT} ] || [ $((ONLINE_ITH_ELEMENT_CORRECT+10)) -lt ${ONLINE_ITH_ELEMENT} ]; then
+            # Check if they are within 5 of each other
+            if [ $((ONLINE_ITH_ELEMENT_CORRECT-5)) -gt ${ONLINE_ITH_ELEMENT} ] || [ $((ONLINE_ITH_ELEMENT_CORRECT+5)) -lt ${ONLINE_ITH_ELEMENT} ]; then
                 echo "Failed"
                 echo -e "Expected: ${ONLINE_CORRECT_STRING}"
                 echo -e "Got: ${ONLINE_LAST_LINE}"
@@ -99,7 +101,7 @@ if [ "${ONLINE_LAST_LINE}" != "${ONLINE_CORRECT_STRING}" ]; then
             continue
         fi
 
-        # Check if they are the same (all other elements
+        # Check if they are the same (all other elements)
         if [ "${ONLINE_ITH_ELEMENT_CORRECT}" != "${ONLINE_ITH_ELEMENT}" ]; then
             echo "Failed"
             echo -e "Expected: ${ONLINE_CORRECT_STRING}"

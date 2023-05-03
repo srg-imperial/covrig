@@ -5,17 +5,17 @@ on:
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - master
 #   push:
 #     branches:
 #       - dev
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
     steps:
-      - name: init
-        run: pwd && echo "Hello"
-      
       - name: Checkout
         uses: actions/checkout@v3
       
