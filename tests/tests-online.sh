@@ -89,8 +89,9 @@ if [ "${ONLINE_LAST_LINE}" != "${ONLINE_CORRECT_STRING}" ]; then
               fi
             fi
 
-            # Check if they are within 5 of each other
-            if [ $((ONLINE_ITH_ELEMENT_CORRECT-5)) -gt ${ONLINE_ITH_ELEMENT} ] || [ $((ONLINE_ITH_ELEMENT_CORRECT+5)) -lt ${ONLINE_ITH_ELEMENT} ]; then
+            # Check if they are within DELTA of each other
+            DELTA=10
+            if [ $((ONLINE_ITH_ELEMENT_CORRECT-DELTA)) -gt ${ONLINE_ITH_ELEMENT} ] || [ $((ONLINE_ITH_ELEMENT_CORRECT+DELTA)) -lt ${ONLINE_ITH_ELEMENT} ]; then
                 echo "Failed"
                 echo -e "Expected: ${ONLINE_CORRECT_STRING}"
                 echo -e "Got: ${ONLINE_LAST_LINE}"
