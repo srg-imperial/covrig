@@ -1,5 +1,11 @@
 # Globals that tell the script the layout of the csv files
+import datetime
+import numpy as np
+import statistics
+import datetime as dt
 from matplotlib import pyplot as plt
+import matplotlib.dates as mdates
+from copy import deepcopy
 # Config for the csv files' layout (edit as necessary)
 import internal.csv_config as config
 import internal.csv_utils as utils
@@ -38,7 +44,7 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
         ax.set_xlim(0, len(eloc_data))
     # Label the axes, do not show xticks
     ax.set_ylabel('ELOC')
-    ax.set_ylim(0, math.ceil(max(eloc_data) / 500) * 500)
+    # ax.set_ylim(math.floor(min(eloc_data) / 500) * 500, math.ceil(max(eloc_data) / 500) * 500)
     # Title the plot
     ax.set_title(f'{csv_name}')
 
@@ -75,7 +81,7 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
         ax.set_xlim(left=0, right=len(tloc_data))
     # Label the axes, do not show xticks
     ax.set_ylabel('TLOC')
-    ax.set_ylim(bottom=0, top=math.ceil(max(tloc_data) / 100) * 100)
+    # ax.set_ylim(bottom=0, top=math.ceil(max(tloc_data) / 100) * 100)
     # Title the plot
     ax.set_title(f'{csv_name}')
 
@@ -283,7 +289,9 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     cleaned_data = utils.clean_data(data)
 
     # Get the coverage data using eloc_data, coverage_data, branch_data, branch_coverage_data and dates
-    covered_lines_data, not_covered_lines_data = utils.get_columns(cleaned_data, ['covlines', 'notcovlines'])
+    covered_lines_data, not_covered_lines_data, patchcoverage_data = utils.get_columns(cleaned_data,
+                                                                                       ['covlines', 'notcovlines',
+                                                                                        'patchcoverage'])
 
     # Count the number of revisions that introduce executable lines
     total_revs_exec = 0
@@ -304,7 +312,7 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
         bucket_names = ["N/A", "[0%, 25%]", "(25%, 50%]", "(50%, 75%]", "(75%, 100%]", "N/A"]
 
     for i in range(len(covered_lines_data)):
-        # Calculate the patch coverage
+        # Calculate the patch coverage (this calc is equal to the patchcoverage column in the csv)
         patch_coverage = covered_lines_data[i] / (covered_lines_data[i] + not_covered_lines_data[i]) if \
             covered_lines_data[i] + not_covered_lines_data[i] > 0 else -1
         # Find the bucket that the patch coverage falls into
@@ -367,6 +375,14 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
         cumulative_total += bucket_p
         idx += 1
 
+    # Get the average patch coverage
+    # Filter patchcoverage data to only include revisions that introduce executable lines
+    patchcoverage_data = [x for i, x in enumerate(patchcoverage_data) if
+                          covered_lines_data[i] + not_covered_lines_data[i] > 0]
+    avg_patch_coverage = sum(patchcoverage_data) / len(patchcoverage_data)
+    ax.bar(csv_name if multiple else 0, 0.5, bottom=avg_patch_coverage, label="Average %", width=0.5, color='black',
+           zorder=4)
+
     # Turn off ticks for the x axis
     if not multiple:
         ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
@@ -380,7 +396,7 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     if not multiple:
         ax.set_title(f'{csv_name}')
     else:
-        ax.set_title(f'Patch Coverage across projects')
+        ax.set_title(f'Patch Coverage across projects (revs that introduce executable lines)')
 
     # Print the legend with the bucket names [0%, 25%], (25%, 50%], (50%, 75%], (75%, 100%]
     # or if we are in large scale mode (0%, 25%], (25%, 50%], (50%, 75%], (75%, 100%], 0%, 100%
@@ -630,6 +646,544 @@ def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple
         plt.close(fig)
 
 
+def plot_coverage_line_per_author(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # Get the columns we want - patch coverage
+    patch_coverage_data, authors, dates, covlines, notcovlines = utils.get_columns(cleaned_data,
+                                                                                   ['patchcoverage', 'author', 'time',
+                                                                                    'covlines', 'notcovlines'])
+
+    # Filter out commits that don't change any executable lines
+    idxs = [i for i in range(len(patch_coverage_data)) if covlines[i] + notcovlines[i] > 0]
+    patch_coverage_data = [patch_coverage_data[i] for i in idxs]
+    authors = [authors[i] for i in idxs]
+    dates = [dates[i] for i in idxs]
+
+    # Get the unique authors
+    unique_authors = list(set(authors))
+
+    # Get the number of authors
+    num_authors = len(unique_authors)
+
+    # Get the number of commits per author
+    commits_per_author = {}
+    for i in range(num_authors):
+        commits_per_author[unique_authors[i]] = 0
+    for i in range(len(authors)):
+        commits_per_author[authors[i]] += 1
+
+    # Filter out authors with less than <limit> commits
+    filtered_authors = []
+    for author in commits_per_author.keys():
+        if commits_per_author[author] >= limit:
+            filtered_authors.append(author)
+    filtered_authors = set(filtered_authors)
+
+    # Create a list of patch coverages for each author
+    author_patch_coverages = {}
+    dates_for_authors = {}
+    for author in filtered_authors:
+        author_patch_coverages[author] = []
+        dates_for_authors[author] = []
+    for i in range(len(authors)):
+        if authors[i] in filtered_authors:
+            author_patch_coverages[authors[i]].append(patch_coverage_data[i])
+            dates_for_authors[authors[i]].append(dates[i])
+
+    # Calculate a moving average for each author with a window size of 5
+    moving_average_author_patch_coverages = {}
+    for author in filtered_authors:
+        moving_average_author_patch_coverages[author] = moving_average(author_patch_coverages[author], 5)
+
+    # Plot a line graph of coverage over time for each author
+    if date:
+        for author in filtered_authors:
+            # print(len(dates_for_authors[author]), len(moving_average_author_patch_coverages[author]))
+            ax.plot(dates_for_authors[author], moving_average_author_patch_coverages[author], label=author)
+    else:
+        # NOTE: not a great visualization since each author has a different number of commits
+        for author in filtered_authors:
+            ax.plot(moving_average_author_patch_coverages[author], label=author)
+
+    # Label the x axis as Date
+    if date:
+        ax.set_xlabel('Date')
+    else:
+        ax.set_xlabel('Commit Number')
+
+    # Label the y axis as Patch Coverage
+    ax.set_ylabel('Patch Coverage')
+
+    # Give the plot a title
+    ax.set_title(
+        f'Patch Coverage over Time for {csv_name} per Author (only revisions that add/modify executable lines)')
+
+    # Add a legend
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[::-1], labels[::-1], loc='upper left', bbox_to_anchor=(1, 1), title='Authors')
+
+    # Save the plot
+    if save:
+        fig.savefig(
+            f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-patch-coverage-line-author{"-date" if date else ""}.png',
+            bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_coverage_box_per_author(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # Get the columns we want - patch coverage
+    patch_coverage_data, authors, dates, covlines, notcovlines = utils.get_columns(cleaned_data,
+                                                                                   ['patchcoverage', 'author', 'time',
+                                                                                    'covlines', 'notcovlines'])
+
+    # Filter out commits that don't change any executable lines
+    idxs = [i for i in range(len(patch_coverage_data)) if covlines[i] + notcovlines[i] > 0]
+    patch_coverage_data = [patch_coverage_data[i] for i in idxs]
+    authors = [authors[i] for i in idxs]
+    dates = [dates[i] for i in idxs]
+
+    # Get the unique authors
+    unique_authors = list(set(authors))
+
+    # Get the number of authors
+    num_authors = len(unique_authors)
+    limit = min(limit, num_authors)  # Make sure we don't try to plot more authors than we have
+
+    # Get the number of commits per author
+    commits_per_author = {}
+    for i in range(num_authors):
+        commits_per_author[unique_authors[i]] = 0
+    for i in range(len(authors)):
+        commits_per_author[authors[i]] += 1
+
+    # # Filter out authors with less than <limit> commits
+    # filtered_authors = []
+    # for author in commits_per_author.keys():
+    #     if commits_per_author[author] >= limit:
+    #         filtered_authors.append(author)
+    # filtered_authors = set(filtered_authors)
+
+    # Filter only the top <limit> authors
+    sorted_authors = sorted(commits_per_author.items(), key=lambda x: x[1], reverse=True)
+    filtered_authors = []
+    for i in range(limit):
+        filtered_authors.append(sorted_authors[i][0])
+
+    # Create a list of patch coverages for each author
+    author_patch_coverages = {}
+    for author in filtered_authors:
+        author_patch_coverages[author] = []
+    for i in range(len(authors)):
+        if authors[i] in filtered_authors:
+            author_patch_coverages[authors[i]].append(patch_coverage_data[i])
+
+    # Plot a box plot of patch coverage for each author
+    # transform the data into a list of lists
+    data_to_plot = []
+    for author in filtered_authors:
+        data_to_plot.append(author_patch_coverages[author])
+
+    # # Print the data
+    # for i in range(len(data_to_plot)):
+    #     # sort the data
+    #     data_to_plot[i].sort()
+    #     print(f'{filtered_authors[i]}: {data_to_plot[i]}')
+
+    # Create the boxplot
+    # ax.boxplot(data_to_plot, labels=filtered_authors, autorange=True)
+
+    # Do a violin plot instead
+    ax.violinplot(data_to_plot, showmedians=True, showextrema=True)
+
+    # Write the author names instead of numbers
+    ax.set_xticks(range(1, len(filtered_authors) + 1))
+    ax.set_xticklabels(filtered_authors)
+    #
+    # # Label the x axis as author
+    # ax.set_xlabel('Author')
+
+    # Make the x label vertical
+    ax.tick_params(axis='x', labelrotation=90)
+
+    # Label the y axis as Patch Coverage
+
+    ax.set_ylabel('Patch Coverage')
+
+    # Give the plot a title
+    ax.set_title(f'Patch Coverage for {csv_name} (revisions that add/modify executable lines)')
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-patch-coverage-box.png',
+                    bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_patch_coverage_over_time(data, csv_name, save=True, date=False, plot=None, window_size=50, savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # Get the columns we want - patch coverage, dates
+    patch_coverage_data, dates, covlines, notcovlines = utils.get_columns(cleaned_data,
+                                                                          ['patchcoverage', 'time', 'covlines',
+                                                                           'notcovlines'])
+
+    # Filter out commits that don't change any executable lines
+    idxs = [i for i in range(len(patch_coverage_data)) if covlines[i] + notcovlines[i] > 0]
+    patch_coverage_data = [patch_coverage_data[i] for i in idxs]
+    dates = [dates[i] for i in idxs]
+
+    # Get the moving average of the patch coverage
+    moving_average_patch_coverage = moving_average(patch_coverage_data, window_size)
+
+    # Plot a line graph of coverage over time
+    if date:
+        ax.plot(dates, moving_average_patch_coverage)
+        ax.plot(dates, patch_coverage_data, 'o')
+    else:
+        ax.plot(moving_average_patch_coverage)
+        ax.plot(patch_coverage_data, 'o')
+
+    # Label the x axis as Date
+    if date:
+        ax.set_xlabel('Date')
+    else:
+        ax.set_xlabel('Commit Number')
+
+    # Label the y axis as Patch Coverage
+    ax.set_ylabel('Patch Coverage')
+
+    # Give the plot a title
+    ax.set_title(
+        f'Patch Coverage over Time for {csv_name} (window size = {window_size}, only commits that add/modify executable lines)')
+
+    # Save the plot
+    if save:
+        fig.savefig(
+            f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-patch-coverage-line-overall{"-date" if date else ""}.png',
+            bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None, limit=5, savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # Get the columns we want - patch coverage and author
+    patch_coverage_data, authors, covlines, notcovlines = utils.get_columns(cleaned_data,
+                                                                            ['patchcoverage', 'author', 'covlines',
+                                                                             'notcovlines'])
+
+    # Filter out commits that don't change any executable lines
+    idxs = [i for i in range(len(patch_coverage_data)) if covlines[i] + notcovlines[i] > 0]
+    patch_coverage_data = [patch_coverage_data[i] for i in idxs]
+    authors = [authors[i] for i in idxs]
+
+    # Get the average patch coverage overall
+    average_patch_coverage_overall = sum(patch_coverage_data) / len(patch_coverage_data)
+
+    # Get the median patch coverage overall
+    # median_patch_coverage_overall = statistics.median(patch_coverage_data)
+
+    # Group the data by author
+    author_patch_coverage = {}
+    for i in range(len(authors)):
+        if authors[i] not in author_patch_coverage.keys():
+            author_patch_coverage[authors[i]] = []
+        author_patch_coverage[authors[i]].append(patch_coverage_data[i])
+
+    # Filter to only the authors with <limit> or more commits
+    filtered_authors = []
+    for author in author_patch_coverage.keys():
+        if len(author_patch_coverage[author]) >= limit:
+            filtered_authors.append(author)
+    filtered_authors = set(filtered_authors)
+
+    # Calculate the average patch coverage for each author
+    average_patch_coverage = {}
+    for author in filtered_authors:
+        average_patch_coverage[author] = sum(author_patch_coverage[author]) / len(author_patch_coverage[author])
+
+    # Sort the authors by average patch coverage and take the top n
+    n = 10
+
+    sorted_average_patch_coverage = sorted(average_patch_coverage.items(), key=lambda x: x[1], reverse=True)
+    sorted_average_patch_coverage = sorted_average_patch_coverage[:n]
+
+    bar_container = ax.bar([x[0] for x in sorted_average_patch_coverage], [x[1] for x in sorted_average_patch_coverage],
+                           edgecolor='black')
+
+    # Add a horizontal line for the average patch coverage overall
+    ax.axhline(y=average_patch_coverage_overall, color='red', linestyle='--')
+    # ax.axhline(y=median_patch_coverage_overall, color='orange', linestyle='--')
+
+    # for sorted_average_patch_coverage, get the number of commits for each author
+    number_of_commits = []
+    for author in sorted_average_patch_coverage:
+        number_of_commits.append(len(author_patch_coverage[author[0]]))
+
+    # use ax.bar_label to add text labels to the top of the bars to show the number of commits
+    ax.bar_label(bar_container, labels=number_of_commits, label_type='edge', padding=3)
+
+    # Label the y axis as Average Patch Coverage
+    ax.set_ylabel('Average Patch Coverage')
+
+    # Make the x label vertical
+    ax.tick_params(axis='x', labelrotation=90)
+    ax.set_ylim(0, 100)
+
+    # Give the plot a title
+    ax.set_title(f'{csv_name}')
+    fig.suptitle(f'Average Patch Coverage per Author (across commits that add/modify executable lines)', fontsize=16,
+                 y=0.98)
+    # Add a subtitle
+    fig.text(0.5, 0.95, f'(Numbers on bars represent number of commits attributed to author)', ha='center', fontsize=14,
+             fontweight='normal')
+
+    # Label the vertical line as the average patch coverage overall in the legend and specify the value
+    # ax.legend([f'Avg. Patch Cov = {average_patch_coverage_overall:.2f}%',
+    #            f'Median Patch Cov = {median_patch_coverage_overall:.2f}%'])
+    ax.legend([f'Avg. Patch Cov = {average_patch_coverage_overall:.2f}%'])
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-average-patch-coverage-per-author.png',
+                    bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_patch_coverage_bins(data, csv_name, save=True, plot=None, savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # Get the columns we want - patch coverage
+    patch_coverage_data, covlines, notcovlines = utils.get_columns(cleaned_data,
+                                                                   ['patchcoverage', 'covlines', 'notcovlines'])
+
+    # Filter patch coverage data to only include commits covlines + notcovlines > 0
+    idxs = [i for i in range(len(patch_coverage_data)) if covlines[i] + notcovlines[i] > 0]
+    patch_coverage_data = [patch_coverage_data[i] for i in idxs]
+
+    bins = 100
+    ax.hist(patch_coverage_data, bins=bins)
+
+    # Label the x axis as Patch Coverage
+    ax.set_xlabel('Patch Coverage')
+
+    # Label the y axis as Number of Commits
+    ax.set_ylabel('Number of Commits')
+
+    # Give the plot a title
+    ax.set_title(f'{csv_name}')
+    fig.suptitle(f'Patch Coverage Distributions for Revisions that Add or Modify Executable Code', fontsize=16)
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-patch-coverage-bins.png',
+                    bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # Get the columns we want - author, date
+    author_data, date_data = utils.get_columns(cleaned_data, ['author', 'time'])
+
+    # # Filter to only the authors with <limit> or more commits
+    # author_commit_frequency = {}
+    # for author in author_data:
+    #     if author not in author_commit_frequency:
+    #         author_commit_frequency[author] = 1
+    #     else:
+    #         author_commit_frequency[author] += 1
+    #
+    # filtered_authors = [author for author in author_commit_frequency if author_commit_frequency[author] >= limit]
+    #
+    # # Filter the data to only include commits by the filtered authors
+    # filtered_data = []
+    # for i in range(len(author_data)):
+    #     if author_data[i] in filtered_authors:
+    #         filtered_data.append((author_data[i], date_data[i]))
+    #
+    # author_data, date_data = zip(*filtered_data)
+    #
+    # # Convert author_data to a list and date_data to a list
+    # author_data = list(author_data)
+    # date_data = list(date_data)
+
+    # Filter to the top <limit> authors
+    author_commit_frequency = {}
+    for author in author_data:
+        if author not in author_commit_frequency:
+            author_commit_frequency[author] = 1
+        else:
+            author_commit_frequency[author] += 1
+
+    sorted_author_commit_frequency = sorted(author_commit_frequency.items(), key=lambda x: x[1], reverse=True)
+    top_authors = [author for author, _ in sorted_author_commit_frequency[:limit]]
+
+    # Filter the data to only include commits by the filtered authors
+    filtered_data = []
+    for i in range(len(author_data)):
+        if author_data[i] in top_authors:
+            filtered_data.append((author_data[i], date_data[i]))
+
+    author_data, date_data = zip(*filtered_data)
+
+    # Convert author_data to a list and date_data to a list
+    author_data = list(author_data)
+    date_data = list(date_data)
+
+
+    # Set months to be a list of all months in the data
+    time_bins = {}
+    # Populate time_bins with (month, year) tuples from the earliest commit to the latest commit
+    # make a copy of the date_data list so we don't modify the original
+    date_data_copy = deepcopy(date_data)
+    # sort the date_data_copy list
+    date_data_copy.sort()
+    # get the earliest commit date
+    earliest_commit_date, latest_commit_date = date_data_copy[0], date_data_copy[-1]
+    # Initialize the time_bins dictionary with the earliest commit date up to the latest commit date in 1 month increments
+    current_date = earliest_commit_date
+    current_date = current_date.replace(day=1).replace(hour=0).replace(minute=0).replace(second=0).replace(microsecond=0)
+    num_bins = 0
+    while current_date <= latest_commit_date:
+        time_bins[(current_date.month, current_date.year)] = 0
+        current_date = (current_date.replace(day=1) + datetime.timedelta(days=32)).replace(day=1)
+        num_bins = 0
+
+    # Populate time_bins with the number of commits per month for each author (dict of dicts)
+    author_commit_frequency_per_month = {}
+    for author in top_authors:
+        author_commit_frequency_per_month[author] = deepcopy(time_bins)
+    for i in range(len(author_data)):
+        author = author_data[i]
+        date = date_data[i]
+        author_commit_frequency_per_month[author][(date.month, date.year)] += 1
+
+    # Create a map from (month, year) tuples to dict objects containing the number of commits for each author
+    time_bins_dict = {}
+    for (month, year) in time_bins:
+        time_bins_dict[(month, year)] = {}
+        for author in top_authors:
+            time_bins_dict[(month, year)][author] = author_commit_frequency_per_month[author][(month, year)]
+
+    # Generate <limit> colours in the matplotlib default colour cycle
+    colours = [colour for _, colour in zip(range(limit), ax._get_lines.prop_cycler)]
+    # Map each author to a colour
+    author_colour_map = {}
+    for i in range(len(top_authors)):
+        author_colour_map[top_authors[i]] = colours[i]
+
+    # Plot the data for each month, year tuple
+    datecounter = 0
+    for (month, year) in time_bins_dict:
+        # Plot as a histogram
+        # order the authors by number of commits
+        sorted_authors = sorted(time_bins_dict[(month, year)].items(), key=lambda x: x[1], reverse=True)
+
+        # convert (month, year) to a datetime object
+        month_dt = datetime.datetime(year=year, month=month, day=1)
+
+        # get the number of days in the month using datetime.timedelta
+        num_days_in_month = (month_dt.replace(day=1) + datetime.timedelta(days=32)).replace(day=1) - month_dt
+
+        # adjust month_dt to be the middle of the month
+        month_dt = month_dt + num_days_in_month / 2
+
+        for author in sorted_authors:
+            ax.bar(month_dt, author[1], label=author[0], width=num_days_in_month-datetime.timedelta(8), color=author_colour_map[author[0]]['color'])
+        datecounter += 1
+
+    # Use autodatelocator to label the x axis with dates and load in time_bins_dict
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    ax.xaxis.set_tick_params(rotation=30, labelsize=10)
+    ax.set_xlabel('Month')
+    ax.set_ylabel('Number of Commits')
+    ax.set_title('Number of Commits per Month')
+
+
+
+
+
+    # # Plot the data
+    # for author in author_commit_frequency_per_month:
+    #     # Transform author_commit_frequency_per_month[author].keys() into datetime objects
+    #     months = [datetime.datetime(year=year, month=month, day=1) for (month, year) in author_commit_frequency_per_month[author].keys()]
+    #     # ax.plot(months, author_commit_frequency_per_month[author].values(), label=author)
+    #     # Plot as a histogram
+    #     ax.hist(months, weights=author_commit_frequency_per_month[author].values(), label=author, bins=len(months))
+    #
+
+    # For
+
+    # Plot the data
+    # for author in author_commit_frequency_per_month:
+    #     ax.plot(months, author_commit_frequency_per_month[author], label=author)
+
+    # Label the x axis as Month
+    ax.set_xlabel('Time (bin size = 1 month)')
+
+    # Label the y axis as Number of Commits
+    ax.set_ylabel('Number of Commits')
+
+    # Give the plot a title
+    ax.set_title(f'{csv_name}')
+
+    # Add a legend for the unique authors
+    handles, labels = ax.get_legend_handles_labels()
+    newLabels, newHandles = [], []
+    for handle, label in zip(handles, labels):
+        if label not in newLabels:
+            newLabels.append(label)
+            newHandles.append(handle)
+
+    ax.legend(newHandles, newLabels, loc='upper left')
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-commit-frequency.png',
+                    bbox_inches='tight')
+        plt.close(fig)
+
+
+""" Utility Functions """
+
+
+def moving_average(series, window_size):
+    window = np.ones(window_size) / window_size
+    return np.convolve(series, window, 'same')
+
+
 def date_check(args: dict):
     # Extract the arguments
     csv_name = args['csv_name']
@@ -638,8 +1192,8 @@ def date_check(args: dict):
     for i in range(len(dates) - 1):
         if dates[i] > dates[i + 1] and csv_name not in date_warning_thrown:
             print(f'Warning: The dates for {csv_name} are not in order, {dates[i]} is after {dates[i + 1]} '
-                  f'({datetime.datetime.fromtimestamp(int(dates[i]))} is after '
-                  f'{datetime.datetime.fromtimestamp(int(dates[i + 1]))})')
+                  f'({dt.datetime.fromtimestamp(int(dates[i]))} is after '
+                  f'{dt.datetime.fromtimestamp(int(dates[i + 1]))})')
             print(
                 f'Maybe double check the git history using something like "git rev-list --reverse -n 3" on'
                 f' the offending commit to check this is intended.')
@@ -666,6 +1220,13 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_churn(data, csv_name, date=date, savedir=savedir)
     plot_author_dist(data, csv_name, date=date, limit=2, savedir=savedir)
 
+    plot_coverage_line_per_author(data, csv_name, date=date, limit=5, savedir=savedir)
+    plot_coverage_box_per_author(data, csv_name, date=date, limit=10, savedir=savedir)
+    plot_patch_coverage_over_time(data, csv_name, date=date, savedir=savedir)
+    plot_average_patch_coverage_per_author(data, csv_name, limit=10, savedir=savedir)
+    plot_patch_coverage_bins(data, csv_name, savedir=savedir)
+    plot_commit_frequency(data, csv_name, savedir=savedir)
+
 
 def plot_all_multiple(paths, csv_names, date):
     # Plot each of the combined graphs
@@ -673,6 +1234,12 @@ def plot_all_multiple(paths, csv_names, date):
     plot_metric_multiple(plot_tloc, 'tloc', paths, csv_names, date=date)
     plot_metric_multiple(plot_evolution_of_eloc_and_tloc, 'evolution_of_eloc_and_tloc', paths, csv_names, date=date)
     plot_metric_multiple(plot_coverage, 'coverage', paths, csv_names, date=date)
+
+    # plot_metric_multiple(plot_coverage_line_per_author, 'coverage_line_per_author', paths, csv_names, date=date, limit=5)
+    plot_metric_multiple(plot_average_patch_coverage_per_author, 'average_patch_coverage_per_author', paths, csv_names,
+                         limit=10)
+    plot_metric_multiple(plot_patch_coverage_bins, 'patch_coverage_bins', paths, csv_names)
+    plot_metric_multiple(plot_commit_frequency, 'commit_frequency', paths, csv_names)
 
     # The combined graphs for patch coverage and patch type are a bit different - they need to be plotted on the same graph rather than subplots
     plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=4)
@@ -702,9 +1269,11 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
                 idxs = (idxs[0] + 1, 0)
 
     fig.tight_layout()
+    fig.subplots_adjust(top=0.92)
     # Check if kwargs contains date, if so, add it to the filename
     date = kwargs.get('date', False)
-    fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}.png', bbox_inches='tight')
+    fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}.png', bbox_inches='tight',
+                dpi=300)
     print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
 
 
@@ -730,7 +1299,6 @@ if __name__ == '__main__':
     import os
     import argparse
     import math
-    import datetime
     import glob
     import shutil
 
@@ -863,7 +1431,7 @@ if __name__ == '__main__':
         plot_all_individual(data, csv_name, date=args.date, savedir=directory)
 
         print("=====================================================")
-        print(f'Finished plotting {csv_name}. You can find the plots in graphs/{args.input}/{csv_name}')
+        print(f'Finished plotting {csv_name}. You can find the plots in graphs/{csv_name}')
 
     if args.dir:
         path = args.input
