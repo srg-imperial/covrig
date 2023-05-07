@@ -8,10 +8,10 @@ if __name__ == '__main__':
     import datetime
 
     parser = argparse.ArgumentParser(description='Parse git blame output.')
-    parser.add_argument('input', type=argparse.FileType('r'),
+    parser.add_argument('input', type=argparse.FileType('r', errors='replace'),
                         help='Input file')
     # take in date.txt for the date
-    parser.add_argument('date', type=argparse.FileType('r'),
+    parser.add_argument('date', type=argparse.FileType('r', errors='ignore'),
                         help='Date file')
     parser.add_argument('output', type=argparse.FileType('w+'),
                         help='Output file')

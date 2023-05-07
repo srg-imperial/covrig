@@ -52,4 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('prepend', type=str,
                         help='Path to prepend')
     args = parser.parse_args()
+
+    print(f"Modifying {args.file.name}... - strip: {args.strip} - prepend: {args.prepend}")
+
     modify_info(args)
