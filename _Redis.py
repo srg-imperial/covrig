@@ -27,7 +27,7 @@ class Redis(Container):
             # Shouldn't get here as compile is only done if we're online
             self.path = self.conn.local("realpath 'repos/redis'").stdout
         """ compile redis """
-        with self.conn.cd('/home/redis'):
+        with self.conn.cd(self.path):
             self.conn.run('chown -R regular:regular .', warn=True)
             result = self.conn.run('su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0\'', warn=True)
             if result.failed:

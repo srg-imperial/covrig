@@ -1,0 +1,38 @@
+FROM ubuntu:22.04
+LABEL ubuntu_version=22.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+	sudo \
+	build-essential \
+	autoconf \
+	automake \
+	libtool \
+	git \
+	curl \
+	openssh-server \
+	--no-install-recommends
+
+# Necessary to do earlier since curl throws an error otherwise on the patch download
+RUN apt-get install -yq --reinstall ca-certificates
+
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
+# Patching cloc bug for later versions of Ubuntu (which come with a newer version of Perl, as in Github runner)
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && curl -L https://bugs.archlinux.org/task/45494?getfile=13174 > cloc.1.64.patch && patch -p1 < cloc.1.64.patch && make install
+
+RUN mkdir -p /var/run/sshd
+
+RUN mkdir /root/.ssh
+ADD id_rsa.pub /root/.ssh/authorized_keys
+RUN chown -R root:root /root/.ssh
+RUN chmod -R 700 /root/.ssh
+
+RUN echo "root:root" | chpasswd
+
+RUN apt-get install -yq ed libcppunit-dev libltdl-dev libssl-dev
+
+RUN git clone https://github.com/squid-cache/squid.git /home/squid
+ADD measure-cov.sh /root/
+
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]

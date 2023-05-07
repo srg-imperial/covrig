@@ -1,5 +1,7 @@
 FROM ubuntu:12.04
 
+RUN sed -i s/archive/old-releases/g etc/apt/sources.list
+
 RUN apt-get update && apt-get install -y \
 	sudo \
 	build-essential \
@@ -9,6 +11,7 @@ RUN apt-get update && apt-get install -y \
 	git \
 	curl \
 	openssh-server \
+    realpath \
 	--no-install-recommends
 
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
@@ -23,9 +26,9 @@ RUN chmod -R 700 /root/.ssh
 
 RUN echo "root:root" | chpasswd
 
-RUN apt-get install -yq ed libcppunit-dev
+RUN apt-get install -yq ed libcppunit-dev libltdl-dev
 
-ADD . /home/squid
+RUN git clone https://github.com/squid-cache/squid.git /home/squid
 ADD measure-cov.sh /root/
 
 EXPOSE 22

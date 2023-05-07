@@ -17,7 +17,7 @@ from _Binutils import *
 from _BinutilsGdb import *
 # from _Findutils import *
 from _Dovecot import *
-# from _Squid import *
+from _Squid import *
 from _Vim import *
 
 # Flow of control:
@@ -177,7 +177,7 @@ def main():
         # "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
         # matches up with mercurial/git-hg commits for ffbf5813, some commits don't work since have external dependencies we can't roll back to (Unicode)
         "dovecot": {"class": Dovecot, "revision": "121b017", "n": 1000},
-        # "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},
+        "squid": {"class": Squid, "revision": "ae64d121", "n": 1500}, # 3896 commits from 1st Jan 2013 (f1402d4) to 6 May 2023
         "git": {"class": Git, "revision": "d7aced9", "n": 500},
         # For Vim, Jun 2013 revision, v7 last rev is edeb846c
         "vim": {"class": Vim, "revision": "f751255", "n": 500},
