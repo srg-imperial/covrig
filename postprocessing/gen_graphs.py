@@ -1061,7 +1061,6 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     author_data = list(author_data)
     date_data = list(date_data)
 
-
     # Set months to be a list of all months in the data
     time_bins = {}
     # Populate time_bins with (month, year) tuples from the earliest commit to the latest commit
@@ -1073,7 +1072,8 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     earliest_commit_date, latest_commit_date = date_data_copy[0], date_data_copy[-1]
     # Initialize the time_bins dictionary with the earliest commit date up to the latest commit date in 1 month increments
     current_date = earliest_commit_date
-    current_date = current_date.replace(day=1).replace(hour=0).replace(minute=0).replace(second=0).replace(microsecond=0)
+    current_date = current_date.replace(day=1).replace(hour=0).replace(minute=0).replace(second=0).replace(
+        microsecond=0)
     num_bins = 0
     while current_date <= latest_commit_date:
         time_bins[(current_date.month, current_date.year)] = 0
@@ -1120,7 +1120,8 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
         month_dt = month_dt + num_days_in_month / 2
 
         for author in sorted_authors:
-            ax.bar(month_dt, author[1], label=author[0], width=num_days_in_month-datetime.timedelta(8), color=author_colour_map[author[0]]['color'])
+            ax.bar(month_dt, author[1], label=author[0], width=num_days_in_month - datetime.timedelta(8),
+                   color=author_colour_map[author[0]]['color'])
         datecounter += 1
 
     # Use autodatelocator to label the x axis with dates and load in time_bins_dict
@@ -1130,10 +1131,6 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     ax.set_xlabel('Month')
     ax.set_ylabel('Number of Commits')
     ax.set_title('Number of Commits per Month')
-
-
-
-
 
     # # Plot the data
     # for author in author_commit_frequency_per_month:
@@ -1172,6 +1169,41 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     # Save the plot
     if save:
         fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-commit-frequency.png',
+                    bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+
+    # Take the row according to the type.
+    type_to_line = {'line': 0, 'function': 1, 'branch': 2}
+    row = data[type_to_line[type]]
+
+    # Make all data ints
+    row = [int(x) for x in row]
+
+    bins = ['UNC', 'LBC', 'UIC', 'UBC', 'GBC', 'GIC', 'GNC', 'CBC', 'EUB', 'ECB', 'DUB', 'DCB']
+
+    colours = ["#ff622a","#cc6666","#eeaa30","#fde007","#448844","#30cc37","#b5f7af","#cad7fe","#dddddd","#cc66ff","#eeeeee","#ffffff"]
+
+    # Plot the data
+    ax.bar(bins, row, color=colours, edgecolor='black')
+
+    # Label the x axis as coverage type
+    ax.set_xlabel('Coverage Type')
+
+    # Label the y axis as Count
+    ax.set_ylabel('Count')
+
+    # Give the plot a title
+    ax.set_title(f'{csv_name} {type} Differential Coverage')
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-{type}-diffcov.png',
                     bbox_inches='tight')
         plt.close(fig)
 
@@ -1226,6 +1258,52 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_average_patch_coverage_per_author(data, csv_name, limit=10, savedir=savedir)
     plot_patch_coverage_bins(data, csv_name, savedir=savedir)
     plot_commit_frequency(data, csv_name, savedir=savedir)
+
+
+def plot_diffcov_individual(data, csv_name, savedir=None):
+    if savedir is None:
+        savedir = args.input
+
+    plot_diffcov_hist(data, csv_name, type='line', savedir=savedir)
+    plot_diffcov_hist(data, csv_name, type='function', savedir=savedir)
+    plot_diffcov_hist(data, csv_name, type='branch', savedir=savedir)
+
+
+def plot_diffcov_multiple(paths, csv_names, savedir=None):
+    if savedir is None:
+        savedir = args.input
+
+    plot_diffcov_format_multiple(plot_diffcov_hist, 'diffcov-line', paths, csv_names, type='line')
+    plot_diffcov_format_multiple(plot_diffcov_hist, 'diffcov-function', paths, csv_names, type='function')
+    plot_diffcov_format_multiple(plot_diffcov_hist, 'diffcov-branch', paths, csv_names, type='branch')
+
+
+def plot_diffcov_format_multiple(metric, outname, paths, csv_names, **kwargs):
+    """ Plot a metric for multiple CSVs on subplots of the same figure. """
+    # Would be nice to have a smarter way of doing this, but for now we'll just hardcode the number of rows and columns
+    rows, columns = 2, 3
+    size = expanded_figsize
+    if len(csv_names) > rows * columns:
+        rows, columns = 3, 4
+        size = expanded_figsize
+    fig, axs = plt.subplots(rows, columns, figsize=size)
+    idxs = (0, 0)
+    for i in range(len(csv_names)):
+        diffcov_data = utils.extract_diffcov_data(paths[i], csv_names[i])
+        if diffcov_data is not None:
+            metric(diffcov_data, csv_names[i], plot=(fig, axs[idxs]), save=False, **kwargs)
+            # Wrap around the indexs or increment
+            idxs = (idxs[0], idxs[1] + 1)
+            if idxs[1] >= columns:
+                idxs = (idxs[0] + 1, 0)
+
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.92)
+    # Check if kwargs contains date, if so, add it to the filename
+    date = kwargs.get('date', False)
+    fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}.png', bbox_inches='tight',
+                dpi=300)
+    print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
 
 
 def plot_all_multiple(paths, csv_names, date):
@@ -1311,6 +1389,9 @@ if __name__ == '__main__':
                         help='The input is a directory (dir/repo1/*.csv, dir/repo2/*.csv)')
     # add a byDate option so if --date is present, the X axis is time, otherwise it is revision number
     parser.add_argument('--date', action='store_true', help='Plot by date')
+    # add an arg to do diffcov plots
+    parser.add_argument('--diffcov', action='store_true', help='Plot diffcov plots')
+    # an an arg to be the diffcov file name
 
     args = parser.parse_args()
 
@@ -1337,6 +1418,9 @@ if __name__ == '__main__':
 
         paths = [x for x in paths if x not in excluded_paths]
 
+        # Make sure no paths include the #diffcov directory
+        paths = [x for x in paths if 'diffcov_' not in x]
+
         # Make sure we have at least one valid CSV file
         if len(paths) == 0:
             raise FileNotFoundError(f'No non-excepted CSV files found in {args.input}')
@@ -1350,6 +1434,8 @@ if __name__ == '__main__':
         csv_names, paths = zip(*csv_paths)
         csv_names = list(csv_names)
         paths = list(paths)
+        diffcov_names = []
+        diffcov_paths = []
 
         print(f'Paths: {paths}')
         # Print the names of the CSV files
@@ -1368,15 +1454,32 @@ if __name__ == '__main__':
             if not os.path.exists(f'postprocessing/graphs/{args.input}/{csv_names[i]}'):
                 os.makedirs(f'postprocessing/graphs/{args.input}/{csv_names[i]}')
 
+            search_dir = None
+
             csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
             if csv_data is not None:
                 plot_all_individual(csv_data, csv_names[i], date=args.date)
                 print(
                     f'Finished plotting {csv_names[i]}. You can find the plots in graphs/{args.input}/{csv_names[i]}')
+                search_dir = os.path.dirname(paths[i])
             else:
                 # Replace paths[i] and csv_names[i] with None so that they are not plotted
                 paths[i] = None
                 csv_names[i] = None
+
+            # if diffcov arg and diffcov dir exists, plot diffcov plots
+            if args.diffcov and search_dir is not None:
+                # Try to find a csv file in the same directory with name diffcov_*.csv
+                diffcov_csv = glob.glob(f'{search_dir}/diffcov_*.csv')
+                if len(diffcov_csv) == 0:
+                    print(f'No diffcov csv found for {csv_names[i]}')
+                else:
+                    diffcov_csv = diffcov_csv[0]
+                    diffcov_data = utils.extract_diffcov_data(diffcov_csv, csv_names[i])
+                    if diffcov_data is not None:
+                        plot_diffcov_individual(diffcov_data, csv_names[i], savedir=args.input)
+                        diffcov_paths.append(diffcov_csv)
+                        diffcov_names.append(csv_names[i])
 
         # Now remove the None values from the lists
         paths = [x for x in paths if x is not None]
@@ -1391,6 +1494,8 @@ if __name__ == '__main__':
 
         # Plot all repos' eloc on the same graph
         plot_all_multiple(paths, csv_names, date=args.date)
+        diffcov_csvs = glob.glob(f'{args.input}/*/diffcov_*.csv')
+        plot_diffcov_multiple(diffcov_paths, diffcov_names)
 
     else:
         # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
@@ -1405,12 +1510,22 @@ if __name__ == '__main__':
         # Get the name of the CSV file (basename)
         csv_name = os.path.basename(args.input)
         directory = os.path.dirname(args.input)
+        subdir = None
+        search_dir = None
+        splitdir = directory.split('/')
 
         # only keep the last part of the directory
-        if len(directory.split('/')) > 1:
-            directory = directory.split('/')[-2]
+        if len(splitdir) > 1:
+            directory = splitdir[-2]
+            subdir = splitdir[-1]
         else:
-            directory = directory.split('/')[-1]
+            directory = splitdir[-1]
+
+        search_dir = directory
+
+        if subdir is not None:
+            search_dir = f'{directory}/{subdir}'
+
         # Remove the .csv extension
         csv_name = csv_name[:-4]
 
@@ -1429,6 +1544,18 @@ if __name__ == '__main__':
         data = utils.extract_data(args.input, csv_name, callback=date_check)
 
         plot_all_individual(data, csv_name, date=args.date, savedir=directory)
+
+        # if diffcov arg and diffcov dir exists, plot diffcov plots
+        if args.diffcov:
+            # Try to find a csv file in the same directory with name diffcov_*.csv
+            diffcov_csv = glob.glob(f'{search_dir}/diffcov_*.csv')
+            if len(diffcov_csv) == 0:
+                print(f'No diffcov csv found for {csv_name}')
+            else:
+                diffcov_csv = diffcov_csv[0]
+                diffcov_data = utils.extract_diffcov_data(diffcov_csv, csv_name)
+                if diffcov_data is not None:
+                    plot_diffcov_individual(diffcov_data, csv_name, savedir=directory)
 
         print("=====================================================")
         print(f'Finished plotting {csv_name}. You can find the plots in graphs/{csv_name}')

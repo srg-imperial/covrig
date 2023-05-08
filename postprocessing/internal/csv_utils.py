@@ -1,6 +1,7 @@
 from .csv_config import file_header_list, file_header_type
 import datetime
 
+
 def clean_data(data, omit=None):
     if omit is None:
         omit = ['EmptyCommit', 'NoCoverage', 'compileError']
@@ -20,6 +21,36 @@ def get_columns(data, columns):
         # Add the data to the list
         data_list.append(column_data)
     return data_list
+
+
+def extract_diffcov_data(input_file, csv_name, callback=None):
+    # Take the input file CSV and extract to an internal representation of the data
+
+    # Open the file
+    with open(input_file, 'r') as f:
+        # Read the file
+        lines = f.readlines()
+
+        # Remove the header
+        lines = lines[1:]
+
+        # Ignore any lines that begin with a # (i.e. comments)
+        lines = [line for line in lines if not line.startswith('#')]
+
+        # Strip the new line characters and any leading or trailing white space
+        lines = [line.strip() for line in lines]
+
+        # Split the lines by comma
+        lines = [line.split(',') for line in lines]
+
+        if len(lines) == 0:
+            print(f'Warning: {csv_name} is missing columns, skipping...')
+            return None
+
+        # Skip any lines that don't have the correct number of columns
+        lines = [line for line in lines if len(line) == 12]
+
+    return lines
 
 
 def extract_data(input_file, csv_name, callback=None):

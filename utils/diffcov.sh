@@ -6,9 +6,6 @@
 echo "Make sure to run this script from the root of the covrig repo!"
 echo "As of 05/04/2023, requires latest version of LCOV (v1.16-47-g6ae8e6e) on local machine installed from source, pre-release"
 
-# Sleep for 2 seconds to give the user time to read the above
-sleep 2
-
 # Start a timer
 START=$(date +%s)
 
@@ -128,21 +125,21 @@ rm -rf "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT"
 mkdir -p "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT"
 cd "$ROOT"/diffcov/current
 
-EXTRA_ARGS=""
-EXTRA_FLAG=""
-# if we're looking at binutils, binutils-gdb, lighttpd2 we need to pass in extra flags
-if [ "$REPO" = "binutils" ] || [ "$REPO" = "binutils-gdb" ] || [ "$REPO" = "lighttpd2" ]; then
-    EXTRA_ARGS=",annotate,source"
-    # Add a space to this EXTRA_FLAG since it should be split into a new argument for genhtml (the reason it's not in quotes later)
-    EXTRA_FLAG=" --synthesize-missing"
-fi
-# if we're looking at zeromq, we need to pass in extra flags
-if [ "$REPO" = "zeromq" ]; then
-    EXTRA_ARGS=",path"
-fi
+#EXTRA_ARGS=""
+#EXTRA_FLAG=""
+## if we're looking at binutils, binutils-gdb, lighttpd2 we need to pass in extra flags
+#if [ "$REPO" = "binutils" ] || [ "$REPO" = "binutils-gdb" ] || [ "$REPO" = "lighttpd2" ] || [ "$REPO" = "redis" ] || [ "$REPO" = "vim" ] || [ "$REPO" = "memcached" ]; then
+#    EXTRA_ARGS=",annotate,source"
+#    # Add a space to this EXTRA_FLAG since it should be split into a new argument for genhtml (the reason it's not in quotes later)
+#    EXTRA_FLAG=" --synthesize-missing"
+#fi
+## if we're looking at zeromq, we need to pass in extra flags
+#if [ "$REPO" = "zeromq" ]; then
+#    EXTRA_ARGS=",path"
+#fi
 
-# NOTE: There is no authorative way to judge whether genhtml works fully - when running best to check that a minimal number of warnings/errors are printed and nothing looks unreasonable
-genhtml --branch-coverage --ignore-errors unmapped,inconsistent"$EXTRA_ARGS"$EXTRA_FLAG total.info --baseline-file "$ROOT"/diffcov/baseline/total.info --diff-file diff.txt --output-directory "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT" --annotate-script "$ROOT"/utils/annotate.sh
+# NOTE: There is no authoritative way to judge whether genhtml works fully - when running best to check that a minimal number of warnings/errors are printed and nothing looks unreasonable
+genhtml --branch-coverage --ignore-errors unmapped,inconsistent,annotate,source,path --synthesize-missing total.info --baseline-file "$ROOT"/diffcov/baseline/total.info --diff-file diff.txt --output-directory "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT" --annotate-script "$ROOT"/utils/annotate.sh 2>&1 | tee "$ROOT"/diffcov/genhtml_output_"$REPO".txt
 
 # Stop the timer
 END=$(date +%s)
@@ -152,3 +149,6 @@ echo "Time taken: $((END-START)) seconds"
 
 # Print the location of the diffcov report
 echo "The diffcov report can be found at: diffcov/diffcov-${REPO}-b_${BASELINE}-c_${CURRENT}/index.html"
+
+# Append the command run to the end of the file
+echo "Command run:" "$0 $REPO $ARCHIVE_DIR $BASELINE $CURRENT" "$SOURCE_DIR" >> "$ROOT"/diffcov/genhtml_output_"$REPO".txt
