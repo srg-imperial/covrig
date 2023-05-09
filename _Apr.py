@@ -27,7 +27,7 @@ class Apr(Container):
     def compile(self):
         """ compile Apr """
         with self.conn.cd(self.path):
-            result = self.conn.run('./buildconf && CFLAGS="-fprofile-arcs -ftest-coverage -fprofile-abs-path" ./configure --with-libxml2', warn=True)
+            result = self.conn.run('./buildconf && CFLAGS="--coverage -fprofile-abs-path" LDFLAGS="--coverage" ./configure --with-libxml2', warn=True)
             result = self.conn.run('make -j3', warn=True)
             if result.failed:
                 self.compileError = True
