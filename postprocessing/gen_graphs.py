@@ -951,7 +951,7 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
 
     # Give the plot a title
     ax.set_title(f'{csv_name}')
-    fig.suptitle(f'Average Patch Coverage per Author (across commits that add/modify executable lines)', fontsize=16,
+    fig.suptitle(f'Average Patch Coverage per Author (across commits that add/modify executable lines) (minimum of {limit} commits)', fontsize=16,
                  y=0.98)
     # Add a subtitle
     fig.text(0.5, 0.95, f'(Numbers on bars represent number of commits attributed to author)', ha='center', fontsize=14,
@@ -1173,6 +1173,75 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
         plt.close(fig)
 
 
+def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None, labels=None, commits_prev_compiling_range=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+    # This time, don't clean the data of compileErrors
+    cleaned_data = utils.clean_data(data)
+
+    # Get the start and end dates
+    date_data = utils.get_columns(cleaned_data, ['time'])[0]
+    start_date = min(date_data)
+    end_date = max(date_data)
+    pos *= -1
+
+    # Plot a horizontal bar between the start and end dates
+    ax.barh(pos, end_date - start_date, left=start_date, height=0.5, label=csv_name, edgecolor='black', zorder=3)
+
+    if commits_prev_compiling_range is not None:
+        lowered = [(x.lower(), x) for x in commits_prev_compiling_range.keys()]
+        for i in range(len(lowered)):
+            if lowered[i][0] in csv_name.lower():
+                daterange = commits_prev_compiling_range[lowered[i][1]]
+                if daterange is None or daterange == (-1, -1):
+                    break
+                # convert daterange to datetime objects
+                start_date_p = datetime.datetime.fromtimestamp(daterange[0])
+                end_date_p = datetime.datetime.fromtimestamp(daterange[1])
+                ax.barh(pos, 20, left=start_date_p, height=0.5, color='#333333', zorder=4)
+                ax.barh(pos, 20, left=end_date_p, height=0.5, color='#333333', zorder=4)
+                break
+
+    # Label the x axis as Date
+    ax.set_xlabel('Date')
+
+    # Show x ticks at full years
+    ax.xaxis.set_major_locator(mdates.YearLocator())
+    # Make sure they are shown as years in the format YYYY
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+
+    # Make sure len(csv_names) yticks are shown
+    if labels is not None:
+        ax.set_yticks([-x for x in range(len(labels))])
+        ax.set_yticklabels(labels)
+
+    if not multiple:
+        # Give the plot a title
+        ax.set_title(f'{csv_name} Timespan')
+    else:
+        ax.set_title(f'Timespan for projects')
+
+    # Get the year of the start date as a datetime object
+    start_date_year = datetime.datetime(year=start_date.year, month=1, day=1)
+
+    # Make it a vertical only grid
+    if pos == 0:
+        ax.grid(visible=True, axis='x', zorder=0)
+        ax.set_xlim(left=start_date_year)
+
+    # Get the current left xlim using num2date
+    left_xlim = mdates.num2date(ax.get_xlim()[0]).replace(tzinfo=None)
+    # Make the left xlim this if it is less than left_xlim
+    if start_date_year < left_xlim:
+        ax.set_xlim(left=start_date_year)
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-timespan.png', bbox_inches='tight')
+        plt.close(fig)
+
+
 def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
@@ -1187,7 +1256,8 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
 
     bins = ['UNC', 'LBC', 'UIC', 'UBC', 'GBC', 'GIC', 'GNC', 'CBC', 'EUB', 'ECB', 'DUB', 'DCB']
 
-    colours = ["#ff622a","#cc6666","#eeaa30","#fde007","#448844","#30cc37","#b5f7af","#cad7fe","#dddddd","#cc66ff","#eeeeee","#ffffff"]
+    colours = ["#ff622a", "#cc6666", "#eeaa30", "#fde007", "#448844", "#30cc37", "#b5f7af", "#cad7fe", "#dddddd",
+               "#cc66ff", "#eeeeee", "#ffffff"]
 
     # Plot the data
     ax.bar(bins, row, color=colours, edgecolor='black')
@@ -1248,6 +1318,7 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_patch_type(data, csv_name, savedir=savedir)
 
     plot_exit_status_rates(data, csv_name, savedir=savedir)
+    # plot_timespan(data, csv_name, savedir=savedir)
 
     plot_churn(data, csv_name, date=date, savedir=savedir)
     plot_author_dist(data, csv_name, date=date, limit=2, savedir=savedir)
@@ -1325,6 +1396,19 @@ def plot_all_multiple(paths, csv_names, date):
     plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names)
 
     plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names)
+    # previous final commits (jun2015data):
+    commits_prev_compiling_range = {
+        'Apr': (-1, -1),
+        'Binutils': (1266228576, 1381776346),
+        'Curl': (-1, -1),
+        'Git': (1370985909, 1386887079),
+        'Lighttpd': (1284310497, 1378821913),
+        'Memcached': (1234570260, 1358117990),
+        'Redis': (1359375286, 1380183166),
+        'Vim': (-1, -1),
+        'Zeromq': (1324305818, 1381730754),
+    }
+    plot_metric_combined(plot_timespan, 'timespan', paths, csv_names, custom_figsize=default_figsize, labels=csv_names, commits_prev_compiling_range=commits_prev_compiling_range)
 
 
 def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
@@ -1357,7 +1441,11 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
 
 def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     """ Plot a metric for multiple CSVs on the same graph of a figure. """
-    fig, axs = plt.subplots(figsize=expanded_figsize)
+    # extract var custom_figsize from kwargs, if it exists
+    custom_figsize = kwargs.get('custom_figsize', None)
+    if custom_figsize is not None:
+        del kwargs['custom_figsize']
+    fig, axs = plt.subplots(figsize=custom_figsize if custom_figsize is not None else expanded_figsize)
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
         if csv_data is not None:
@@ -1495,7 +1583,8 @@ if __name__ == '__main__':
         # Plot all repos' eloc on the same graph
         plot_all_multiple(paths, csv_names, date=args.date)
         diffcov_csvs = glob.glob(f'{args.input}/*/diffcov_*.csv')
-        plot_diffcov_multiple(diffcov_paths, diffcov_names)
+        if args.diffcov:
+            plot_diffcov_multiple(diffcov_paths, diffcov_names)
 
     else:
         # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
