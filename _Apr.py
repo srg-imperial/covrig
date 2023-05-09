@@ -22,12 +22,12 @@ class Apr(Container):
             self.timeout = 200
 
         self.tsuite_path = ('test',)
-        self.ignore_coverage_from = ('include/*',)
+        self.ignore_coverage_from = ('include/*', '*/test/*')
 
     def compile(self):
         """ compile Apr """
         with self.conn.cd(self.path):
-            result = self.conn.run('./buildconf && ./configure --with-libxml2 CFLAGS="--coverage" LDFLAGS="--coverage"', warn=True)
+            result = self.conn.run('./buildconf && CFLAGS="-fprofile-arcs -ftest-coverage -fprofile-abs-path" ./configure --with-libxml2', warn=True)
             result = self.conn.run('make -j3', warn=True)
             if result.failed:
                 self.compileError = True
