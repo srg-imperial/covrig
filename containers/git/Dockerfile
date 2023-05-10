@@ -8,9 +8,10 @@ RUN apt-get update && apt-get install -yq \
 	git \
     lcov \
     openssh-server \
+    curl \
+    make \
+    realpath \
 	--no-install-recommends
-
-#	openssh-server \
 
 #RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
@@ -38,11 +39,8 @@ RUN apt-get -y install \
 	python \
 	unzip \
 	libio-pty-perl \
-	libssl-dev \
-    make \
-    realpath
+	libssl-dev
 
-#	libtime-modules-perl \
 RUN sudo apt-get install -yq --reinstall ca-certificates
 
 RUN git clone https://github.com/git/git.git /home/git
