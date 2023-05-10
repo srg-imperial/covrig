@@ -138,6 +138,11 @@ cd "$ROOT"/diffcov/current
 #    EXTRA_ARGS=",path"
 #fi
 
+if [ "$REPO" = "lighttpd2" ]; then
+  # Use lcov to skip the file src/modules/mod_proxy.c - complains of a gained baseline coverage error otherwise
+  lcov  --rc lcov_branch_coverage=1 -r total.info "*/src/modules/mod_proxy.c" -o total.info
+fi
+
 # NOTE: There is no authoritative way to judge whether genhtml works fully - when running best to check that a minimal number of warnings/errors are printed and nothing looks unreasonable
 genhtml --branch-coverage --ignore-errors unmapped,inconsistent,annotate,source,path --synthesize-missing total.info --baseline-file "$ROOT"/diffcov/baseline/total.info --diff-file diff.txt --output-directory "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT" --annotate-script "$ROOT"/utils/annotate.sh 2>&1 | tee "$ROOT"/diffcov/genhtml_output_"$REPO".txt
 

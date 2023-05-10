@@ -1417,7 +1417,7 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
     rows, columns = 2, 3
     size = default_figsize
     if len(csv_names) > rows * columns:
-        rows, columns = 3, 4
+        rows, columns = 3, 3
         size = expanded_figsize
     fig, axs = plt.subplots(rows, columns, figsize=size)
     idxs = (0, 0)
@@ -1496,9 +1496,9 @@ if __name__ == '__main__':
             paths += glob.glob(f'{args.input}/*.csv')
 
         # TODO: remove when data fixed
-        # Remove the following CSV files from the list since they are either not complete or lack fields
+        # Remove the following CSV files from the list since they are either not complete, lack fields or we don't want to show them anymore
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
-                          'remotedata/binutils/Binutils.csv']
+                          'remotedata/binutils/Binutils.csv', 'remotedata/redis_non_det/Redis_sofar.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:

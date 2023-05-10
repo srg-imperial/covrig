@@ -35,7 +35,7 @@ class Curl(Container):
                 warn=True)
             with self.conn.cd('cvr'):
                 result = self.conn.run('../configure --disable-shared --enable-debug --enable-maintainer-mode --enable-manual '
-                                       '--enable-code-coverage --with-openssl CFLAGS="-fprofile-abs-path -fprofile-arcs -ftest-coverage -g -O0" LDFLAGS="-lgcov --coverage" && make -sj', warn=True)
+                                       '--enable-code-coverage --with-openssl CFLAGS="-fprofile-abs-path --coverage -g -O0" LDFLAGS="--coverage" && make -sj', warn=True)
                 if result.failed:
                     self.compileError = True
 
@@ -45,6 +45,8 @@ class Curl(Container):
         # if compile failed, skip this step
         if not self.compileError and not self.emptyCommit:
             with self.conn.cd(self.source_path):
-                result = self.conn.run(f"export USER=root && timeout {self.timeout} make test", warn=True)
-                if result.failed:
-                    self.maketestError = result.return_code
+                for i in range(5):
+                    result = self.conn.run(f"export USER=root && timeout {self.timeout} make test", warn=True)
+                    if result.failed:
+                        self.maketestError = result.return_code
+                self.conn.run('killall curl', warn=True)
