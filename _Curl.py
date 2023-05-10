@@ -22,7 +22,7 @@ class Curl(Container):
             self.timeout = 600
 
         self.tsuite_path = ('tests',)
-        self.ignore_coverage_from = ('include/*',)
+        self.ignore_coverage_from = ('include/*', '*/tests/*')
 
     def compile(self):
         """ compile Curl """
@@ -35,7 +35,7 @@ class Curl(Container):
                 warn=True)
             with self.conn.cd('cvr'):
                 result = self.conn.run('../configure --disable-shared --enable-debug --enable-maintainer-mode --enable-manual '
-                                       '--enable-code-coverage --with-openssl CFLAGS="-fprofile-arcs -ftest-coverage -g -O0" LDFLAGS="-lgcov --coverage" && make -sj', warn=True)
+                                       '--enable-code-coverage --with-openssl CFLAGS="-fprofile-abs-path -fprofile-arcs -ftest-coverage -g -O0" LDFLAGS="-lgcov --coverage" && make -sj', warn=True)
                 if result.failed:
                     self.compileError = True
 
