@@ -11,13 +11,13 @@ START=$(date +%s)
 
 ROOT=$(realpath .)
 
-# Check root with user (is this the root of the covrig repo? with Y/n with
-read -p "Is this the root of the covrig repo? (Y/n) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]
-then
-  exit 1
-fi
+## Check root with user (is this the root of the covrig repo? with Y/n with
+#read -p "Is this the root of the covrig repo? (Y/n) " -n 1 -r
+#echo
+#if [[ ! $REPLY =~ ^[Yy]$ ]]
+#then
+#  exit 1
+#fi
 
 # Take in our input: <repo> <baseline> <current> [source dir]
 REPO=$1
@@ -80,16 +80,39 @@ tar xjf "$ARCHIVE_DIR"/coverage-"${CURRENT}".tar.bz2 -C diffcov/current
 # navigate to repos/redis
 cd "$ROOT"/repos/"$REPO" || echo "Error: $ROOT/repos/$REPO does not exist. Make sure you have a repos/<repo> directory"
 
+# If no source dir is given, assume it is the root of the repo, so the whole repo is copied over
 git checkout "$BASELINE"
 cp -R "$SOURCE_DIR" "$ROOT"/diffcov/baseline/
 
 git checkout "$CURRENT"
 cp -R "$SOURCE_DIR" "$ROOT"/diffcov/current/
 
+
 # use git blame to annotate the files
 echo "Annotating files for $REPO, baseline: $BASELINE, current: $CURRENT"
-"$ROOT"/utils/annotate_files.sh "$SOURCE_DIR" # used to run as . from redis/src, hopefully this works
-mv "$SOURCE_DIR"/*.annotated "$ROOT"/diffcov/current/"$SOURCE_DIR"
+
+DIRS=$(find "$SOURCE_DIR" -type d)
+# Strip off the leading ./
+DIRS=$(echo "$DIRS" | sed 's:^\./::')
+
+# TODO: This method may work for others as well as apr, but I'm not sure
+# If apr, do the following on all possible directories inside apr/
+#if [ "$REPO" = "apr" ]; then
+  for dir in $DIRS; do
+      "$ROOT"/utils/annotate_files.sh "$dir"
+      # Check if there are any annotated files
+      # Do a find for all files that end in .annotated in the current directory
+      # If there are any, move them to the diffcov directory
+      ANNOTATED_PRESENT=$(find "$dir" -maxdepth 1 -type f -name "*.annotated")
+      if [ -n "$ANNOTATED_PRESENT" ]; then
+          mv "$dir"/*.annotated "$ROOT"/diffcov/current/"$dir"
+          echo "Moved $dir/*.annotated to $ROOT/diffcov/current/$dir"
+      fi
+  done
+#else
+#  "$ROOT"/utils/annotate_files.sh "$SOURCE_DIR" # used to run as . from redis/src, hopefully this works
+#  mv "$SOURCE_DIR"/*.annotated "$ROOT"/diffcov/current/"$SOURCE_DIR"
+#fi
 
 
 # do the diff between the <baseline> and the <current>
@@ -121,8 +144,10 @@ python3 "$ROOT"/utils/localize_info_src.py diffcov/current/total.info $STRIP $RE
 echo "Preparing to run genhtml for $REPO, baseline: $BASELINE, current: $CURRENT"
 
 # while in current, run genhtml
-rm -rf "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT"
-mkdir -p "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT"
+OUTDIR="$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT"
+
+rm -rf "$OUTDIR"
+mkdir -p "$OUTDIR"
 cd "$ROOT"/diffcov/current
 
 #EXTRA_ARGS=""
@@ -143,8 +168,10 @@ if [ "$REPO" = "lighttpd2" ]; then
   lcov  --rc lcov_branch_coverage=1 -r total.info "*/src/modules/mod_proxy.c" -o total.info
 fi
 
+COMMAND_DUMP="$ROOT"/diffcov/genhtml_output_"$REPO".txt
+
 # NOTE: There is no authoritative way to judge whether genhtml works fully - when running best to check that a minimal number of warnings/errors are printed and nothing looks unreasonable
-genhtml --branch-coverage --ignore-errors unmapped,inconsistent,annotate,source,path --synthesize-missing total.info --baseline-file "$ROOT"/diffcov/baseline/total.info --diff-file diff.txt --output-directory "$ROOT"/diffcov/diffcov-"$REPO"-b_"$BASELINE"-c_"$CURRENT" --annotate-script "$ROOT"/utils/annotate.sh 2>&1 | tee "$ROOT"/diffcov/genhtml_output_"$REPO".txt
+genhtml --branch-coverage --ignore-errors unmapped,inconsistent,annotate,source,path --synthesize-missing total.info --baseline-file "$ROOT"/diffcov/baseline/total.info --diff-file diff.txt --output-directory "$OUTDIR" --annotate-script "$ROOT"/utils/annotate.sh 2>&1 | tee $COMMAND_DUMP
 
 # Stop the timer
 END=$(date +%s)
@@ -155,5 +182,7 @@ echo "Time taken: $((END-START)) seconds"
 # Print the location of the diffcov report
 echo "The diffcov report can be found at: diffcov/diffcov-${REPO}-b_${BASELINE}-c_${CURRENT}/index.html"
 
-# Append the command run to the end of the file
-echo "Command run:" "$0 $REPO $ARCHIVE_DIR $BASELINE $CURRENT" "$SOURCE_DIR" >> "$ROOT"/diffcov/genhtml_output_"$REPO".txt
+# Append the command run to the end of the file we wrote the results of genhtml to
+echo "Command run:" "$0 $REPO $ARCHIVE_DIR $BASELINE $CURRENT" "$SOURCE_DIR" >> "$COMMAND_DUMP"
+
+echo "Log at: $COMMAND_DUMP"

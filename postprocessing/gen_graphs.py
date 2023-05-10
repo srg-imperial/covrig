@@ -1263,13 +1263,14 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
     ax.bar(bins, row, color=colours, edgecolor='black')
 
     # Label the x axis as coverage type
-    ax.set_xlabel('Coverage Type')
+    ax.set_xlabel('Differential Coverage Categories')
 
     # Label the y axis as Count
-    ax.set_ylabel('Count')
+    # take type_to_line[type] and make its first letter uppercase
+    ax.set_ylabel(f'{type.capitalize()} Count')
 
     # Give the plot a title
-    ax.set_title(f'{csv_name} {type} Differential Coverage')
+    ax.set_title(f'{csv_name}')
 
     # Save the plot
     if save:
@@ -1353,9 +1354,9 @@ def plot_diffcov_format_multiple(metric, outname, paths, csv_names, **kwargs):
     """ Plot a metric for multiple CSVs on subplots of the same figure. """
     # Would be nice to have a smarter way of doing this, but for now we'll just hardcode the number of rows and columns
     rows, columns = 2, 3
-    size = expanded_figsize
+    size = default_figsize
     if len(csv_names) > rows * columns:
-        rows, columns = 3, 4
+        rows, columns = 3, 3
         size = expanded_figsize
     fig, axs = plt.subplots(rows, columns, figsize=size)
     idxs = (0, 0)

@@ -11,7 +11,7 @@ for file in $DIR/*; do
     if [[ $file == *.annotated ]]; then
         echo "Skipping $file"
     # do for *.c, *.h, *.cpp, *.hpp
-    elif [[ $file == *.c ]] || [[ $file == *.h ]] || [[ $file == *.cpp ]] || [[ $file == *.hpp ]]; then
+    elif [[ $file == *.c ]] || [[ $file == *.h ]] || [[ $file == *.cpp ]] || [[ $file == *.hpp ]] || [[ $file == *.cc ]] || [[ $file == *.hh ]] || [[ $file == *.cxx ]] || [[ $file == *.hxx ]]; then
         echo "Running blame.sh on $file"
         "$SCRIPT_DIR"/blame.sh "$file"
     fi
