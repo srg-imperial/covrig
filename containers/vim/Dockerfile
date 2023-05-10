@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     realpath \
 	--no-install-recommends
 
-# For curl to emit gcov properly, we need lcov 1.16 (otherwise gcov can't read the .gcda files)
+# For vim to emit gcov properly, we need lcov 1.16 (otherwise gcov can't read the .gcda files)
 RUN cd /tmp && curl -L https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16.tar.gz | tar xz && cd lcov-* && make PREFIX=/usr install
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
 
@@ -33,16 +33,15 @@ ADD id_rsa.pub /root/.ssh/authorized_keys
 RUN chown -R root:root /root/.ssh
 RUN chmod -R 700 /root/.ssh
 
-RUN apt-get install -yq \
-    libssl-dev \
-    stunnel4 \
-    python3 \
-    python-impacket
+RUN echo "root:root" | chpasswd
 
-RUN apt-get install -yq --reinstall ca-certificates # Needed for higher ubuntu versions (e.g. 20)
+RUN adduser --gecos "" --disabled-password regular
 
-RUN git clone https://github.com/curl/curl.git /home/curl
+RUN apt-get -yq install libncurses5-dev libncursesw5-dev
 
+RUN git clone https://github.com/vim/vim.git /home/vim
+
+RUN chown -R regular /home/vim
 ADD measure-cov.sh /root/
 
 EXPOSE 22

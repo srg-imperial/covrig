@@ -19,14 +19,14 @@ class Vim(Container):
             # set timeout (in seconds) for the test suite to run
             self.timeout = 1500 # for revisions before 8.0.0000 400 suffices, later revs have more tests
 
-        self.tsuite_path = ('src/testdir',)
+        self.tsuite_path = ('testdir',)
         self.ignore_coverage_from = ('/usr/include/*',)
 
     def compile(self):
         """ compile Lighttpd """
         with self.conn.cd(self.path):
             # Run tests excluding gui tests (was default behaviour pre-8.0)
-            result = self.conn.run("su regular -c \"CFLAGS='--coverage' LDFLAGS='--coverage' ./configure --without-x --disable-gtktest --with-features=normal --disable-gui\" && " +
+            result = self.conn.run("su regular -c \"CFLAGS='-fprofile-abs-path --coverage' LDFLAGS='--coverage' ./configure --without-x --disable-gtktest --with-features=normal --disable-gui\" && " +
                                    "su regular -c \"make -j`grep -c '^processor' /proc/cpuinfo`\"", warn=True)
             # make with as many jobs as there are cores
             if result.failed:
