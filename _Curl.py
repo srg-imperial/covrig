@@ -9,8 +9,8 @@ class Curl(Container):
 
     # Inspired by https://github.com/curl/curl/blob/master/scripts/coverage.sh
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
 
         # set variables
         if self.offline:
@@ -44,9 +44,11 @@ class Curl(Container):
         super(Curl, self).make_test()
         # if compile failed, skip this step
         if not self.compileError and not self.emptyCommit:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.source_path):
-                # for i in range(5):
-                result = self.conn.run(f"export USER=root && timeout {self.timeout} make test", warn=True)
-                if result.failed:
-                    self.maketestError = result.return_code
-                # self.conn.run('killall curl', warn=True)
+                for i in range(self.repeats):
+                    result = self.conn.run(f"export USER=root && timeout {self.timeout} make test", warn=True)
+                    if result.failed:
+                        self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)
+                self.conn.run('killall curl', warn=True)

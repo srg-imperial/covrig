@@ -7,8 +7,8 @@ from Container import Container
 class Zeromq(Container):
     """ Zeromq class """
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
 
         # set variables
         if self.offline:
@@ -41,9 +41,11 @@ class Zeromq(Container):
         """ run the test suite """
         # if compile failed, skip this step
         if not self.compileError:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.path):
-                for i in range(5):
+                for i in range(self.repeats):
                     result = self.conn.run(("ulimit -n 64000 && timeout " + str(self.timeout) +
                                   " make check CFLAGS='-O0' CXXFLAGS='-O0'"), warn=True)
                     if result.failed:
                         self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)

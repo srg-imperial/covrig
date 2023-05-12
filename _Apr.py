@@ -9,8 +9,8 @@ class Apr(Container):
 
     # Mainly followed instructions from https://github.com/apache/apr/blob/trunk/README to generate coverage data
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
 
         # set variables
         if self.offline:
@@ -37,13 +37,16 @@ class Apr(Container):
         super(Apr, self).make_test()
         # if compile failed, skip this step
         if not self.compileError and not self.emptyCommit:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.tsuite_path[0]): # we (unusually) cd into the test directory to run the tests
-                result = self.conn.run("make", warn=True)
-                result = self.conn.run(f"timeout {self.timeout} ./testall", warn=True)
-                if result.failed:
-                    # Makefile error - i.e. could compile but could not run tests
-                    # Treat as a test failure - only really seen for APR (e.g. 0763586)
-                    if result.return_code == 127:
-                        self.maketestError = 2
-                    else:
-                        self.maketestError = result.return_code
+                for i in range(self.repeats):
+                    result = self.conn.run("make", warn=True)
+                    result = self.conn.run(f"timeout {self.timeout} ./testall", warn=True)
+                    if result.failed:
+                        # Makefile error - i.e. could compile but could not run tests
+                        # Treat as a test failure - only really seen for APR (e.g. 0763586)
+                        if result.return_code == 127:
+                            self.maketestError = 2
+                        else:
+                            self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)

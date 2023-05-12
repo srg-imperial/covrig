@@ -10,8 +10,8 @@ class Memcached(Container):
     # note that since sometimes memcached doesn't like us to be root,
     # a user account 'regular' is needed to run the following
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
         # set variables
         if self.offline:
             self.path = self.omnirun("realpath 'repos/memcached'").stdout.strip()
@@ -40,13 +40,15 @@ class Memcached(Container):
         """ run the test suite """
         # if compile failed, skip this step
         if not self.compileError:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.source_path):
-                # for i in range(5):
-                # # print system time in seconds since epoch
-                # self.conn.run('date +%s')
-                result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
-                # # print system time in seconds since epoch
-                # self.conn.run('date +%s')
-                if result.failed:
-                    self.maketestError = result.return_code
+                for i in range(self.repeats):
+                    # # print system time in seconds since epoch
+                    # self.conn.run('date +%s')
+                    result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
+                    # # print system time in seconds since epoch
+                    # self.conn.run('date +%s')
+                    if result.failed:
+                        self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)
                 self.conn.run('killall memcached', warn=True)

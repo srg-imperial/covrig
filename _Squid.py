@@ -7,8 +7,8 @@ from Container import Container
 class Squid(Container):
     """ squid class """
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
 
         # set variables
         if self.offline:
@@ -37,8 +37,10 @@ class Squid(Container):
         super(Squid, self).make_test()
         # if compile failed, skip this step
         if not self.compileError:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.path):
-                # for i in range(5):
-                result = self.conn.run('timeout ' + str(self.timeout) + ' make check', warn=True)
-                if result.failed:
-                    self.maketestError = result.return_code
+                for i in range(self.repeats):
+                    result = self.conn.run('timeout ' + str(self.timeout) + ' make check', warn=True)
+                    if result.failed:
+                        self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)
