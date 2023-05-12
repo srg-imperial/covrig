@@ -7,7 +7,7 @@
 Covrig is a flexible infrastructure that can be used to run each version of a system in isolation to collect static and dynamic software metrics (code coverage, lines of code), originally developed by Paul Marinescu and Petr Hosek at Imperial College London.
 
 ### Changelog (April 2023)
-- Upgraded to python3 3 (incl. deps)
+- Upgraded to python3 (incl. deps)
 - Added more examples for containers
 - Added support for differential coverage calculation
 - Rewrote and extended postprocessing graph generation

@@ -91,6 +91,8 @@ cp -R "$SOURCE_DIR" "$ROOT"/diffcov/current/
 # use git blame to annotate the files
 echo "Annotating files for $REPO, baseline: $BASELINE, current: $CURRENT"
 
+#TODO: will likely have to do a mkdir -p cvr for curl since everything was done in that directory
+
 DIRS=$(find "$SOURCE_DIR" -type d)
 # Strip off the leading ./
 DIRS=$(echo "$DIRS" | sed 's:^\./::')

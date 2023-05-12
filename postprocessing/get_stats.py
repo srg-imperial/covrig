@@ -187,7 +187,7 @@ def export_bucketed_patch_coverage(data, csv_name):
 def write_stats(paths, csv_names):
     write_multiple_csv(export_number_revs, paths, csv_names, ['App', 'OK', 'TF', 'TO', 'CF', 'TotalWorking', 'Time'],
                        'num_revs')
-    write_multiple_csv(export_eloc_tloc, paths, csv_names, ['App', 'Lang', 'ELOC', 'Lang', 'TLOC'], 'eloc_tloc')
+    write_multiple_csv(export_eloc_tloc, paths, csv_names, ['App', 'Lang.', 'ELOC', 'Lang.', 'TLOC'], 'eloc_tloc')
     write_multiple_csv(export_lines_hunks_files, paths, csv_names, ['App', 'Lines', 'Hunks', 'Files'],
                        'lines_hunks_files')
     write_multiple_csv(export_bucketed_patch_coverage, paths, csv_names,

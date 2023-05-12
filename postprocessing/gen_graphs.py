@@ -4,6 +4,7 @@ import numpy as np
 import statistics
 import datetime as dt
 from matplotlib import pyplot as plt
+import matplotlib.colors as mcolors
 import matplotlib.dates as mdates
 from copy import deepcopy
 # Config for the csv files' layout (edit as necessary)
@@ -627,9 +628,9 @@ def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple
 
     # Give the plot a title
     if not multiple:
-        ax.set_title(f'Number of Commits per Exit Status for {csv_name}')
+        ax.set_title(f'Percentage of Commits per Exit Status for {csv_name}')
     else:
-        ax.set_title(f'Number of Commits per Exit Status')
+        ax.set_title(f'Percentage of Commits per Exit Status')
 
     if pos == 0:
         # Add a legend
@@ -951,8 +952,10 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
 
     # Give the plot a title
     ax.set_title(f'{csv_name}')
-    fig.suptitle(f'Average Patch Coverage per Author (across commits that add/modify executable lines) (minimum of {limit} commits)', fontsize=16,
-                 y=0.98)
+    fig.suptitle(
+        f'Average Patch Coverage per Author (across commits that add/modify executable lines) (minimum of {limit} commits)',
+        fontsize=16,
+        y=0.98)
     # Add a subtitle
     fig.text(0.5, 0.95, f'(Numbers on bars represent number of commits attributed to author)', ha='center', fontsize=14,
              fontweight='normal')
@@ -1173,7 +1176,8 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
         plt.close(fig)
 
 
-def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None, labels=None, commits_prev_compiling_range=None):
+def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None, labels=None,
+                  commits_prev_compiling_range=None):
     if plot is None:
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
@@ -1184,10 +1188,15 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
     date_data = utils.get_columns(cleaned_data, ['time'])[0]
     start_date = min(date_data)
     end_date = max(date_data)
+    idx = pos
     pos *= -1
 
-    # Plot a horizontal bar between the start and end dates
-    ax.barh(pos, end_date - start_date, left=start_date, height=0.5, label=csv_name, edgecolor='black', zorder=3)
+    bar_height = 0.5
+
+    # Get the list of colour from mcolors.TABLEAU_COLORS
+    colours = list(mcolors.TABLEAU_COLORS.values())
+
+    # The 250 revs in Covrig (looking at table 1 and cross-referencing ELOC) are the 250 most recent commits of the legacy
 
     if commits_prev_compiling_range is not None:
         lowered = [(x.lower(), x) for x in commits_prev_compiling_range.keys()]
@@ -1195,12 +1204,41 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
             if lowered[i][0] in csv_name.lower():
                 daterange = commits_prev_compiling_range[lowered[i][1]]
                 if daterange is None or daterange == (-1, -1):
+                    if daterange == (-1, -1):
+                        ax.barh(pos, end_date - start_date, left=start_date, height=bar_height, color=colours[idx],
+                                edgecolor='black', zorder=3)
                     break
                 # convert daterange to datetime objects
-                start_date_p = datetime.datetime.fromtimestamp(daterange[0])
+                start_date_p_d = datetime.datetime.fromtimestamp(daterange[0])
                 end_date_p = datetime.datetime.fromtimestamp(daterange[1])
-                ax.barh(pos, 20, left=start_date_p, height=0.5, color='#333333', zorder=4)
-                ax.barh(pos, 20, left=end_date_p, height=0.5, color='#333333', zorder=4)
+                # Get the index of date_data that has the value end_date_p
+                end_date_p_index = date_data.index(end_date_p)
+                # Now get that index minus 249 (i.e a range of 250 commits) since we have cleaned the data of compileErrors
+                start_date_p = date_data[end_date_p_index - 249]
+                print(f"Covrig (250) data for {csv_name} is from {int(start_date_p.timestamp())} to {int(end_date_p.timestamp())}")
+
+                # Bar for the legacy data
+                prev_bar = ax.barh(pos, end_date_p - start_date_p, left=start_date_p, height=bar_height,
+                                   color=colours[idx], hatch='//////', edgecolor='black', zorder=3)
+
+                # plot the same bar again but transparently, a little hack to only display one legend entry
+                # works on assumption that second bar has legacy data (since apr doesn't) - no need to overengineer this
+                if idx == 1:
+                    dummy_bar = ax.barh(pos, end_date_p - start_date_p, left=start_date_p, height=bar_height,
+                                        facecolor='none', hatch='//////', edgecolor='black', zorder=3,
+                                        label='Legacy data for original Covrig paper (250 commits)')
+
+                # Start of all the data in jun2015data/
+                ax.barh(pos, 20, left=start_date_p_d, height=bar_height, color='black', zorder=4)
+                # # End of the 250 revisions studied under Covrig
+                # ax.barh(pos, 10, left=end_date_p, height=bar_height, color='#333333', zorder=4)
+                # # Start of the 250 revisions studied under Covrig
+                # ax.barh(pos, 10, left=start_date_p, height=bar_height, color='#333333', zorder=5)
+
+                # Bar for the new data
+                ax.barh(pos, end_date - end_date_p, left=end_date_p, height=bar_height, color=colours[idx],
+                        edgecolor='black',
+                        zorder=3)
                 break
 
     # Label the x axis as Date
@@ -1220,7 +1258,10 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
         # Give the plot a title
         ax.set_title(f'{csv_name} Timespan')
     else:
-        ax.set_title(f'Timespan for projects')
+        ax.set_title(f'Timespan for projects (excluding compileErrors)')
+
+    # Move title to the left
+    ax.title.set_position([0.5, 1.05])
 
     # Get the year of the start date as a datetime object
     start_date_year = datetime.datetime(year=start_date.year, month=1, day=1)
@@ -1235,6 +1276,13 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
     # Make the left xlim this if it is less than left_xlim
     if start_date_year < left_xlim:
         ax.set_xlim(left=start_date_year)
+
+    # Change ylims so there is a little space at the top and bottom
+    if idx == 8 and multiple:
+        ax.set_ylim(top=1, bottom=-9)
+
+    # Put the legend in the upper right corner
+    ax.legend(loc='upper right')
 
     # Save the plot
     if save:
@@ -1397,7 +1445,7 @@ def plot_all_multiple(paths, csv_names, date):
     plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names)
 
     plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names)
-    # previous final commits (jun2015data):
+    # previous final commits (jun2015data) - all commits, not just 250
     commits_prev_compiling_range = {
         'Apr': (-1, -1),
         'Binutils': (1266228576, 1381776346),
@@ -1409,7 +1457,8 @@ def plot_all_multiple(paths, csv_names, date):
         'Vim': (-1, -1),
         'Zeromq': (1324305818, 1381730754),
     }
-    plot_metric_combined(plot_timespan, 'timespan', paths, csv_names, custom_figsize=default_figsize, labels=csv_names, commits_prev_compiling_range=commits_prev_compiling_range)
+    plot_metric_combined(plot_timespan, 'timespan', paths, csv_names, custom_figsize=(10, 7), labels=csv_names,
+                         commits_prev_compiling_range=commits_prev_compiling_range, dpi=300)
 
 
 def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
@@ -1444,8 +1493,11 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     """ Plot a metric for multiple CSVs on the same graph of a figure. """
     # extract var custom_figsize from kwargs, if it exists
     custom_figsize = kwargs.get('custom_figsize', None)
+    dpi = kwargs.get('dpi', None)
     if custom_figsize is not None:
         del kwargs['custom_figsize']
+    if dpi is not None:
+        del kwargs['dpi']
     fig, axs = plt.subplots(figsize=custom_figsize if custom_figsize is not None else expanded_figsize)
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
@@ -1457,7 +1509,7 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     bucket_no = kwargs.get('bucket_no', None)
     fig.savefig(
         f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}{bucket_no if bucket_no is not None else ""}.png',
-        bbox_inches='tight')
+        bbox_inches='tight', dpi=dpi)
     print(
         f'Finished plotting combined {outname}{"-date" if date else ""}. You can find the plots in graphs/{args.input}')
 

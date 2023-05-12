@@ -42,7 +42,11 @@ class Memcached(Container):
         if not self.compileError:
             with self.conn.cd(self.source_path):
                 # for i in range(5):
+                # # print system time in seconds since epoch
+                # self.conn.run('date +%s')
                 result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
+                # # print system time in seconds since epoch
+                # self.conn.run('date +%s')
                 if result.failed:
                     self.maketestError = result.return_code
                 self.conn.run('killall memcached', warn=True)
