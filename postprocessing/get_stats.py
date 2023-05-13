@@ -183,6 +183,33 @@ def export_bucketed_patch_coverage(data, csv_name):
 
     return csv_row
 
+def export_non_det_revisions(data, csv_name):
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # Get the commit hash, repeats, and non_det columns
+    commit_hash, repeats, non_det = utils.get_columns(cleaned_data, ['rev', 'repeats', 'non_det'])
+
+    print(type(non_det))
+    print(non_det)
+
+    # Get the indices of the non_det revisions
+    non_det_indices = [i for i in range(len(non_det)) if non_det[i] == 'True']
+
+    # Get the commit hashes of the non_det revisions
+    non_det_commit_hashes = [commit_hash[i] for i in non_det_indices]
+
+    # Get the number of repeats of the non_det revisions
+    non_det_repeats = [repeats[i] for i in non_det_indices][0]
+
+    # Get the number of non_det revisions
+    num_non_det_revs = len(non_det_commit_hashes)
+
+    # Construct a csv row with the format csv_name, num_non_det_revs, non_det_repeats, non_det_commit_hashes*
+    csv_row = f'{csv_name},{num_non_det_revs},{non_det_repeats},\"[' + ','.join(non_det_commit_hashes) + ']\"'
+
+    return csv_row
+
 
 def write_stats(paths, csv_names):
     write_multiple_csv(export_number_revs, paths, csv_names, ['App', 'OK', 'TF', 'TO', 'CF', 'TotalWorking', 'Time'],
@@ -193,6 +220,16 @@ def write_stats(paths, csv_names):
     write_multiple_csv(export_bucketed_patch_coverage, paths, csv_names,
                        ['App', '<= 10 NP', '<= 10 C', '11-100 NP', '11-100 C', '> 100 NP', '> 100 C'],
                        'bucketed_patch_coverage')
+
+    # Now filter paths to only include those in the following list
+    included_paths = ['remotedata/apr/Apr_repeats_mangled.csv']
+    # Get the indices of the included paths
+    included_indices = [i for i in range(len(paths)) if paths[i] in included_paths]
+    # Get the included paths and csv names
+    paths = [paths[i] for i in included_indices]
+    csv_names = [csv_names[i] for i in included_indices]
+
+    write_multiple_csv(export_non_det_revisions, paths, csv_names, ['App', 'Nondet. Result', 'Repeats', 'Nondet. Commits'], 'non_det_revs')
 
 
 def write_multiple_csv(func, paths, csv_names, header, name):

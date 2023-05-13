@@ -409,7 +409,10 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     if pos == 0:
         if bucket_no == covrig_buckets:
             # Move the legend to the side
-            ax.legend(handles[::-1][1:5], labels[::-1][1:5], bbox_to_anchor=(1.05, 1), loc='upper left')
+            # Remove any N/A strings from handles and labels
+            handles = handles[1:5] + handles[6:]
+            labels = labels[1:5] + labels[6:]
+            ax.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc='upper left')
         else:
             # Move the legend to the side
             ax.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -1551,7 +1554,7 @@ if __name__ == '__main__':
         # TODO: remove when data fixed
         # Remove the following CSV files from the list since they are either not complete, lack fields or we don't want to show them anymore
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
-                          'remotedata/binutils/Binutils.csv', 'remotedata/redis_non_det/Redis_sofar.csv']
+                          'remotedata/binutils/Binutils.csv', 'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/apr/Apr_repeats_mangled.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:

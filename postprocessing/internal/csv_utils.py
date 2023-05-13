@@ -1,4 +1,4 @@
-from .csv_config import file_header_list, file_header_type
+from .csv_config import file_header_list, file_header_type, file_header_list_v1, file_header_list_legacy
 import datetime
 
 
@@ -67,11 +67,14 @@ def extract_data(input_file, csv_name, callback=None):
         # Ignore any lines that begin with a # (i.e. comments)
         lines = [line for line in lines if not line.startswith('#')]
 
+        # Strip the new line characters and any leading or trailing white space
+        lines = [line.strip() for line in lines]
+
         # Split the lines by comma
         lines = [line.split(',') for line in lines]
 
         # Skip any lines that don't have the correct number of columns
-        lines = [line for line in lines if len(line) == len(file_header_list)]
+        lines = [line for line in lines if len(line) == len(file_header_list) or len(line) == len(file_header_list_v1) or len(line) == len(file_header_list_legacy)]
 
         if len(lines) == 0:
             print(f'Warning: {csv_name} is missing columns, skipping...')
