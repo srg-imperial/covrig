@@ -37,6 +37,8 @@ class DataHandler(object):
         self.average = _collector.average
         self.prev_covered = _collector.prev_covered
         self.merge = _collector.merge
+        self.repeats = '0'
+        self.non_det = False
 
         # prev_covered[i] contains the #lines covered from the revision current~i
         for i, _ in enumerate(self.prev_covered):
