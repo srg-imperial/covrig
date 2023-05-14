@@ -1554,7 +1554,9 @@ if __name__ == '__main__':
         # TODO: remove when data fixed
         # Remove the following CSV files from the list since they are either not complete, lack fields or we don't want to show them anymore
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
-                          'remotedata/binutils/Binutils.csv', 'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/apr/Apr_repeats_mangled.csv']
+                          'remotedata/binutils/Binutils.csv', 'remotedata/redis_non_det/Redis_sofar.csv',
+                          'remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv',
+                          'remotedata/lighttpd2/Lighttpd2_repeats1.csv', 'remotedata/lighttpd2/Lighttpd2_repeats2.csv', 'remotedata/lighttpd2/Lighttpd2_repeats3.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:

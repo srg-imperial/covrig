@@ -96,7 +96,8 @@ class DataHandler(object):
         data += [self.timestamp, self.exitStatus, self.hunks, self.ehunks,
                  self.changed_files, self.echanged_files, self.changed_test_files,
                  self.hunks3, self.ehunks3, self.merge, self.total_branches, self.covered_branches]
-        data += [self.repeats, self.non_det]
+        if self.repeats > 1:
+            data += [self.repeats, self.non_det]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
         if isfile('data/' + self.outputfolder + '/' + self.outputfile + '.csv'):
@@ -120,7 +121,8 @@ class DataHandler(object):
                 header += ["#covlinesprevpatches*" for i in range(0, WINDOW_SIZE)]
                 header += ["time", "exit", "hunks", "ehunks", "changed_files", "echanged_files",
                            "changed_test_files", "hunks3", "ehunks3", "merge", "#br", "#brcov"]
-                header += ["repeats", "non_det"]
+                if self.repeats > 1:
+                    header += ["repeats", "non_det"]
                 a.writerow(header)
                 a.writerow(data)
 

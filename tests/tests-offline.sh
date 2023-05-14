@@ -7,7 +7,7 @@ NUM=$1
 # Check if repos/binutils exists
 if [ ! -d repos/binutils ]; then
     # Should be done by build script on GitHub Actions
-    echo "Failed, repos/binutils does not exist"
+    echo "Failed, repos/binutils does not exist (from git://sourceware.org/git/binutils.git)"
     exit 1
 fi
 

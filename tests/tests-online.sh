@@ -6,7 +6,7 @@ NUM=$1
 
 # Check if repos/binutils exists
 if [ ! -d repos/binutils ]; then
-    echo "Failed, repos/binutils does not exist"
+    echo "Failed, repos/binutils does not exist (from git://sourceware.org/git/binutils.git)"
     exit 1
 fi
 
@@ -21,7 +21,7 @@ LOGFILE=tests/logs/"$(basename "$0" .sh)".log
 
 echo "Building docker image for binutils..."
 # Create a docker image for binutils (storage ~500MB, should take ~1min)
-docker build --quiet -t binutils:12 -f containers/binutils/Dockerfile-12 containers/binutils
+docker build -q -t binutils:12 -f containers/binutils/Dockerfile-12 containers/binutils
 
 echo -n "#${NUM} Covrig online test: "
 python3 analytics.py --output binutils --image binutils:12 --endatcommit 9d10bf2 binutils 1 &> ${LOGFILE} & pid=$!

@@ -222,7 +222,7 @@ def write_stats(paths, csv_names):
                        'bucketed_patch_coverage')
 
     # Now filter paths to only include those in the following list
-    included_paths = ['remotedata/apr/Apr_repeats_mangled.csv']
+    included_paths = ['remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv']
     # Get the indices of the included paths
     included_indices = [i for i in range(len(paths)) if paths[i] in included_paths]
     # Get the included paths and csv names
