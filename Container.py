@@ -564,6 +564,8 @@ class Container(object):
         c.timestamp = timestamp
         c.tsuite_size = self.tsize
         c.merge = self.merge
+        c.repeats = self.repeats
+        c.non_det = self.get_non_determinism_flag()
         # if compilation failed, halt
         if self.compileError:
             c.compileError = True
@@ -592,8 +594,6 @@ class Container(object):
             c.changed_files = len(self.changed_files)
             c.echanged_files = len(self.echanged_files)
             c.changed_test_files = len(self.changed_test_files)
-            c.repeats = self.repeats
-            c.non_det = self.get_non_determinism_flag()
 
         # pass the Collector() obj to the Data Handler to store results in CSV format
         x = DataHandler(c)

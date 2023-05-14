@@ -37,8 +37,8 @@ class DataHandler(object):
         self.average = _collector.average
         self.prev_covered = _collector.prev_covered
         self.merge = _collector.merge
-        self.repeats = '0'
-        self.non_det = False
+        self.repeats = _collector.repeats
+        self.non_det = _collector.non_det
 
         # prev_covered[i] contains the #lines covered from the revision current~i
         for i, _ in enumerate(self.prev_covered):
@@ -61,8 +61,6 @@ class DataHandler(object):
             self.changed_files = _collector.changed_files
             self.echanged_files = _collector.echanged_files
             self.changed_test_files = _collector.changed_test_files
-            self.repeats = _collector.repeats
-            self.non_det = _collector.non_det
 
     def extractData(self):
         # if the compilation failed, leave the ELOCs at 0
@@ -96,7 +94,7 @@ class DataHandler(object):
         data += [self.timestamp, self.exitStatus, self.hunks, self.ehunks,
                  self.changed_files, self.echanged_files, self.changed_test_files,
                  self.hunks3, self.ehunks3, self.merge, self.total_branches, self.covered_branches]
-        if self.repeats > 1:
+        if int(self.repeats) > 1:
             data += [self.repeats, self.non_det]
         # results are stored in data/project-name/project-name.csv;
         # if the csv already exists, append a row to it
