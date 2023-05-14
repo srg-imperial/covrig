@@ -13,13 +13,23 @@ RUN apt-get update && apt-get install -y \
 	git \
 	curl \
 	openssh-server \
-    lcov \
 	--no-install-recommends
 
-# realpath is installed by default from Ubuntu 18.04
+RUN apt-get install -yq --reinstall ca-certificates
 
-#RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
-RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
+# Fix lighttpd2:22 in the same manner as curl etc.
+RUN cd /tmp && curl -L https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16.tar.gz | tar xz && cd lcov-* && make PREFIX=/usr install
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && curl -L https://bugs.archlinux.org/task/45494?getfile=13174 > cloc.1.64.patch && patch -p1 < cloc.1.64.patch && make install
+
+# Remove the old version of gcc
+RUN apt-get remove gcc -y
+
+RUN sudo apt install software-properties-common -y
+RUN sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+RUN sudo apt update -y && sudo apt install gcc-9 -y
+# Symbolic link between gcc-9, gcov-9 to gcc, gcov
+RUN sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 100
+RUN sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-9 100
 
 RUN mkdir -p /var/run/sshd
 
@@ -44,10 +54,8 @@ RUN apt-get install -yq \
     librtmp-dev \
     libcurl4-gnutls-dev # or libcurl4-openssl-dev
 
-RUN apt-get -y install python3-pip
+RUN apt-get -yq install python3-pip
 RUN pip3 install pycurl
-
-RUN apt-get install -yq --reinstall ca-certificates
 
 RUN git clone https://github.com/lighttpd/lighttpd2.git /home/lighttpd2
 ADD measure-cov.sh /root/
