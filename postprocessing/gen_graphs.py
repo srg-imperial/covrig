@@ -1080,11 +1080,10 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     current_date = earliest_commit_date
     current_date = current_date.replace(day=1).replace(hour=0).replace(minute=0).replace(second=0).replace(
         microsecond=0)
-    num_bins = 0
+
     while current_date <= latest_commit_date:
         time_bins[(current_date.month, current_date.year)] = 0
         current_date = (current_date.replace(day=1) + datetime.timedelta(days=32)).replace(day=1)
-        num_bins = 0
 
     # Populate time_bins with the number of commits per month for each author (dict of dicts)
     author_commit_frequency_per_month = {}
@@ -1329,6 +1328,95 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
                     bbox_inches='tight')
         plt.close(fig)
 
+def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=None):
+    if plot is None:
+        plot = plt.subplots(figsize=default_figsize)
+    (fig, ax) = plot
+
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
+
+    # This should only be called for files that have a non_det column
+    date_data, non_det_data, repeats_data = utils.get_columns(cleaned_data, ['time', 'non_det', 'repeats'])
+
+    repeats = repeats_data[0]
+
+    # Set months to be a list of all months in the data
+    time_bins = {}
+
+    if date:
+        # Populate time_bins with (month, year) tuples from the earliest commit to the latest commit
+        # make a copy of the date_data list so we don't modify the original
+        date_data_copy = deepcopy(date_data)
+        # sort the date_data_copy list
+        date_data_copy.sort()
+        # get the earliest commit date
+        earliest_commit_date, latest_commit_date = date_data_copy[0], date_data_copy[-1]
+        # Initialize the time_bins dictionary with the earliest commit date up to the latest commit date in 1 month increments
+        current_date = earliest_commit_date
+        current_date = current_date.replace(day=1).replace(hour=0).replace(minute=0).replace(second=0).replace(
+            microsecond=0)
+
+        while current_date <= latest_commit_date:
+            time_bins[(current_date.month, current_date.year)] = 0
+            current_date = (current_date.replace(day=1) + datetime.timedelta(days=32)).replace(day=1)
+
+        # Iterate: Look at date_data[i], get which month and year it is, increment time_bins[(month, year)] if non_det_data[i] is True
+        for i in range(len(date_data)):
+            # Get the month and year of the ith commit
+            month, year = date_data[i].month, date_data[i].year
+            # Increment the number of commits in that month
+            non_det_value = non_det_data[i] == 'True'
+            time_bins[(month, year)] += int(non_det_value)
+    else:
+        # We are constructing bins in relations to commits, not dates
+        bin_size = 10
+        # Populate time_bins with len(date_data) / bin_size bins (round up)
+        num_bins = math.ceil(len(date_data) / bin_size)
+        for i in range(num_bins):
+            # So for bin_size = 10, we should have bins 0-9, 10-19, 20-29, etc.
+            time_bins[i * bin_size] = 0
+
+        # Start at the first commit, and increment the bin that it belongs to
+        current_bin = 0
+        for i in range(len(date_data)):
+            # Increment the bin
+            time_bins[current_bin] += int(non_det_data[i] == 'True')
+            # If we have reached the end of the bin, increment the current_bin
+            if (i + 1) % bin_size == 0:
+                current_bin += bin_size
+
+    # Plot the data
+    # Get the x and y data
+    if date:
+        x_data = [dt.datetime(year=year, month=month, day=1) for (month, year) in time_bins.keys()]
+    else:
+        x_data = list(time_bins.keys())
+    y_data = list(time_bins.values())
+
+    # Plot the data as a histogram
+    if date:
+        ax.bar(x_data, y_data, width=30, color='#ff622a', edgecolor='black')
+    else:
+        ax.bar(x_data, y_data, color='#ff622a', edgecolor='black', align='edge', width=bin_size)
+
+    # Label the x axis as Month
+    if date:
+        ax.set_xlabel('Time (bin size = 1 month)')
+    else:
+        ax.set_xlabel('Number of Commits (bin size = 10 commits)')
+
+    # Label the y axis as Number of Nondet Commits
+    ax.set_ylabel('Number of Commits exhibiting Nondeterministic Behaviour')
+
+    # Give the plot a title
+    ax.set_title(f'{csv_name} ({repeats} repeats)')
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-nondet{"-date" if date else ""}.png', bbox_inches='tight')
+        plt.close(fig)
+
 
 """ Utility Functions """
 
@@ -1381,6 +1469,11 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_average_patch_coverage_per_author(data, csv_name, limit=10, savedir=savedir)
     plot_patch_coverage_bins(data, csv_name, savedir=savedir)
     plot_commit_frequency(data, csv_name, savedir=savedir)
+
+    # non-det graphs - old data won't have this
+    included_names = ['Apr_repeats_mangled.csv', 'Zeromq_repeats.csv']
+    if csv_name in included_names:
+        plot_non_det_hist(data, csv_name, date=date, savedir=savedir)
 
 
 def plot_diffcov_individual(data, csv_name, savedir=None):
@@ -1441,6 +1534,8 @@ def plot_all_multiple(paths, csv_names, date):
                          limit=10)
     plot_metric_multiple(plot_patch_coverage_bins, 'patch_coverage_bins', paths, csv_names)
     plot_metric_multiple(plot_commit_frequency, 'commit_frequency', paths, csv_names)
+
+    # TODO: do a plot_metric_multiple for the non-det graphs (so only for the ones that have non-det data)
 
     # The combined graphs for patch coverage and patch type are a bit different - they need to be plotted on the same graph rather than subplots
     plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=4)
