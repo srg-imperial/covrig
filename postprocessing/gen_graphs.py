@@ -7,6 +7,9 @@ from matplotlib import pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.dates as mdates
 from copy import deepcopy
+
+from matplotlib.ticker import MaxNLocator
+
 # Config for the csv files' layout (edit as necessary)
 import internal.csv_config as config
 import internal.csv_utils as utils
@@ -1409,6 +1412,9 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
     # Label the y axis as Number of Nondet Commits
     ax.set_ylabel('Number of Commits exhibiting Nondeterministic Behaviour')
 
+    # Make sure y ticks only show whole numbers
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
     # Give the plot a title
     ax.set_title(f'{csv_name} ({repeats} repeats)')
 
@@ -1471,7 +1477,7 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_commit_frequency(data, csv_name, savedir=savedir)
 
     # non-det graphs - old data won't have this
-    included_names = ['Apr_repeats_mangled.csv', 'Zeromq_repeats.csv']
+    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats']
     if csv_name in included_names:
         plot_non_det_hist(data, csv_name, date=date, savedir=savedir)
 
@@ -1651,7 +1657,7 @@ if __name__ == '__main__':
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
                           'remotedata/binutils/Binutils.csv', 'remotedata/redis_non_det/Redis_sofar.csv',
                           'remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv',
-                          'remotedata/lighttpd2/Lighttpd2_repeats1.csv', 'remotedata/lighttpd2/Lighttpd2_repeats2.csv', 'remotedata/lighttpd2/Lighttpd2_repeats3.csv']
+                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:

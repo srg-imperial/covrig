@@ -106,13 +106,15 @@ def export_lines_hunks_files(data, csv_name):
     # sum the covlines and notcovlines to get the total lines of code
     lines = [cov_lines[i] + not_cov_lines[i] for i in range(len(cov_lines))]
 
+
     # # Limit to the first 250 revisions
     # lines = lines[:250]
     # hunks = hunks[:250]
     # files = files[:250]
 
-    # Find indices of rows where echanged_files is not 0
-    nonzero_indices = [i for i in range(len(files)) if files[i] != 0]
+    # Find indices of rows where either of cov_lines and not_cov_lines are nonzero
+    # (can do covlines + notcovlines > 0 since they are always positive)
+    nonzero_indices = [i for i in range(len(lines)) if cov_lines[i] + not_cov_lines[i] > 0]
 
     # Filter lines and hunks to only include nonzero indices
     lines = [lines[i] for i in nonzero_indices]
@@ -222,7 +224,7 @@ def write_stats(paths, csv_names):
                        'bucketed_patch_coverage')
 
     # Now filter paths to only include those in the following list
-    included_paths = ['remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv']
+    included_paths = ['remotedata/apr/Apr_repeats.csv', 'remotedata/zeromq/Zeromq_repeats.csv']
     # Get the indices of the included paths
     included_indices = [i for i in range(len(paths)) if paths[i] in included_paths]
     # Get the included paths and csv names

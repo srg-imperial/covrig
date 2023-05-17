@@ -28,6 +28,10 @@ class Git(Container):
             # for later versions, need -std=c99
             # make configure && ./configure && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile
             result = self.conn.run("make configure && ./configure CFLAGS='-std=c99' && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile", warn=True)
+            # tested on a multitude of revisions and is consistent - we can run the test suite in parallel without any
+            # issues. Speedup min. 5x (all coverage archives produced w/o this though for consistencty, speedup helpful
+            # for identifying non-deterministic tests)
+            result = self.conn.run('sed -i "s/DEFAULT_TEST_TARGET=test -j1 test/DEFAULT_TEST_TARGET=test -j15 test/g" Makefile', warn=True)
             if result.failed:
                 self.compileError = True
 
