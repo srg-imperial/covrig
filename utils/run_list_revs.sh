@@ -136,8 +136,14 @@ trap "kill $pid 2> /dev/null" EXIT
 while kill -0 $pid 2> /dev/null; do
     SUM=0
     # Look at $OUTPUT_DIR/"$REPO".csv and count the number of lines - 1
-    if [ -f data/"$OUTPUT_DIR"/"$REPO".csv ]; then
-      SUM=$(wc -l < data/"$OUTPUT_DIR"/"$REPO".csv)
+    # See if there is a csv file in data/"$OUTPUT_DIR"
+    SEARCH=$(find data/"$OUTPUT_DIR" -name "*.csv")
+
+    # If SEARCH is non-empty, then there is a csv file in data/"$OUTPUT_DIR", so count the number of lines - 1
+    # Get the name of the file
+    if [ -n "$SEARCH" ]; then
+      FILENAME=$(basename "$SEARCH")
+      SUM=$(wc -l < data/"$OUTPUT_DIR"/"$FILENAME")
       SUM=$((SUM - 1))
     fi
     # Print the number of commits explored so far and the number of commits left to explore (in the same line)
