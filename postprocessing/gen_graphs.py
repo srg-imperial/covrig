@@ -1336,8 +1336,9 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
         plot = plt.subplots(figsize=default_figsize)
     (fig, ax) = plot
 
-    # Clean the data
-    cleaned_data = utils.clean_data(data)
+    # Clean the data - we also don't want TimedOut as non-det errors with this usually mean the test timed out in
+    # some of the runs but not others instead of passing and then failing
+    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage', 'compileError', 'TimedOut'])
 
     # This should only be called for files that have a non_det column
     date_data, non_det_data, repeats_data = utils.get_columns(cleaned_data, ['time', 'non_det', 'repeats'])

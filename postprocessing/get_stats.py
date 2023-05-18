@@ -186,8 +186,9 @@ def export_bucketed_patch_coverage(data, csv_name):
     return csv_row
 
 def export_non_det_revisions(data, csv_name):
-    # Clean the data
-    cleaned_data = utils.clean_data(data)
+    # Clean the data (not removing all OK rows since some repos return OK but have different return values under the
+    # hood which make for some interesting results)
+    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage', 'compileError', 'TimedOut'])
 
     # Get the commit hash, repeats, and non_det columns
     commit_hash, repeats, non_det = utils.get_columns(cleaned_data, ['rev', 'repeats', 'non_det'])
