@@ -8,6 +8,19 @@ def clean_data(data, omit=None):
     return [x for x in data if x[file_header_list.index('exit')] not in omit]
 
 
+def limit_data(data, end_at_commit, limit=250):
+    # Find the index of the commit to end at in data
+    end_at_commit_index = [x[file_header_list.index('rev')] for x in data].index(end_at_commit)
+    # print(f'Ending at commit {end_at_commit} (index {end_at_commit_index})')
+    # Print a warning if end_at_commit_index is less than limit
+    lower_bound = end_at_commit_index - limit
+    if end_at_commit_index < limit:
+        # print(f'Warning: end_at_commit_index {end_at_commit_index} is less than limit {limit}, returning {end_at_commit_index} commits...')
+        lower_bound = 0
+    # Return the data up to the end_at_commit_index
+    return data[lower_bound:end_at_commit_index]
+
+
 def get_columns(data, columns):
     # Get the data from the columns specified and convert to the correct type using file_header_type
     data_list = []
@@ -74,7 +87,9 @@ def extract_data(input_file, csv_name, callback=None):
         lines = [line.split(',') for line in lines]
 
         # Skip any lines that don't have the correct number of columns
-        lines = [line for line in lines if len(line) == len(file_header_list) or len(line) == len(file_header_list_v1) or len(line) == len(file_header_list_legacy)]
+        lines = [line for line in lines if
+                 len(line) == len(file_header_list) or len(line) == len(file_header_list_v1) or len(line) == len(
+                     file_header_list_legacy)]
 
         if len(lines) == 0:
             print(f'Warning: {csv_name} is missing columns, skipping...')

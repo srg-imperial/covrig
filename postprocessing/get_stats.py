@@ -351,5 +351,6 @@ if __name__ == '__main__':
         # Stats for number of revs
         write_multiple_csv(export_number_revs, [args.input], [csv_name], ['csv_name', 'num_revs', 'num_days'],
                            'num_revs')
+        # TODO: Fill in the rest of the stats
 
     print("All done!")

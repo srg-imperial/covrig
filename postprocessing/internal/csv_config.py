@@ -43,3 +43,12 @@ file_header_type = {
     'repeats': int,
     'non_det': str,
 }
+
+exit_codes = {
+    'OK': 0,
+    'SomeTestFailed': 1,
+    'TimedOut': 2,
+    'compileError': 3,
+    'NoCoverage': 4,
+    'EmptyCommit': 5,
+}
