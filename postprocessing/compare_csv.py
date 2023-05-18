@@ -229,19 +229,19 @@ if __name__ == '__main__':
         print('Success: No significant differences found between the two data sets when taking the average difference!')
         exit(0)
 
-    # Calculate the variance for each data set over the significant difference columns
-    # Idea: If the variances are similar, then we just have an offset between the two data sets, which is fine
-    # If the variances are different, then we have a problem
-    variances1 = calculate_variance_for_columns(limited_data1, significant_diffs_idxs)
-    variances2 = calculate_variance_for_columns(limited_data2, significant_diffs_idxs)
-
-    # Print our variances as such: <column name> <variance1> <variance2>
-    print("Calculating variances...")
-    print('Variances: <column> <file1> <file2>')
-    for i in range(len(variances1)):
-        if variances1[i] == -1 or variances2[i] == -1:  # i.e. string column
-            continue
-        print(f'{significant_diffs_names[i]}: {variances1[i]} {variances2[i]}')
+    # # Calculate the variance for each data set over the significant difference columns
+    # # Idea: If the variances are similar, then we just have an offset between the two data sets, which is fine
+    # # If the variances are different, then we have a problem
+    # variances1 = calculate_variance_for_columns(limited_data1, significant_diffs_idxs)
+    # variances2 = calculate_variance_for_columns(limited_data2, significant_diffs_idxs)
+    #
+    # # Print our variances as such: <column name> <variance1> <variance2>
+    # print("Calculating variances...")
+    # print('Variances: <column> <file1> <file2>')
+    # for i in range(len(variances1)):
+    #     if variances1[i] == -1 or variances2[i] == -1:  # i.e. string column
+    #         continue
+    #     print(f'{significant_diffs_names[i]}: {variances1[i]} {variances2[i]}')
 
     string_idxs = []
     if 'str' in significant_diffs_types:
@@ -251,15 +251,15 @@ if __name__ == '__main__':
         chisq_list, p_val_list = chi_squared(limited_data1, limited_data2, significant_diffs_idxs)
 
     ok_count = 0
-    # Conduct a quick Levenes to see if the variances are significantly different for element in variances1 and variances2
+    # Conduct a quick Levenes to see if the variances are significantly different for elements in the significant_diffs_idxs
     # If the variances are significantly different, then we have a problem
     p_value = 0.05
     # If p_values returned are less than p_value, then the variances are significantly different
-    print("-" * 25)
-    print('Levene\'s test (variance similarity):')
+    # print("-" * 25)
+    print(f'Levene\'s test (variance similarity on those with difference > {threshold}):')
     print(f'p-value: {p_value}')
     score, p = levenes_test(limited_data1, limited_data2, significant_diffs_idxs)
-    for i in range(len(variances1)):
+    for i in range(len(significant_diffs_idxs)):
         if score[i] == -1 or p[i] == -1:  # i.e. string column
             ok_count += 1
             continue
@@ -270,8 +270,8 @@ if __name__ == '__main__':
             info_string = 'Similar'
         print(f'{significant_diffs_names[i]}: Score: {score[i]:.5f} p-value: {p[i]:.5f} ({info_string})')
 
-    if ok_count == len(variances1):
-        print('Success: All variances are similar, so we just have an offset between the two data sets, which is fine!')
+    if ok_count == len(significant_diffs_idxs):
+        print('Success: All variances are similar, so we just have an offset between the two data sets, which is fine! (Caused by environmental factors)')
     else:
         print('Failure: We have a problem, the variances of the datasets are significantly different')
 
