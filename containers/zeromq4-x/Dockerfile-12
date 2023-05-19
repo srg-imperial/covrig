@@ -1,5 +1,3 @@
-# Used this Dockerfile to build the image that resulted in the container that was used to run the tests.
-
 FROM ubuntu:12.04
 
 RUN sed -i s/archive/old-releases/g etc/apt/sources.list
@@ -18,6 +16,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
+RUN cd /tmp && curl -L -k https://download.libsodium.org/libsodium/releases/old/unsupported/libsodium-1.0.0.tar.gz | tar xz && cd libsodium-* && ./configure && make && make check && make install && ldconfig
 
 RUN mkdir -p /var/run/sshd
 
@@ -26,11 +25,9 @@ ADD id_rsa.pub /root/.ssh/authorized_keys
 RUN chown -R root:root /root/.ssh
 RUN chmod -R 700 /root/.ssh
 
-RUN apt-get -yq install flex bison texinfo libncurses5-dev dejagnu libelf-dev bc libjansson-dev zlib1g-dev
+RUN echo "root:root" | chpasswd
 
-RUN apt-get install -yq --reinstall ca-certificates # Needed for higher ubuntu versions (e.g. 20)
-
-RUN git clone git://sourceware.org/git/binutils.git /home/binutils
+RUN git clone https://github.com/zeromq/zeromq4-x.git /home/zeromq4-x/
 ADD measure-cov.sh /root/
 
 EXPOSE 22

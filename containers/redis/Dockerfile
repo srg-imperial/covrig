@@ -1,3 +1,5 @@
+# Used this Dockerfile to build the image that resulted in the container that was used to run the tests.
+
 FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \
