@@ -25,17 +25,15 @@ class Zeromq(Container):
     def compile(self):
         """ compile Zeromq """
         with self.conn.cd(self.path):
-            #check if revision needs a small fix
-            result = self.conn.run('git rev-list --first-parent a563d49 ^c28af41 | grep $(git rev-parse HEAD) || git rev-list --first-parent dc9749f ^e1cc2d4 | grep $(git rev-parse HEAD)', warn=True)
+            # check if revision needs a small fix
+            result = self.conn.run(
+                'git rev-list --first-parent a563d49 ^c28af41 | grep $(git rev-parse HEAD) || git rev-list --first-parent dc9749f ^e1cc2d4 | grep $(git rev-parse HEAD)',
+                warn=True)
             if result.stdout.strip() != "":
                 self.conn.run("sed -i '20s/^$/#include <unistd.h>/' tests/test_connect_delay.cpp", warn=True)
-            self.conn.run("sed -i 's/libzmq_werror=\"yes\"/libzmq_werror=\"no\"/g' configure.ac", warn=True)
-            self.conn.run("sed -i '/#include <assert.h>/a\#include <stdint.h>' tools/curve_keygen.c", warn=True)
-            # write a
-            # Changing libzmq flag since likely was run on OSX previously which automatically did not add -Werror
-            result = self.conn.run(("sh autogen.sh && sh configure --without-documentation --with-libsodium=/usr/local "
-                          "--with-gcov=yes CFLAGS='-O0 -fprofile-arcs -ftest-coverage' "
-                          "CXXFLAGS='-O0 -fprofile-arcs -ftest-coverage' && make -j4 " ), warn=True)
+            result = self.conn.run(("sh autogen.sh && sh configure --build=x86_64-linux-gnu --host=x86_64-linux-gnu --without-documentation --with-libsodium=/usr/local"
+                                    "--with-gcov=yes CFLAGS='-O0 -fprofile-arcs -ftest-coverage' "
+                                    "CXXFLAGS='-O0 -fprofile-arcs -ftest-coverage' && make -j4 "), warn=True)
             # breaks on 3 revisions a3ae0d4 to 6b2304a (compileError), fixed in 9a6b875 (test_ctx_options_SOURCES = test_ctx_options.cpp)
             if result.failed:
                 self.compileError = True
@@ -49,7 +47,7 @@ class Zeromq(Container):
             with self.conn.cd(self.path):
                 for i in range(self.repeats):
                     result = self.conn.run(("ulimit -n 64000 && timeout " + str(self.timeout) +
-                                  " make check CFLAGS='-O0' CXXFLAGS='-O0'"), warn=True)
+                                            " make check CFLAGS='-O0' CXXFLAGS='-O0'"), warn=True)
                     if result.failed:
                         self.maketestError = result.return_code
                     self.exit_status_list.append(result.return_code)
