@@ -1,4 +1,5 @@
-from .csv_config import file_header_list, file_header_type, file_header_list_v1, file_header_list_legacy
+from .csv_config import file_header_list, file_header_type, file_header_list_v1, file_header_list_legacy, \
+    file_header_list_legacy_nobr
 import datetime
 
 
@@ -20,6 +21,14 @@ def limit_data(data, end_at_commit, limit=250):
     # Return the data up to the end_at_commit_index
     return data[lower_bound:end_at_commit_index]
 
+def get_data_with_commits(data, commits):
+    # Get a list of the commits in the data
+    data_commits = get_columns(data, ['rev'])[0]
+    # Get the indices of the commits in the data
+    data_commits_indices = [data_commits.index(x) for x in commits]
+
+    # Return the data with the commits
+    return [data[x] for x in data_commits_indices]
 
 def get_columns(data, columns):
     # Get the data from the columns specified and convert to the correct type using file_header_type
@@ -89,7 +98,7 @@ def extract_data(input_file, csv_name, callback=None):
         # Skip any lines that don't have the correct number of columns
         lines = [line for line in lines if
                  len(line) == len(file_header_list) or len(line) == len(file_header_list_v1) or len(line) == len(
-                     file_header_list_legacy)]
+                     file_header_list_legacy) or len(line) == len(file_header_list_legacy_nobr)]
 
         if len(lines) == 0:
             print(f'Warning: {csv_name} is missing columns, skipping...')

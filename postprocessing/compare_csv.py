@@ -9,14 +9,18 @@ import internal.csv_utils as utils
 
 
 # Commands run:
-# python3 postprocessing/compare_csv.py jun2015data/Redis/Redis.csv remotedata/redis_repeated/Redis_all_rep.csv --limit 250 --endatcommit 354a5de
+# python3 postprocessing/compare_csv.py jun2015data/Binutils/Binutils.csv remotedata/binutils/Binutils.csv --limit 250 --endatcommit 2b9ed0a
 # python3 postprocessing/compare_csv.py jun2015data/Git/Git.csv remotedata/git/Git_all.csv --limit 250 --endatcommit d7aced9
-
+# python3 postprocessing/compare_csv.py jun2015data/Lighttpd-gnutls/Lighttpd.csv remotedata/lighttpd2/Lighttpd2_nr.csv --limit 250 --endatcommit 0d40b25
+# python3 postprocessing/compare_csv.py jun2015data/Memcached/Memcached.csv remotedata/memcached/Memcached_all.csv --limit 250 --endatcommit 87e2f36
+# python3 postprocessing/compare_csv.py jun2015data/Redis/Redis.csv remotedata/redis_repeated/Redis_all_rep.csv --limit 250 --endatcommit 354a5de
+# python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq/Zeromq.csv --limit 250 --endatcommit 573d7b0
+# ^^ Zeromq one fails but this is ok since we compile it with different flags (e.g. --without-documentation)
 def compare_csv(data1, data2):
     # Create an array to store the differences for each column
     # Work with file_header_list_v1 since Covrig data is in v1 format
     differences = [0] * len(config.file_header_list_v1)
-    differences_data = [[]] * len(config.file_header_list_v1)
+    differences_data = [[0 for i in range(len(config.file_header_list_v1))] for j in range(len(data1))]
 
     # Go through each row and each column and compare the values
     for i in range(len(data1)):
@@ -41,7 +45,7 @@ def compare_csv(data1, data2):
 
             # Update the difference for this column
             differences[j] += val_difference
-            differences_data[j].append(val_difference)
+            differences_data[i][j] = val_difference
 
     # Compute the average difference for each column with a map
     avg_differences = list(map(lambda x: x / len(data1), differences))
@@ -107,6 +111,8 @@ def chi_squared(data1, data2, column_idxs):
     # Calculate the degrees of freedom
     dof = len(data1) - 1
 
+    dists = [[] for i in range(len(data1))]
+
     # For each column in data given by column_idxs, calculate the chi squared test
     for i in range(len(column_idxs)):
         # Get the column index
@@ -146,9 +152,17 @@ def chi_squared(data1, data2, column_idxs):
         # Remove all indices where both col_data1_converted and col_data2_converted are zero
         col_data1_converted = [col_data1_converted[j] for j in non_zero_indices]
         col_data2_converted = [col_data2_converted[j] for j in non_zero_indices]
-        chisq[i], p_vals[i] = chisquare(f_obs=col_data1_converted, f_exp=col_data2_converted)
+        col_data1_converted_adj = col_data1_converted.copy()
+        col_data2_converted_adj = col_data2_converted.copy()
+        # Remove all indices where one of col_data1_converted or col_data2_converted is zero, add 1 to each to avoid divide by zero and mitigate large skew of results
+        for j in range(len(col_data1_converted_adj)):
+            if col_data1_converted_adj[j] == 0 or col_data2_converted_adj[j] == 0:
+                col_data1_converted_adj[j] += 1
+                col_data2_converted_adj[j] += 1
+        chisq[i], p_vals[i] = chisquare(f_obs=col_data1_converted_adj, f_exp=col_data2_converted_adj)
+        dists[i] = [col_data1_converted, col_data2_converted]
 
-    return chisq, p_vals
+    return chisq, p_vals, dists
 
 
 def report_diffs(diffs):
@@ -158,6 +172,29 @@ def report_diffs(diffs):
     for i in range(len(diffs)):
         print(f'{config.file_header_list_v1[i]}: {diffs[i]}')
     print("-" * 25)
+
+def match_commits(data1, data2):
+    # Get the commit hashes from each data set
+    commits1 = utils.get_columns(data1, ['rev'])[0]
+    commits2 = utils.get_columns(data2, ['rev'])[0]
+
+    # Get the intersection of the two commit lists
+    commits = list(set(commits1).intersection(commits2))
+
+    # Get the indices of the commits in data1 and data2
+    idxs1 = [commits1.index(commit) for commit in commits]
+    idxs2 = [commits2.index(commit) for commit in commits]
+
+    # Get the data for each commit
+    ret_data1 = [data1[idx] for idx in idxs1]
+    ret_data2 = [data2[idx] for idx in idxs2]
+
+    # Step through the data and make sure the commits match
+    for i in range(len(ret_data1)):
+        if ret_data1[i][0] != ret_data2[i][0]:
+            print(f'Warning: commits {ret_data1[i][0]} and {ret_data2[i][0]} do not match')
+
+    return ret_data1, ret_data2
 
 
 # def report_vars(vars, names):
@@ -205,12 +242,30 @@ if __name__ == '__main__':
 
     # Filter the data to include <limit> commits up to <endatcommit>
     limited_data1 = utils.limit_data(cleaned_data1, args.endatcommit, limit=args.limit)
-    limited_data2 = utils.limit_data(cleaned_data2, args.endatcommit, limit=args.limit)
+    # limited_data2 = utils.limit_data(cleaned_data2, args.endatcommit, limit=args.limit)
+    limited_data2 = utils.get_data_with_commits(cleaned_data2, utils.get_columns(limited_data1, ['rev'])[0])
 
     # Emit a warning if data is not the same length
     if len(limited_data1) != len(limited_data2):
-        print('Error: Not the same set of revision when cleaned of compile errors, empty commits and no coverage')
-        exit(1)
+        print('Warning: Not the same set of revision when cleaned of compile errors, empty commits and no coverage')
+        exit(0)
+
+    # If revisions don't line up
+    if utils.get_columns(limited_data1, ['rev'])[0] != utils.get_columns(limited_data2, ['rev'])[0]:
+        print('Revisions don\'t line up (a rev likely compiles in one dataset but not in the other), attempting to match up the commits...')
+        # Remove commits that are not in both data sets
+        limited_data1, limited_data2 = match_commits(limited_data1, limited_data2)
+        print(f'Number of commits matched: {len(limited_data1)}')
+
+    # If rows don't have the same number of columns
+    if len(limited_data1[0]) != len(limited_data2[0]):
+        print('Warning: Rows don\'t have the same number of columns, assuming these are the last two')
+        # Case of config.file_header_list_legacy_nobr
+        if len(limited_data1[0]) > len(limited_data2[0]):
+            limited_data1 = [row[:len(limited_data2[0])] for row in limited_data1]
+        else:
+            limited_data2 = [row[:len(limited_data1[0])] for row in limited_data2]
+        print(f"Trimmed the rows to match, working on the remaining {len(limited_data1[0])} columns")
 
     # Compare the two data sets
     avg_differences, differences_data = compare_csv(limited_data1, limited_data2)
@@ -248,7 +303,7 @@ if __name__ == '__main__':
         # Calculate the ChiSq test for the string columns
         # Get the indices of the string columns
         string_idxs = [i for i in range(len(significant_diffs_types)) if significant_diffs_types[i] == 'str']
-        chisq_list, p_val_list = chi_squared(limited_data1, limited_data2, significant_diffs_idxs)
+        chisq_list, p_val_list, dists = chi_squared(limited_data1, limited_data2, significant_diffs_idxs)
 
     ok_count = 0
     # Conduct a quick Levenes to see if the variances are significantly different for elements in the significant_diffs_idxs
@@ -257,7 +312,7 @@ if __name__ == '__main__':
     # If p_values returned are less than p_value, then the variances are significantly different
     # print("-" * 25)
     print(f'Levene\'s test (variance similarity on those with difference > {threshold}):')
-    print(f'p-value: {p_value}')
+    print(f'p: {p_value} (H0: variances are similar with p-value >= {p_value}, H1: variances are significantly different with p < {p_value})')
     score, p = levenes_test(limited_data1, limited_data2, significant_diffs_idxs)
     for i in range(len(significant_diffs_idxs)):
         if score[i] == -1 or p[i] == -1:  # i.e. string column
@@ -280,7 +335,7 @@ if __name__ == '__main__':
     if 'str' in significant_diffs_types and len(string_idxs) > 0 and len(chisq_list) > 0 and len(p_val_list) > 0:
         print("-" * 25)
         print('Chi-Squared test:')
-        print(f'p-value: {p_value}')
+        print(f'p: {p_value} (H0: frequencies are similar with p-value >= {p_value}, H1: frequencies are significantly different with p-value < {p_value})')
         for i in string_idxs:
             # Check if the p-value is less than 0.05
             if chisq_list[i] == -1 or p_val_list[i] == -1:  # i.e. numeric column
@@ -288,6 +343,7 @@ if __name__ == '__main__':
                 continue
             if p_val_list[i] < 0.05:
                 info_string = 'Significantly different!'
+                info_string += f' (Distributions of labels were {" and ".join([str(x) for x in dists[i]])})'
             else:
                 ok_count += 1
                 info_string = 'Similar'
@@ -299,3 +355,4 @@ if __name__ == '__main__':
                 'Success: All string distributions are similar!')
         else:
             print('Warning: The exit codes are not distributed similarly between the two data sets (different distributions of OK and SomeTestFailed)')
+            print("This can be OK if dependency issues were resolved on the more recent data set.")
