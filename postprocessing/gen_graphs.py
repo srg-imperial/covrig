@@ -22,14 +22,28 @@ file_header_type = config.file_header_type
 
 # Other globals
 output_location = 'postprocessing/graphs/'
-default_figsize = (11, 11)
-expanded_figsize = (15, 15)
+DEFAULT_FIGSIZE = (11, 11)
+EXPANDED_FIGSIZE = (15, 15)
 date_warning_thrown = []
+
+LEGACY_NUM_REVS = 250
+# previous final commits (jun2015data) - all commits, not just 250, but end elem is also end of 250
+commits_prev_compiling_range = {
+    'Apr': (-1, -1),
+    'Binutils': (1266228576, 1381776346),
+    'Curl': (-1, -1),
+    'Git': (1370985909, 1386887079),
+    'Lighttpd2': (1284310497, 1378821913),
+    'Memcached': (1234570260, 1358117990),
+    'Redis': (1359375286, 1380183166),
+    'Vim': (-1, -1),
+    'Zeromq': (1324305818, 1381730754),
+}
 
 
 def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -55,6 +69,9 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     # Use locator_params to make the y axis have 10 ticks
     ax.locator_params(axis='y', nbins=10)
 
+    # If we can find the legacy date, let's plot it as a vertical line
+    plot_vert_at_timestamp(ax, csv_name, date)
+
     # Save the plot
     if save:
         ax.set_title(f'ELOC over time for {csv_name}')
@@ -66,7 +83,7 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
 
 def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -92,6 +109,9 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     # Use locator_params to make the y axis have 10 ticks
     ax.locator_params(axis='y', nbins=10)
 
+    # If we can find the legacy date, let's plot it as a vertical line
+    plot_vert_at_timestamp(ax, csv_name, date)
+
     # Save the plot
     if save:
         ax.set_title(f'Test LOC over time for {csv_name}')
@@ -103,7 +123,7 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
 def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroone", date=False,
                                     plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -174,6 +194,9 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
 
     ax.legend(['Code', 'Test'], loc='upper left')
 
+    # If we can find the legacy date, let's plot it as a vertical line
+    plot_vert_at_timestamp(ax, csv_name, date)
+
     # Save the plot
     if save:
         ax.set_title(f'Co-evolution of executable and test code for {csv_name}')
@@ -184,7 +207,7 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
 
 def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -233,6 +256,9 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None
     # Print the legend
     ax.legend(['Line Coverage', 'Branch Coverage'])
 
+    # If we can find the legacy date, let's plot it as a vertical line
+    plot_vert_at_timestamp(ax, csv_name, date)
+
     # Save the plot
     if save:
         ax.set_title(f'Coverage for {csv_name}')
@@ -243,7 +269,7 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None
 
 def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -277,6 +303,9 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
     # Give the plot a title
     ax.set_title(f'{csv_name}')
 
+    # If we can find the legacy date, let's plot it as a vertical line
+    plot_vert_at_timestamp(ax, csv_name, date)
+
     # Save the plot
     if save:
         ax.set_title(f'Churn for {csv_name}')
@@ -287,7 +316,7 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
 
 def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -433,7 +462,7 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
 
 def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data
     cleaned_data = utils.clean_data(data)
@@ -509,7 +538,7 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False,
 
 def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -583,7 +612,7 @@ def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5, 
 
 def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # This time, don't clean the data of compileErrors
     cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage'])
@@ -655,7 +684,7 @@ def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple
 
 def plot_coverage_line_per_author(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data
     cleaned_data = utils.clean_data(data)
@@ -744,7 +773,7 @@ def plot_coverage_line_per_author(data, csv_name, save=True, date=False, plot=No
 
 def plot_coverage_box_per_author(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data
     cleaned_data = utils.clean_data(data)
@@ -839,7 +868,7 @@ def plot_coverage_box_per_author(data, csv_name, save=True, date=False, plot=Non
 
 def plot_patch_coverage_over_time(data, csv_name, save=True, date=False, plot=None, window_size=50, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data
     cleaned_data = utils.clean_data(data)
@@ -888,7 +917,7 @@ def plot_patch_coverage_over_time(data, csv_name, save=True, date=False, plot=No
 
 def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None, limit=5, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # Clean the data
     cleaned_data = utils.clean_data(data)
@@ -980,7 +1009,7 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
 
 def plot_patch_coverage_bins(data, csv_name, save=True, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
 
     # Clean the data
@@ -1016,7 +1045,7 @@ def plot_patch_coverage_bins(data, csv_name, save=True, plot=None, savedir=None)
 
 def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
 
     # Clean the data
@@ -1184,7 +1213,7 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
 def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None, labels=None,
                   commits_prev_compiling_range=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
     # This time, don't clean the data of compileErrors
     cleaned_data = utils.clean_data(data)
@@ -1220,7 +1249,8 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
                 end_date_p_index = date_data.index(end_date_p)
                 # Now get that index minus 249 (i.e a range of 250 commits) since we have cleaned the data of compileErrors
                 start_date_p = date_data[end_date_p_index - 249]
-                print(f"Covrig (250) data for {csv_name} is from {int(start_date_p.timestamp())} to {int(end_date_p.timestamp())}")
+                print(
+                    f"Covrig (250) data for {csv_name} is from {int(start_date_p.timestamp())} to {int(end_date_p.timestamp())}")
 
                 # Bar for the legacy data
                 prev_bar = ax.barh(pos, end_date_p - start_date_p, left=start_date_p, height=bar_height,
@@ -1297,7 +1327,7 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
 
 def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
 
     # Take the row according to the type.
@@ -1331,9 +1361,10 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
                     bbox_inches='tight')
         plt.close(fig)
 
+
 def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=default_figsize)
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
 
     # Clean the data - we also don't want TimedOut as non-det errors with this usually mean the test timed out in
@@ -1419,9 +1450,13 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
     # Give the plot a title
     ax.set_title(f'{csv_name} ({repeats} repeats)')
 
+    # If we can find the legacy date, let's plot it as a vertical line
+    plot_vert_at_timestamp(ax, csv_name, date, round_to_month=True)
+
     # Save the plot
     if save:
-        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-nondet{"-date" if date else ""}.png', bbox_inches='tight')
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-nondet{"-date" if date else ""}.png',
+                    bbox_inches='tight')
         plt.close(fig)
 
 
@@ -1451,6 +1486,33 @@ def date_check(args: dict):
     return True
 
 
+def get_250_timestamp(csv_name):
+    # Get rid of the substring "_repeats" or "_all" from the csv_name
+    csv_name = csv_name.replace('_repeats', '').replace('_all_rep', '').replace('_all', '').replace('_nr', '').replace('_combined', '')
+    ret_date = -1
+    # Get the lower case name of the csv
+    lowered = [(x.lower(), x) for x in commits_prev_compiling_range.keys()]
+    for i in range(len(lowered)):
+        if lowered[i][0] == csv_name.lower():
+            ret_date = commits_prev_compiling_range[lowered[i][1]][1]
+            break
+
+    # Return the date we believe is associated with the csv
+    return ret_date
+
+def plot_vert_at_timestamp(ax, csv_name, date, round_to_month=False):
+    # If we can find the legacy date, let's plot it as a vertical line
+    if (legacy_date := get_250_timestamp(csv_name)) and legacy_date != -1:
+        if date:
+            legacy_date = dt.datetime.fromtimestamp(legacy_date)
+            if round_to_month:
+                # round the date to halfway through the month it is in
+                legacy_date = legacy_date.replace(day=15)
+        else:
+            legacy_date = LEGACY_NUM_REVS
+        ax.axvline(x=legacy_date, color='gray', linestyle=':')
+
+
 def plot_all_individual(data, csv_name, date, savedir=None):
     if savedir is None:
         savedir = args.input
@@ -1478,7 +1540,7 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_commit_frequency(data, csv_name, savedir=savedir)
 
     # non-det graphs - old data won't have this
-    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats']
+    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats']
     if csv_name in included_names:
         plot_non_det_hist(data, csv_name, date=date, savedir=savedir)
 
@@ -1505,10 +1567,10 @@ def plot_diffcov_format_multiple(metric, outname, paths, csv_names, **kwargs):
     """ Plot a metric for multiple CSVs on subplots of the same figure. """
     # Would be nice to have a smarter way of doing this, but for now we'll just hardcode the number of rows and columns
     rows, columns = 2, 3
-    size = default_figsize
+    size = DEFAULT_FIGSIZE
     if len(csv_names) > rows * columns:
         rows, columns = 3, 3
-        size = expanded_figsize
+        size = EXPANDED_FIGSIZE
     fig, axs = plt.subplots(rows, columns, figsize=size)
     idxs = (0, 0)
     for i in range(len(csv_names)):
@@ -1550,18 +1612,6 @@ def plot_all_multiple(paths, csv_names, date):
     plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names)
 
     plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names)
-    # previous final commits (jun2015data) - all commits, not just 250
-    commits_prev_compiling_range = {
-        'Apr': (-1, -1),
-        'Binutils': (1266228576, 1381776346),
-        'Curl': (-1, -1),
-        'Git': (1370985909, 1386887079),
-        'Lighttpd': (1284310497, 1378821913),
-        'Memcached': (1234570260, 1358117990),
-        'Redis': (1359375286, 1380183166),
-        'Vim': (-1, -1),
-        'Zeromq': (1324305818, 1381730754),
-    }
     plot_metric_combined(plot_timespan, 'timespan', paths, csv_names, custom_figsize=(10, 7), labels=csv_names,
                          commits_prev_compiling_range=commits_prev_compiling_range, dpi=300)
 
@@ -1570,10 +1620,10 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
     """ Plot a metric for multiple CSVs on subplots of the same figure. """
     # Would be nice to have a smarter way of doing this, but for now we'll just hardcode the number of rows and columns
     rows, columns = 2, 3
-    size = default_figsize
+    size = DEFAULT_FIGSIZE
     if len(csv_names) > rows * columns:
         rows, columns = 3, 3
-        size = expanded_figsize
+        size = EXPANDED_FIGSIZE
     fig, axs = plt.subplots(rows, columns, figsize=size)
     idxs = (0, 0)
     for i in range(len(csv_names)):
@@ -1603,7 +1653,7 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
         del kwargs['custom_figsize']
     if dpi is not None:
         del kwargs['dpi']
-    fig, axs = plt.subplots(figsize=custom_figsize if custom_figsize is not None else expanded_figsize)
+    fig, axs = plt.subplots(figsize=custom_figsize if custom_figsize is not None else EXPANDED_FIGSIZE)
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
         if csv_data is not None:
@@ -1656,9 +1706,11 @@ if __name__ == '__main__':
         # TODO: remove when data fixed
         # Remove the following CSV files from the list since they are either not complete, lack fields or we don't want to show them anymore
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
-                          'remotedata/binutils/Binutils.csv', 'remotedata/redis_non_det/Redis_sofar.csv',
+                          'remotedata/binutils/Binutils.csv', 'remotedata/binutils-gdb/BinutilsGdb_repeats.csv',
+                          'remotedata/redis_non_det/Redis_sofar.csv',
                           'remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv',
-                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv']
+                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv',
+                          'remotedata/curl/Curl_repeats1.csv', 'remotedata/git/Git1.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:

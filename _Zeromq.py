@@ -33,8 +33,7 @@ class Zeromq(Container):
                 self.conn.run("sed -i '20s/^$/#include <unistd.h>/' tests/test_connect_delay.cpp", warn=True)
             result = self.conn.run(("sh autogen.sh && sh configure --build=x86_64-linux-gnu --host=x86_64-linux-gnu --without-documentation --with-libsodium=/usr/local"
                                     "--with-gcov=yes CFLAGS='-O0 -fprofile-arcs -ftest-coverage' "
-                                    "CXXFLAGS='-O0 -fprofile-arcs -ftest-coverage' && make -j4 "), warn=True)
-            # breaks on 3 revisions a3ae0d4 to 6b2304a (compileError), fixed in 9a6b875 (test_ctx_options_SOURCES = test_ctx_options.cpp)
+                                    "CXXFLAGS='-O0 -fprofile-arcs -ftest-coverage' LIBS='-lstdc++' && make -j4 "), warn=True)
             if result.failed:
                 self.compileError = True
 
