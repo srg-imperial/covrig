@@ -22,7 +22,7 @@ UNAME=$1
 
 # git clone https://github.com/srg-imperial/covrig.git && cd covrig && git switch dev
 
-sudo apt-get install python3.8-venv
+sudo apt-get install -y python3.8-venv
 python3.8 -m venv venv
 source venv/bin/activate
 pip install fabric==2.7.1 docker
@@ -40,10 +40,10 @@ echo \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo docker run hello-world
 
-sudo apt-get install parallel
+sudo apt-get install -y parallel
 
 sudo usermod -a -G docker $UNAME
 
