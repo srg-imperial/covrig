@@ -5,7 +5,7 @@
 # e.g. tfb19
 UNAME=$1
 # Oneliner can also be done with export UNAME=tfb19, etc.:
-# sudo apt-get install -y ufw && sudo ufw allow 80 && sudo ufw allow 22 && sudo addgroup $UNAME && sudo usermod -a G sudo $UNAME && sudo usermod -a -G ssh $UNAME && sudo mkdir /home/$UNAME && sudo chown $UNAME:$UNAME /home/$UNAME && mkdir /home/$UNAME/.ssh
+# sudo apt-get install -y ufw && sudo ufw allow 80 && sudo ufw allow 22 && sudo addgroup $UNAME && sudo usermod -a G sudo $UNAME && sudo usermod -a -G ssh $UNAME && sudo mkdir /home/$UNAME && sudo chown $UNAME:$UNAME /home/$UNAME && mkdir /home/$UNAME/.ssh && sudo chown $UNAME:$UNAME /home/$UNAME/.ssh
 
 # sudo apt-get install -y ufw
 # sudo ufw allow 80
@@ -22,7 +22,7 @@ UNAME=$1
 
 # git clone https://github.com/srg-imperial/covrig.git && cd covrig && git switch dev
 
-sudo apt-install python3.8-venv
+sudo apt-get install python3.8-venv
 python3.8 -m venv venv
 source venv/bin/activate
 pip install -r fabric==2.7.1 docker
