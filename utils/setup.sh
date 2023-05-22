@@ -25,7 +25,7 @@ UNAME=$1
 sudo apt-get install python3.8-venv
 python3.8 -m venv venv
 source venv/bin/activate
-pip install -r fabric==2.7.1 docker
+pip install fabric==2.7.1 docker
 
 sudo apt-get update
 sudo apt-get install ca-certificates curl gnupg
