@@ -87,6 +87,52 @@ def export_eloc_tloc(data, csv_name):
 
     return csv_row
 
+def export_delta_eloc_tloc(data, csv_name):
+    cleaned_data = utils.clean_data(data)
+
+    # Get eloc, tloc, and language
+    eloc_data, tloc_data = utils.get_columns(cleaned_data, ['eloc', 'testsize'])
+
+    # Get the last eloc and tloc
+    eloc = eloc_data[-1]
+    tloc = tloc_data[-1]
+
+    # Get the first eloc and tloc
+    first_eloc = eloc_data[0]
+    first_tloc = tloc_data[0]
+
+    # Calculate the delta eloc and tloc
+    delta_eloc = eloc - first_eloc
+    delta_tloc = tloc - first_tloc
+
+    # Calculate the delta eloc and tloc as a percentage of the first eloc and tloc
+    delta_eloc_percent = delta_eloc / first_eloc * 100
+    delta_tloc_percent = delta_tloc / first_tloc * 100
+
+    # Construct a CSV row with format csv_name, final eloc, delta eloc, final tloc, delta tloc
+    # csv_row = f'{csv_name},"{eloc:,}","{delta_eloc:,}","{tloc:,}","{delta_tloc:,}"'
+
+    # Construct a CSV row with format csv_name, delta eloc, delta eloc percent, delta tloc, delta tloc percent
+    csv_row = f'{csv_name},"{delta_eloc:,}",+{delta_eloc_percent:.1f}%,"{delta_tloc:,}",+{delta_tloc_percent:.1f}%'
+
+    return csv_row
+
+def export_code_coverage(data, csv_name):
+    # Export the final percentage code coverage
+
+    cleaned_data = utils.clean_data(data)
+
+    # Get the eloc and coverage
+    eloc_data, coverage_data = utils.get_columns(cleaned_data, ['eloc', 'coverage'])
+
+    # Calculate the percentage code coverage which is the last coverage divided by the last eloc multiplied by 100
+    percent_coverage = coverage_data[-1] / eloc_data[-1] * 100
+
+    # Construct a CSV row with format csv_name, percent coverage
+    csv_row = f'{csv_name},{percent_coverage:.1f}%'
+
+    return csv_row
+
 
 def export_lines_hunks_files(data, csv_name):
     # Export stats like lines, hunks, and files
@@ -142,46 +188,43 @@ def export_bucketed_patch_coverage(data, csv_name):
     cleaned_data = utils.clean_data(data)
 
     # Get the coverage data, eloc and echanged_files
-    eloc_data, patch_coverage, coveredlines, notcoveredlines = utils.get_columns(cleaned_data, ['eloc', 'patchcoverage', 'covlines', 'notcovlines'])
+    eloc_data, coveredlines, notcoveredlines = utils.get_columns(cleaned_data, ['eloc', 'covlines', 'notcovlines'])
 
     eloc_diffs = [coveredlines[i] + notcoveredlines[i] for i in range(len(coveredlines))]
 
-    peloc = 0
     nonzero_indices = []
     for i in range(len(eloc_data)):
         if eloc_data[i] > 0:
-            if eloc_data[i] != peloc or coveredlines[i] > 0 or notcoveredlines[i] > 0:
+            if coveredlines[i] + notcoveredlines[i] > 0:
                 nonzero_indices.append(i)
-            peloc = eloc_data[i]
 
     eloc_diffs = [eloc_diffs[i] for i in nonzero_indices]
-    patch_coverage = [patch_coverage[i] for i in nonzero_indices]
+    coveredlines = [coveredlines[i] for i in nonzero_indices]
+
 
     # bucket the coverage percentages into 3 buckets (<= 10, 11-100, > 100) in terms of eloc
     bucketed_cov_perc_data = [0, 0, 0]
-    totals = [0, 0, 0]
+    total_covered = [0, 0, 0]
+    total_total = [0, 0, 0]
     for i in range(len(eloc_diffs)):
         if eloc_diffs[i] <= 10:
             bucketed_cov_perc_data[0] += 1
-            totals[0] += patch_coverage[i]
+            total_covered[0] += coveredlines[i]
+            total_total[0] += eloc_diffs[i]
         elif eloc_diffs[i] <= 100:
             bucketed_cov_perc_data[1] += 1
-            totals[1] += patch_coverage[i]
+            total_covered[1] += coveredlines[i]
+            total_total[1] += eloc_diffs[i]
         else:
             bucketed_cov_perc_data[2] += 1
-            totals[2] += patch_coverage[i]
+            total_covered[2] += coveredlines[i]
+            total_total[2] += eloc_diffs[i]
 
     # Get the average coverage percentages
-    bucketed_cov_perc_data_av = [totals[i] / bucketed_cov_perc_data[i] for i in range(len(bucketed_cov_perc_data))]
-
-    # format bucketed_cov_perc_data_av to 1dp
-    bucketed_cov_perc_data_av = [round(bucketed_cov_perc_data_av[i], 1) for i in range(len(bucketed_cov_perc_data_av))]
-
-    # End all bucketed_cov_perc_data_av with a %
-    bucketed_cov_perc_data_av = [str(bucketed_cov_perc_data_av[i]) + '%' for i in range(len(bucketed_cov_perc_data_av))]
+    bucketed_cov_perc_data_av = [total_covered[i] * 100 / total_total[i] for i in range(len(total_covered))]
 
     # Construct a CSV row with format csv_name, <= 10, <=10 av, 11-100, 11-100 av, > 100, > 100 av
-    csv_row = f'{csv_name},{bucketed_cov_perc_data[0]},{bucketed_cov_perc_data_av[0]},{bucketed_cov_perc_data[1]},{bucketed_cov_perc_data_av[1]},{bucketed_cov_perc_data[2]},{bucketed_cov_perc_data_av[2]}'
+    csv_row = f'{csv_name},{bucketed_cov_perc_data[0]},{bucketed_cov_perc_data_av[0]:.1f}%,{bucketed_cov_perc_data[1]},{bucketed_cov_perc_data_av[1]:.1f}%,{bucketed_cov_perc_data[2]},{bucketed_cov_perc_data_av[2]:.1f}%'
 
     return csv_row
 
@@ -192,9 +235,6 @@ def export_non_det_revisions(data, csv_name):
 
     # Get the commit hash, repeats, and non_det columns
     commit_hash, repeats, non_det = utils.get_columns(cleaned_data, ['rev', 'repeats', 'non_det'])
-
-    print(type(non_det))
-    print(non_det)
 
     # Get the indices of the non_det revisions
     non_det_indices = [i for i in range(len(non_det)) if non_det[i] == 'True']
@@ -208,40 +248,75 @@ def export_non_det_revisions(data, csv_name):
     # Get the number of non_det revisions
     num_non_det_revs = len(non_det_commit_hashes)
 
-    # Construct a csv row with the format csv_name, num_non_det_revs, non_det_repeats, non_det_commit_hashes*
-    csv_row = f'{csv_name},{num_non_det_revs},{non_det_repeats},\"[' + ','.join(non_det_commit_hashes) + ']\"'
+    # Get the number of non_det revisions as a percentage of the total number of revisions
+    num_non_det_revs_perc = num_non_det_revs / len(commit_hash) * 100
+
+    # Construct a csv row with the format csv_name, num_non_det_revs, num_not_det_revs_perc, non_det_repeats, non_det_commit_hashes*
+    csv_row = f'{csv_name},{num_non_det_revs},{num_non_det_revs_perc:.1f},{non_det_repeats},\"[{",".join(non_det_commit_hashes)}]\"'
+
+    return csv_row
+
+def export_coverage_delta(data, csv_name):
+    # Clean the data of all apart from OK
+    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage', 'compileError', 'TimedOut', 'SomeTestFailed'])
+
+    # Get the coverage data and eloc
+    eloc_data, coverage = utils.get_columns(cleaned_data, ['eloc', 'coverage'])
+
+    # Calculate the coverage at the start and end of the project
+    start_coverage = coverage[0] / eloc_data[0] * 100
+    end_coverage = coverage[-1] / eloc_data[-1] * 100
+
+    # Calculate the delta in coverage
+    delta_coverage = end_coverage - start_coverage
+
+    # Calculate the percentage delta in coverage
+    delta_coverage_perc = delta_coverage / start_coverage * 100
+
+    # If delta_coverage and delta_coverage_perc are positive, add a + to the start of the string
+
+    # Construct a csv row with the format csv_name, start_coverage, end_coverage, delta_coverage, delta_coverage_perc
+    csv_row = f'{csv_name},{start_coverage:.1f},{end_coverage:.1f},{delta_coverage_perc:+.1f}%'
 
     return csv_row
 
 
-def write_stats(paths, csv_names):
+def write_stats(paths, csv_names, limit=None):
+
     write_multiple_csv(export_number_revs, paths, csv_names, ['App', 'OK', 'TF', 'TO', 'CF', 'TotalWorking', 'Time'],
-                       'num_revs')
-    write_multiple_csv(export_eloc_tloc, paths, csv_names, ['App', 'Lang.', 'ELOC', 'Lang.', 'TLOC'], 'eloc_tloc')
+                       'num_revs', limit=limit)
+    write_multiple_csv(export_eloc_tloc, paths, csv_names, ['App', 'Lang.', 'ELOC', 'Lang.', 'TLOC'], 'eloc_tloc', limit=limit)
+    write_multiple_csv(export_delta_eloc_tloc, paths, csv_names, ['App', 'ΔELOC', 'ΔELOC%', 'ΔTLOC', 'ΔTLOC%'], 'delta_eloc_tloc', limit=limit)
     write_multiple_csv(export_lines_hunks_files, paths, csv_names, ['App', 'Lines', 'Hunks', 'Files'],
-                       'lines_hunks_files')
+                       'lines_hunks_files', limit=limit)
     write_multiple_csv(export_bucketed_patch_coverage, paths, csv_names,
                        ['App', '<= 10 NP', '<= 10 C', '11-100 NP', '11-100 C', '> 100 NP', '> 100 C'],
-                       'bucketed_patch_coverage')
+                       'bucketed_patch_coverage', limit=limit)
+    write_multiple_csv(export_code_coverage, paths, csv_names, ['App', 'Final Cov. %'], 'code_coverage', limit=limit)
+    write_multiple_csv(export_coverage_delta, paths, csv_names, ['App', 'Start Cov. %', 'End Cov. %', 'Cov. % Δ'], 'coverage_delta', limit=limit)
 
     # Now filter paths to only include those in the following list
-    included_paths = ['remotedata/apr/Apr_repeats.csv', 'remotedata/zeromq/Zeromq_repeats.csv']
-    # Get the indices of the included paths
-    included_indices = [i for i in range(len(paths)) if paths[i] in included_paths]
+    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats', 'Curl_2500_repeats', 'Redis_all_rep2']
+    # Get the indices of the included names
+    included_indices = [i for i in range(len(csv_names)) if csv_names[i] in included_names]
     # Get the included paths and csv names
-    paths = [paths[i] for i in included_indices]
     csv_names = [csv_names[i] for i in included_indices]
+    paths = [paths[i] for i in included_indices]
 
-    write_multiple_csv(export_non_det_revisions, paths, csv_names, ['App', 'Nondet. Result', 'Repeats', 'Nondet. Commits'], 'non_det_revs')
+    write_multiple_csv(export_non_det_revisions, paths, csv_names, ['App', 'Nondet. Result', '% Total Working Flaky', 'Repeats', 'Nondet. Commits'], 'non_det_revs')
 
 
-def write_multiple_csv(func, paths, csv_names, header, name):
+def write_multiple_csv(func, paths, csv_names, header, name, limit=None):
     # Run a function on multiple CSV files
     rows = []
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i])
         if csv_data is None:
             continue
+        # Filter the data to only include revisions that modify executable code or test files
+        csv_data, _ = utils.filter_data_by_exec_test(csv_data)
+        if limit is not None:
+            csv_data = csv_data[-limit:]
         res = func(csv_data, csv_names[i])
         if res is not None:
             rows.append(res)
@@ -280,8 +355,12 @@ if __name__ == '__main__':
     # add a directory option so if --dir is present, the input is a directory, otherwise it is a file
     parser.add_argument('--dir', action='store_true',
                         help='The input is a directory (dir/repo1/*.csv, dir/repo2/*.csv)')
+    # add a limit option to limit the number of revisions to process
+    parser.add_argument('--limit', type=int, help='The number of revisions to process')
 
     args = parser.parse_args()
+
+    print(args.limit)
 
     # Make a stats directory if it doesn't exist
     if not os.path.isdir('stats'):
@@ -301,8 +380,17 @@ if __name__ == '__main__':
 
         # TODO: remove when data fixed
         # Remove the following CSV files from the list since they are either not complete or lack fields
-        excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
-                          'remotedata/binutils/Binutils.csv']
+        excluded_paths = ['remotedata/binutils/Binutils_all.csv', 'remotedata/binutils/Binutils_repeats.csv',
+                          'remotedata/binutils-binutils-gdb-combined/Binutils_combined.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_all.csv', 'remotedata/curl/Curl_2500_nr.csv',
+                          'remotedata/lighttpd2/Lighttpd2_nr.csv', 'remotedata/memcached/Memcached_all.csv',
+                          'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/redis_repeated/Redis_all_rep.csv',
+                          'remotedata/vim/Vim_rep_1.csv', 'remotedata/zeromq/Zeromq.csv', 'remotedata/vim/Vim_2500_nr.csv']
+
+        # Get indices of all paths that contain the word 'diffcov'
+        diffcov_indices = [i for i in range(len(paths)) if 'diffcov' in paths[i]]
+        # Remove all paths that contain the word 'diffcov'
+        paths = [paths[i] for i in range(len(paths)) if i not in diffcov_indices]
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:
@@ -330,7 +418,7 @@ if __name__ == '__main__':
         print("=====================================================")
 
         # Stats for number of revs
-        write_stats(paths, csv_names)
+        write_stats(paths, csv_names, limit=args.limit)
 
     else:
         # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
@@ -349,8 +437,6 @@ if __name__ == '__main__':
         csv_name = csv_name[:-4]
 
         # Stats for number of revs
-        write_multiple_csv(export_number_revs, [args.input], [csv_name], ['csv_name', 'num_revs', 'num_days'],
-                           'num_revs')
-        # TODO: Fill in the rest of the stats
+        write_stats([args.input], [csv_name], limit=args.limit)
 
     print("All done!")

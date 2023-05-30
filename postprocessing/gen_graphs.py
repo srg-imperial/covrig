@@ -22,6 +22,7 @@ file_header_type = config.file_header_type
 
 # Other globals
 output_location = 'postprocessing/graphs/'
+SMALL_FIGSIZE = (5, 5)
 DEFAULT_FIGSIZE = (11, 11)
 EXPANDED_FIGSIZE = (15, 15)
 date_warning_thrown = []
@@ -33,6 +34,7 @@ commits_prev_compiling_range = {
     'Binutils': (1266228576, 1381776346),
     'Curl': (-1, -1),
     'Git': (1370985909, 1386887079),
+    'Lighttpd': (1284310497, 1378821913),
     'Lighttpd2': (1284310497, 1378821913),
     'Memcached': (1234570260, 1358117990),
     'Redis': (1359375286, 1380183166),
@@ -207,7 +209,7 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
 
 def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+        plot = plt.subplots(figsize=SMALL_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -254,7 +256,7 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None
     ax.set_title(f'{csv_name}')
 
     # Print the legend
-    ax.legend(['Line Coverage', 'Branch Coverage'])
+    ax.legend(['Line Coverage', 'Branch Coverage'], prop={'size': 6}, loc='upper right')
 
     # If we can find the legacy date, let's plot it as a vertical line
     plot_vert_at_timestamp(ax, csv_name, date)
@@ -314,7 +316,7 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
         plt.close(fig)
 
 
-def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False, savedir=None):
+def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False, savedir=None, weighted=False):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -322,9 +324,7 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     cleaned_data = utils.clean_data(data)
 
     # Get the coverage data using eloc_data, coverage_data, branch_data, branch_coverage_data and dates
-    covered_lines_data, not_covered_lines_data, patchcoverage_data = utils.get_columns(cleaned_data,
-                                                                                       ['covlines', 'notcovlines',
-                                                                                        'patchcoverage'])
+    eloc_data, cov_data, covered_lines_data, not_covered_lines_data, patchcoverage_data = utils.get_columns(cleaned_data, ['eloc', 'coverage', 'covlines', 'notcovlines', 'patchcoverage'])
 
     # Count the number of revisions that introduce executable lines
     total_revs_exec = 0
@@ -343,6 +343,8 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     bucket_names = ["0%", "(0%, 25%]", "(25%, 50%]", "(50%, 75%]", "(75%, 100%)", "100%"]
     if bucket_no == covrig_buckets:
         bucket_names = ["N/A", "[0%, 25%]", "(25%, 50%]", "(50%, 75%]", "(75%, 100%]", "N/A"]
+
+    lines_bucket_membership = []
 
     for i in range(len(covered_lines_data)):
         # Calculate the patch coverage (this calc is equal to the patchcoverage column in the csv)
@@ -375,18 +377,39 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
                 print('Invalid bucket number for patch coverage')
                 return
         bucket_membership.append(bucket)
+        num_lines_added_modified = covered_lines_data[i] + not_covered_lines_data[i] if \
+            covered_lines_data[i] + not_covered_lines_data[i] > 0 else -1
+        lines_bucket_membership.append(num_lines_added_modified)
+
 
     # Assert if we are in covrig mode we should not have any 0s or 5s in our bucket membership
     assert bucket_no != covrig_buckets or (0 not in bucket_membership and 5 not in bucket_membership)
 
     # Calculate the number of revisions in each bucket
     bucket_counts = [0] * large_scale_buckets
-    for bucket in bucket_membership:
-        if bucket != -1:
+    line_counts = [0] * large_scale_buckets
+    total_lines_contributed = 0
+    for bucket_idx in range(len(bucket_membership)):
+        if bucket_membership[bucket_idx] != -1:
+            bucket = bucket_membership[bucket_idx]
             bucket_counts[bucket] += 1
+            line_counts[bucket] += lines_bucket_membership[bucket_idx]
+            total_lines_contributed += lines_bucket_membership[bucket_idx]
 
     # Calculate the percentage of revisions in each bucket using total_revs_exec
-    bucket_percentages = [x * 100 / total_revs_exec for x in bucket_counts]
+    bucket_percentages = []
+    for bucket in range(len(bucket_counts)):
+        percentage_in_bucket = bucket_counts[bucket] * 100 / total_revs_exec
+        # Use the line counts to calculate the weighted percentage
+        if weighted:
+            line_percentage_in_bucket = line_counts[bucket] * 100 / total_lines_contributed
+            # Multiply the percentage by the percentage of lines contributed by that bucket
+            percentage_in_bucket *= line_percentage_in_bucket
+        bucket_percentages.append(percentage_in_bucket)
+
+    # If weighted, normalise the percentages so they sum to 100
+    if weighted:
+        bucket_percentages = [x * 100 / sum(bucket_percentages) for x in bucket_percentages]
 
     # Assert we sum to roughly 100
     assert 99.9 < sum(bucket_percentages) < 100.1
@@ -410,10 +433,18 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
 
     # Get the average patch coverage
     # Filter patchcoverage data to only include revisions that introduce executable lines
-    patchcoverage_data = [x for i, x in enumerate(patchcoverage_data) if
-                          covered_lines_data[i] + not_covered_lines_data[i] > 0]
-    avg_patch_coverage = sum(patchcoverage_data) / len(patchcoverage_data)
-    ax.bar(csv_name if multiple else 0, 0.5, bottom=avg_patch_coverage, label="Average %", width=0.5, color='black',
+    # patchcoverage_data = [x for i, x in enumerate(patchcoverage_data) if
+    #                       covered_lines_data[i] + not_covered_lines_data[i] > 0]
+    # avg_patch_coverage = sum(patchcoverage_data) / len(patchcoverage_data)
+
+    # Calculate the coverage for each revision using eloc and coverage
+    coverage_perc = [x * 100 / y if y > 0 else -1 for x, y in zip(cov_data, eloc_data)]
+    # Filter coverage_perc to only include revisions that work (no -1s)
+    coverage_perc = [x for x in coverage_perc if x != -1]
+    # Calculate the average coverage
+    avg_coverage = sum(coverage_perc) / len(coverage_perc)
+
+    ax.bar(csv_name if multiple else 0, 0.5, bottom=avg_coverage, label="Average %", width=0.5, color='black',
            zorder=4)
 
     # Turn off ticks for the x axis
@@ -536,7 +567,7 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False,
         plt.close(fig)
 
 
-def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
+def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit_authors=5, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -566,7 +597,7 @@ def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit=5, 
 
     # look at dictionary and remove authors with less than <limit> commits
     for key in list(commits_per_author.keys()):
-        if commits_per_author[key] < limit:
+        if commits_per_author[key] < limit_authors:
             del commits_per_author[key]
             del lines_added_per_author[key]
 
@@ -682,7 +713,7 @@ def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple
         plt.close(fig)
 
 
-def plot_coverage_line_per_author(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
+def plot_coverage_line_per_author(data, csv_name, save=True, date=False, plot=None, limit_authors=5, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -716,7 +747,7 @@ def plot_coverage_line_per_author(data, csv_name, save=True, date=False, plot=No
     # Filter out authors with less than <limit> commits
     filtered_authors = []
     for author in commits_per_author.keys():
-        if commits_per_author[author] >= limit:
+        if commits_per_author[author] >= limit_authors:
             filtered_authors.append(author)
     filtered_authors = set(filtered_authors)
 
@@ -771,7 +802,7 @@ def plot_coverage_line_per_author(data, csv_name, save=True, date=False, plot=No
         plt.close(fig)
 
 
-def plot_coverage_box_per_author(data, csv_name, save=True, date=False, plot=None, limit=5, savedir=None):
+def plot_coverage_box_per_author(data, csv_name, save=True, date=False, plot=None, limit_authors=5, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -794,7 +825,7 @@ def plot_coverage_box_per_author(data, csv_name, save=True, date=False, plot=Non
 
     # Get the number of authors
     num_authors = len(unique_authors)
-    limit = min(limit, num_authors)  # Make sure we don't try to plot more authors than we have
+    limit = min(limit_authors, num_authors)  # Make sure we don't try to plot more authors than we have
 
     # Get the number of commits per author
     commits_per_author = {}
@@ -915,7 +946,7 @@ def plot_patch_coverage_over_time(data, csv_name, save=True, date=False, plot=No
         plt.close(fig)
 
 
-def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None, limit=5, savedir=None):
+def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None, limit_authors=5, savedir=None):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -948,7 +979,7 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
     # Filter to only the authors with <limit> or more commits
     filtered_authors = []
     for author in author_patch_coverage.keys():
-        if len(author_patch_coverage[author]) >= limit:
+        if len(author_patch_coverage[author]) >= limit_authors:
             filtered_authors.append(author)
     filtered_authors = set(filtered_authors)
 
@@ -988,7 +1019,7 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
     # Give the plot a title
     ax.set_title(f'{csv_name}')
     fig.suptitle(
-        f'Average Patch Coverage per Author (across commits that add/modify executable lines) (minimum of {limit} commits)',
+        f'Average Patch Coverage per Author (across commits that add/modify executable lines) (minimum of {limit_authors} commits)',
         fontsize=16,
         y=0.98)
     # Add a subtitle
@@ -1246,7 +1277,17 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
                 start_date_p_d = datetime.datetime.fromtimestamp(daterange[0])
                 end_date_p = datetime.datetime.fromtimestamp(daterange[1])
                 # Get the index of date_data that has the value end_date_p
-                end_date_p_index = date_data.index(end_date_p)
+                if end_date_p in date_data:
+                    end_date_p_index = date_data.index(end_date_p)
+                else:
+                    # Iterate through date_data to find the closest date to end_date_p
+                    end_date_p_index = 0
+                    for i in range(len(date_data)):
+                        end_date_p_index = i
+                        if date_data[i] > end_date_p:
+                            break
+                    end_date_p = date_data[end_date_p_index]
+
                 # Now get that index minus 249 (i.e a range of 250 commits) since we have cleaned the data of compileErrors
                 start_date_p = date_data[end_date_p_index - 249]
                 print(
@@ -1325,9 +1366,9 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
         plt.close(fig)
 
 
-def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir=None):
+def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir=None, size=DEFAULT_FIGSIZE):
     if plot is None:
-        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+        plot = plt.subplots(figsize=size)
     (fig, ax) = plot
 
     # Take the row according to the type.
@@ -1524,23 +1565,24 @@ def plot_all_individual(data, csv_name, date, savedir=None):
 
     plot_patch_coverage(data, csv_name, bucket_no=4, savedir=savedir)
     plot_patch_coverage(data, csv_name, bucket_no=6, savedir=savedir)
+    # Note plot_patch_type will operate on filtered data here so there should be no 'other' category. Filtering is turned off for combined plot.
     plot_patch_type(data, csv_name, savedir=savedir)
 
     plot_exit_status_rates(data, csv_name, savedir=savedir)
     # plot_timespan(data, csv_name, savedir=savedir)
 
     plot_churn(data, csv_name, date=date, savedir=savedir)
-    plot_author_dist(data, csv_name, date=date, limit=2, savedir=savedir)
+    plot_author_dist(data, csv_name, date=date, limit_authors=2, savedir=savedir)
 
-    plot_coverage_line_per_author(data, csv_name, date=date, limit=5, savedir=savedir)
-    plot_coverage_box_per_author(data, csv_name, date=date, limit=10, savedir=savedir)
-    plot_patch_coverage_over_time(data, csv_name, date=date, savedir=savedir)
-    plot_average_patch_coverage_per_author(data, csv_name, limit=10, savedir=savedir)
+    plot_coverage_line_per_author(data, csv_name, date=date, limit_authors=5, savedir=savedir)
+    plot_coverage_box_per_author(data, csv_name, date=date, limit_authors=10, savedir=savedir)
+    # plot_patch_coverage_over_time(data, csv_name, date=date, savedir=savedir)
+    plot_average_patch_coverage_per_author(data, csv_name, limit_authors=10, savedir=savedir)
     plot_patch_coverage_bins(data, csv_name, savedir=savedir)
     plot_commit_frequency(data, csv_name, savedir=savedir)
 
     # non-det graphs - old data won't have this
-    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats']
+    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats', 'Redis_all_rep2', 'Curl_2500_repeats', 'Vim_2500_reps']
     if csv_name in included_names:
         plot_non_det_hist(data, csv_name, date=date, savedir=savedir)
 
@@ -1549,9 +1591,10 @@ def plot_diffcov_individual(data, csv_name, savedir=None):
     if savedir is None:
         savedir = args.input
 
-    plot_diffcov_hist(data, csv_name, type='line', savedir=savedir)
-    plot_diffcov_hist(data, csv_name, type='function', savedir=savedir)
-    plot_diffcov_hist(data, csv_name, type='branch', savedir=savedir)
+    diffcov_figsize = (7, 7)
+    plot_diffcov_hist(data, csv_name, type='line', savedir=savedir, size=diffcov_figsize)
+    plot_diffcov_hist(data, csv_name, type='function', savedir=savedir, size=diffcov_figsize)
+    plot_diffcov_hist(data, csv_name, type='branch', savedir=savedir, size=diffcov_figsize)
 
 
 def plot_diffcov_multiple(paths, csv_names, savedir=None):
@@ -1591,43 +1634,52 @@ def plot_diffcov_format_multiple(metric, outname, paths, csv_names, **kwargs):
     print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
 
 
-def plot_all_multiple(paths, csv_names, date):
+def plot_all_multiple(paths, csv_names, date, limit=None):
     # Plot each of the combined graphs
-    plot_metric_multiple(plot_eloc, 'eloc', paths, csv_names, date=date)
-    plot_metric_multiple(plot_tloc, 'tloc', paths, csv_names, date=date)
-    plot_metric_multiple(plot_evolution_of_eloc_and_tloc, 'evolution_of_eloc_and_tloc', paths, csv_names, date=date)
-    plot_metric_multiple(plot_coverage, 'coverage', paths, csv_names, date=date)
+    plot_metric_multiple(plot_eloc, 'eloc', paths, csv_names, date=date, custom_figsize=(11,9), limit=limit)
+    plot_metric_multiple(plot_tloc, 'tloc', paths, csv_names, date=date, custom_figsize=(11,9), limit=limit)
+    plot_metric_multiple(plot_evolution_of_eloc_and_tloc, 'evolution_of_eloc_and_tloc', paths, csv_names, date=date, custom_figsize=(11,9), limit=limit)
+    plot_metric_multiple(plot_coverage, 'coverage', paths, csv_names, date=date, custom_figsize=(9,11), limit=limit)
 
-    # plot_metric_multiple(plot_coverage_line_per_author, 'coverage_line_per_author', paths, csv_names, date=date, limit=5)
     plot_metric_multiple(plot_average_patch_coverage_per_author, 'average_patch_coverage_per_author', paths, csv_names,
-                         limit=10)
-    plot_metric_multiple(plot_patch_coverage_bins, 'patch_coverage_bins', paths, csv_names)
-    plot_metric_multiple(plot_commit_frequency, 'commit_frequency', paths, csv_names)
+                         limit_authors=10, limit=limit)
+    plot_metric_multiple(plot_patch_coverage_bins, 'patch_coverage_bins', paths, csv_names, limit=limit)
+    plot_metric_multiple(plot_commit_frequency, 'commit_frequency', paths, csv_names, limit=limit)
 
     # TODO: do a plot_metric_multiple for the non-det graphs (so only for the ones that have non-det data)
 
     # The combined graphs for patch coverage and patch type are a bit different - they need to be plotted on the same graph rather than subplots
-    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=4)
-    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6)
-    plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names)
+    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=4, limit=limit)
+    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6, weighted=False, limit=limit)
+    plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names, limit=limit, no_filter=True)
 
-    plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names)
+    plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names, limit=limit)
     plot_metric_combined(plot_timespan, 'timespan', paths, csv_names, custom_figsize=(10, 7), labels=csv_names,
-                         commits_prev_compiling_range=commits_prev_compiling_range, dpi=300)
+                         commits_prev_compiling_range=commits_prev_compiling_range, dpi=300, limit=limit)
 
 
 def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
     """ Plot a metric for multiple CSVs on subplots of the same figure. """
     # Would be nice to have a smarter way of doing this, but for now we'll just hardcode the number of rows and columns
     rows, columns = 2, 3
-    size = DEFAULT_FIGSIZE
+    # extract var custom_figsize from kwargs, if it exists
+    custom_figsize = kwargs.get('custom_figsize', None)
+    if custom_figsize is not None:
+        del kwargs['custom_figsize']
+    else:
+        custom_figsize = DEFAULT_FIGSIZE
+    limit = kwargs.get('limit', None)
+    del kwargs['limit']
     if len(csv_names) > rows * columns:
         rows, columns = 3, 3
-        size = EXPANDED_FIGSIZE
-    fig, axs = plt.subplots(rows, columns, figsize=size)
+    fig, axs = plt.subplots(rows, columns, figsize=custom_figsize)
     idxs = (0, 0)
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
+        # Filter the data to only include revisions that modify executable code or test files
+        csv_data, _ = utils.filter_data_by_exec_test(csv_data)
+        if limit is not None:
+            csv_data = csv_data[-limit:]
         if csv_data is not None:
             metric(csv_data, csv_names[i], plot=(fig, axs[idxs]), save=False, **kwargs)
             # Wrap around the indexs or increment
@@ -1651,11 +1703,30 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     dpi = kwargs.get('dpi', None)
     if custom_figsize is not None:
         del kwargs['custom_figsize']
+    limit = kwargs.get('limit', None)
+    del kwargs['limit']
     if dpi is not None:
         del kwargs['dpi']
+    no_filter = kwargs.get('no_filter', None)
+    if no_filter is not None:
+        del kwargs['no_filter']
     fig, axs = plt.subplots(figsize=custom_figsize if custom_figsize is not None else EXPANDED_FIGSIZE)
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
+        # Filter the data to only include revisions that modify executable code or test files (don't filter for patch type)
+        if no_filter is None and limit is None:
+            # i.e. if we are allowed to filter and we are not limiting the number of revisions, then only filter
+            csv_data, _ = utils.filter_data_by_exec_test(csv_data)
+        if no_filter is not None and limit is not None:
+            # i.e. if we are not allowed to filter and we are limiting the number of revisions, then filter and limit
+            # by getting the nth (reversed) exec/test-changing rev, then working forward until the end
+            csv_data_filtered, idxs = utils.filter_data_by_exec_test(csv_data)
+            first_idx = idxs[-limit]
+            csv_data = csv_data[first_idx:]
+        if no_filter is None and limit is not None:
+            # We are allowed to filter, and allowed to limit
+            csv_data, _ = utils.filter_data_by_exec_test(csv_data)
+            csv_data = csv_data[-limit:]
         if csv_data is not None:
             metric(csv_data, csv_names[i], plot=(fig, axs), save=False, pos=i, multiple=True, **kwargs)
 
@@ -1687,7 +1758,8 @@ if __name__ == '__main__':
     parser.add_argument('--date', action='store_true', help='Plot by date')
     # add an arg to do diffcov plots
     parser.add_argument('--diffcov', action='store_true', help='Plot diffcov plots')
-    # an an arg to be the diffcov file name
+    # add an arg to limit the number of commits to plot
+    parser.add_argument('--limit', type=int, help='Limit the number of commits to plot')
 
     args = parser.parse_args()
 
@@ -1695,6 +1767,10 @@ if __name__ == '__main__':
         # Make sure the input is a directory
         if not os.path.isdir(args.input):
             raise NotADirectoryError(f'{args.input} is not a directory')
+
+        # Strip trailing slash
+        if args.input[-1] == '/':
+            args.input = args.input[:-1]
 
         # Get the names of the CSV files (basenames)
         paths = glob.glob(f'{args.input}/*/*.csv')
@@ -1707,10 +1783,19 @@ if __name__ == '__main__':
         # Remove the following CSV files from the list since they are either not complete, lack fields or we don't want to show them anymore
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
                           'remotedata/binutils/Binutils.csv', 'remotedata/binutils-gdb/BinutilsGdb_repeats.csv',
-                          'remotedata/redis_non_det/Redis_sofar.csv',
+                          'remotedata/binutils/Binutils_repeats.csv', 'remotedata/binutils-gdb/BinutilsGdb_repeats_section2.csv',
+                          'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/binutils/Binutils_all.csv',
                           'remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv',
-                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv',
-                          'remotedata/curl/Curl_repeats1.csv', 'remotedata/git/Git1.csv']
+                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv', 'remotedata/git/Git1.csv',
+                          'remotedata/redis_repeated/Redis_2500_reps.csv', 'remotedata/vim/Vim_2500_reps.csv', 'remotedata/vim/Vim_rep_1_3.csv',
+                          'remotedata/vim/Vim_rep_1_4.csv', 'remotedata/curl/Curl_2500_repeats.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky2.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky3.csv',
+                          'remotedata/vim/Vim_rep_1_1.csv', 'remotedata/vim/Vim_rep_1_r1.csv',
+                          'remotedata/vim/Vim_rep_1_r2.csv',
+                          'remotedata/vim/Vim_rep_1_r3.csv',
+                          'jun2015data/Dovecot/Dovecot.csv', 'jun2015data/Lighttpd-gnutls/Lighttpd.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:
@@ -1757,6 +1842,8 @@ if __name__ == '__main__':
             search_dir = None
 
             csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
+            if args.limit:
+                csv_data = csv_data[-args.limit:]
             if csv_data is not None:
                 plot_all_individual(csv_data, csv_names[i], date=args.date)
                 print(
@@ -1793,10 +1880,10 @@ if __name__ == '__main__':
         print("Now plotting combined graphs...")
 
         # Plot all repos' eloc on the same graph
-        plot_all_multiple(paths, csv_names, date=args.date)
+        plot_all_multiple(paths, csv_names, date=args.date, limit=args.limit)
         diffcov_csvs = glob.glob(f'{args.input}/*/diffcov_*.csv')
         if args.diffcov:
-            plot_diffcov_multiple(diffcov_paths, diffcov_names)
+            plot_diffcov_multiple(diffcov_paths, diffcov_names, limit=args.limit)
 
     else:
         # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
@@ -1844,7 +1931,7 @@ if __name__ == '__main__':
 
         data = utils.extract_data(args.input, csv_name, callback=date_check)
 
-        plot_all_individual(data, csv_name, date=args.date, savedir=directory)
+        plot_all_individual(data, csv_name, date=args.date, savedir=directory, limit=args.limit)
 
         # if diffcov arg and diffcov dir exists, plot diffcov plots
         if args.diffcov:
@@ -1854,9 +1941,9 @@ if __name__ == '__main__':
                 print(f'No diffcov csv found for {csv_name}')
             else:
                 diffcov_csv = diffcov_csv[0]
-                diffcov_data = utils.extract_diffcov_data(diffcov_csv, csv_name)
+                diffcov_data = utils.extract_diffcov_data(diffcov_csv, csv_name, limit=args.limit)
                 if diffcov_data is not None:
-                    plot_diffcov_individual(diffcov_data, csv_name, savedir=directory)
+                    plot_diffcov_individual(diffcov_data, csv_name, savedir=directory, limit=args.limit)
 
         print("=====================================================")
         print(f'Finished plotting {csv_name}. You can find the plots in graphs/{csv_name}')
