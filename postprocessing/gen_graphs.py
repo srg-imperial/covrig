@@ -42,6 +42,20 @@ commits_prev_compiling_range = {
     'Zeromq': (1324305818, 1381730754),
 }
 
+# Extracted from {csv_names[i]} starts at: <> portion of code in plot_metric_combined
+commits_prev_operating_range = {
+    'Apr': (-1, -1),
+    'Binutils': (1289860245, 1381776346),
+    'Curl': (-1, -1),
+    'Git': (1372106937, 1386887079),
+    'Lighttpd': (1284933555, 1378821913),
+    'Lighttpd2': (1284933555, 1378821913),
+    'Memcached': (1236258497, 1358117990),
+    'Redis': (1362569886, 1380183166),
+    'Vim': (-1, -1),
+    'Zeromq': (1335763996, 1381730754),
+}
+
 
 def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
@@ -1261,18 +1275,20 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
     # Get the list of colour from mcolors.TABLEAU_COLORS
     colours = list(mcolors.TABLEAU_COLORS.values())
 
-    # The 250 revs in Covrig (looking at table 1 and cross-referencing ELOC) are the 250 most recent commits of the legacy
+    # The 250 revs in Covrig (looking at table 1 and cross-referencing ELOC) are the 250 most recent commits of the legacy that modify exec code/tests
 
     if commits_prev_compiling_range is not None:
         lowered = [(x.lower(), x) for x in commits_prev_compiling_range.keys()]
         for i in range(len(lowered)):
             if lowered[i][0] in csv_name.lower():
                 daterange = commits_prev_compiling_range[lowered[i][1]]
+                # If it's a new repository (not in legacy Covrig) then just plot from start to end
                 if daterange is None or daterange == (-1, -1):
                     if daterange == (-1, -1):
                         ax.barh(pos, end_date - start_date, left=start_date, height=bar_height, color=colours[idx],
                                 edgecolor='black', zorder=3)
                     break
+                # If it's a repository in legacy Covrig then plot from the daterange first
                 # convert daterange to datetime objects
                 start_date_p_d = datetime.datetime.fromtimestamp(daterange[0])
                 end_date_p = datetime.datetime.fromtimestamp(daterange[1])
@@ -1282,14 +1298,14 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
                 else:
                     # Iterate through date_data to find the closest date to end_date_p
                     end_date_p_index = 0
-                    for i in range(len(date_data)):
-                        end_date_p_index = i
-                        if date_data[i] > end_date_p:
+                    for j in range(len(date_data)):
+                        end_date_p_index = j
+                        if date_data[j] > end_date_p:
                             break
                     end_date_p = date_data[end_date_p_index]
 
-                # Now get that index minus 249 (i.e a range of 250 commits) since we have cleaned the data of compileErrors
-                start_date_p = date_data[end_date_p_index - 249]
+                # use the operating range to get the start date of the legacy data (not first data point, first one used in study)
+                start_date_p = datetime.datetime.fromtimestamp(commits_prev_operating_range[lowered[i][1]][0])
                 print(
                     f"Covrig (250) data for {csv_name} is from {int(start_date_p.timestamp())} to {int(end_date_p.timestamp())}")
 
@@ -1305,7 +1321,7 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
                                         label='Legacy data for original Covrig paper (250 commits)')
 
                 # Start of all the data in jun2015data/
-                ax.barh(pos, 20, left=start_date_p_d, height=bar_height, color='black', zorder=4)
+                ax.barh(pos, 15, left=start_date_p_d, height=bar_height, color='black', zorder=4)
                 # # End of the 250 revisions studied under Covrig
                 # ax.barh(pos, 10, left=end_date_p, height=bar_height, color='#333333', zorder=4)
                 # # Start of the 250 revisions studied under Covrig
@@ -1721,7 +1737,11 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
             # i.e. if we are not allowed to filter and we are limiting the number of revisions, then filter and limit
             # by getting the nth (reversed) exec/test-changing rev, then working forward until the end
             csv_data_filtered, idxs = utils.filter_data_by_exec_test(csv_data)
+            if limit > len(idxs):
+                limit = len(idxs)
             first_idx = idxs[-limit]
+            # Print out the timestamp at first_idx
+            print(f"{csv_names[i]} starts at: {csv_data[first_idx][config.file_header_list.index('time')]}")
             csv_data = csv_data[first_idx:]
         if no_filter is None and limit is not None:
             # We are allowed to filter, and allowed to limit
