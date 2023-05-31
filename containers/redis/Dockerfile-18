@@ -1,0 +1,42 @@
+FROM ubuntu:18.04
+LABEL ubuntu_version=18.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+	sudo \
+	build-essential \
+	autoconf \
+	automake \
+	libtool \
+	git \
+	curl \
+    openssh-server \
+    psmisc \
+	--no-install-recommends
+
+RUN sudo apt-get install -yq --reinstall ca-certificates
+
+# For curl to emit gcov properly, we need lcov 1.16 (otherwise gcov can't read the .gcda files)
+RUN cd /tmp && curl -L https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16.tar.gz | tar xz && cd lcov-* && make PREFIX=/usr install
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && curl -L https://bugs.archlinux.org/task/45494?getfile=13174 > cloc.1.64.patch && patch -p1 < cloc.1.64.patch && make install
+
+RUN mkdir -p /var/run/sshd
+
+RUN mkdir /root/.ssh
+ADD id_rsa.pub /root/.ssh/authorized_keys
+RUN chown -R root:root /root/.ssh
+RUN chmod -R 700 /root/.ssh
+
+RUN echo "root:root" | chpasswd
+
+RUN adduser --gecos "" --disabled-password regular
+
+RUN apt-get -yq install tcl8.5 pkg-config libjemalloc-dev
+
+RUN git clone https://github.com/antirez/redis.git /home/redis
+ADD measure-cov.sh /root/
+
+RUN git config --global --add safe.directory /home/redis
+
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]

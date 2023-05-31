@@ -7,14 +7,28 @@ from scipy.stats import levene, chisquare
 import internal.csv_config as config
 import internal.csv_utils as utils
 
+# Same as in gen_graphs but for commits. Would be nice to automate this or have shared in the config file
+commits_prev_operating_range = {
+    'Apr': (None, None),
+    'Binutils': ('3d62a77', '2b9ed0a'),
+    'Curl': (None, None),
+    'Git': ('001d116', '694a88a'),
+    'Lighttpd': ('c972bea', '0d40b25'),
+    'Lighttpd2': ('c972bea', '0d40b25'),
+    'Memcached': ('d9220d6', 'f99755c'),
+    'Redis': ('011fa89', '3c9bb87'),
+    'Vim': (None, None),
+    'Zeromq': ('36bfaaa', '573d7b0'),
+}
+
 
 # Commands run:
-# python3 postprocessing/compare_csv.py jun2015data/Binutils/Binutils.csv remotedata/binutils/Binutils.csv --limit 250 --endatcommit 2b9ed0a
-# python3 postprocessing/compare_csv.py jun2015data/Git/Git.csv remotedata/git/Git_all.csv --limit 250 --endatcommit d7aced9
-# python3 postprocessing/compare_csv.py jun2015data/Lighttpd-gnutls/Lighttpd.csv remotedata/lighttpd2/Lighttpd2_nr.csv --limit 250 --endatcommit 0d40b25
-# python3 postprocessing/compare_csv.py jun2015data/Memcached/Memcached.csv remotedata/memcached/Memcached_all.csv --limit 250 --endatcommit 87e2f36
-# python3 postprocessing/compare_csv.py jun2015data/Redis/Redis.csv remotedata/redis_repeated/Redis_all_rep.csv --limit 250 --endatcommit 354a5de
-# python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq/Zeromq.csv --limit 250 --endatcommit 573d7b0
+# python3 postprocessing/compare_csv.py jun2015data/Binutils/Binutils.csv remotedata/binutils/Binutils.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Git/Git.csv remotedata/git/Git_all.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Lighttpd-gnutls/Lighttpd.csv remotedata/lighttpd2/Lighttpd2_nr.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Memcached/Memcached.csv remotedata/memcached/Memcached_all.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Redis/Redis.csv remotedata/redis/tmp/Redis_all_rep_no_non_det_stats.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq/Zeromq.csv --limit 250
 # ^^ Zeromq one fails but this is ok since we compile it with different flags (e.g. --without-documentation)
 def compare_csv(data1, data2):
     # Create an array to store the differences for each column
@@ -215,14 +229,7 @@ if __name__ == '__main__':
     # Add other arguments, limit and endatcommit
     parser.add_argument('--limit', type=int, default=250,
                         help='Number of commits to compare')
-    parser.add_argument('--endatcommit', type=str, default=None,
-                        help='Commit hash to end at')
     args = parser.parse_args()
-
-    # Make sure endatcommit is provided
-    if args.endatcommit is None:
-        print('Please provide the commit hash to end at')
-        exit(0)
 
     # Get basenames
     # Get the name of the CSV file (basename)
@@ -236,12 +243,44 @@ if __name__ == '__main__':
     data1 = utils.extract_data(args.basefile, csv_name1)
     data2 = utils.extract_data(args.newfile, csv_name2)
 
-    # Filter out the commits that have compile errors, empty commits or have no coverage
+    start_idx = 0
+    end_idx = 0
+    commit_range = None
+    lowered = [(x.lower(), x) for x in commits_prev_operating_range.keys()]
+    for i in range(len(lowered)):
+        if lowered[i][0] in csv_name1.lower():
+            commit_range = commits_prev_operating_range[lowered[i][1]]
+            # If it's a new repository (not in legacy Covrig) then just plot from start to end
+            if commit_range is None or commit_range == (None, None):
+                print(f'No commit range for {lowered[i][1]}')
+                exit(0)
+
+            # Get the start and end commits
+            start_commit = commit_range[0]
+            end_commit = commit_range[1]
+
+            # Get the list of revs in data1
+            revs = utils.get_columns(data1, ['rev'])[0]
+            # Get the index of the start commit and end commit
+            start_idx = revs.index(start_commit)
+            end_idx = revs.index(end_commit)
+            break
+    if start_idx == 0 and end_idx == 0:
+        print(f'Could not match {csv_name1} to a repository')
+        exit(0)
+
+    # Filter data1 to the range between start_commit and end_commit
+    data1 = data1[start_idx:end_idx+1]
+
+    # Filter to those that modify executable code or tests
+    data1, _ = utils.filter_data_by_exec_test(data1)
+
+    # Filter out the commits that have compile errors, empty commits or have no coverage (should already be done by filter_data_by_exec_test , but just in case)
     cleaned_data1 = utils.clean_data(data1)
     cleaned_data2 = utils.clean_data(data2)
 
     # Filter the data to include <limit> commits up to <endatcommit>
-    limited_data1 = utils.limit_data(cleaned_data1, args.endatcommit, limit=args.limit)
+    limited_data1 = utils.limit_data(cleaned_data1, commit_range[1], limit=args.limit)
     # limited_data2 = utils.limit_data(cleaned_data2, args.endatcommit, limit=args.limit)
     limited_data2 = utils.get_data_with_commits(cleaned_data2, utils.get_columns(limited_data1, ['rev'])[0])
 

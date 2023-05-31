@@ -29,7 +29,7 @@ class Redis(Container):
         """ compile redis """
         with self.conn.cd(self.path):
             self.conn.run('chown -R regular:regular .', warn=True)
-            result = self.conn.run('su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0\'', warn=True)
+            result = self.conn.run(f'su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0 CFLAGS=-std=gnu99\'', warn=True)
             if result.failed:
                 self.compileError = True
 
