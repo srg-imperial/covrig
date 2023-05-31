@@ -5,17 +5,18 @@
 # e.g. tfb19
 UNAME=$1
 # Oneliner can also be done with export UNAME=tfb19, etc.:
-# sudo apt-get install -y ufw && sudo ufw allow 80 && sudo ufw allow 22 && sudo addgroup $UNAME && sudo usermod -a G sudo $UNAME && sudo usermod -a -G ssh $UNAME && sudo mkdir /home/$UNAME && sudo chown $UNAME:$UNAME /home/$UNAME && mkdir /home/$UNAME/.ssh && sudo chown $UNAME:$UNAME /home/$UNAME/.ssh
+# sudo apt-get install -y ufw && sudo ufw allow 80 && sudo ufw allow 22 && sudo addgroup $UNAME && sudo usermod -a -G sudo $UNAME && sudo usermod -a -G ssh $UNAME && sudo mkdir /home/$UNAME && sudo chown $UNAME:$UNAME /home/$UNAME && mkdir /home/$UNAME/.ssh && sudo chown $UNAME:$UNAME /home/$UNAME/.ssh
 
 # sudo apt-get install -y ufw
 # sudo ufw allow 80
 # sudo ufw allow 22
 # sudo addgroup $UNAME
-# sudo usermod -a G sudo $UNAME
+# sudo usermod -a -G sudo $UNAME
 # sudo usermod -a -G ssh $UNAME
 # sudo mkdir /home/$UNAME
 # sudo chown $UNAME:$UNAME /home/$UNAME
 # mkdir /home/$UNAME/.ssh
+# sudo chown $UNAME:$UNAME /home/$UNAME/.ssh
 
 # From local machine
 # scp ~/.ssh/id_rsa $UNAME@cloud-vm-XX-XX.doc.ic.ac.uk:/home/$UNAME/.ssh/id_rsa
@@ -49,7 +50,8 @@ sudo usermod -a -G docker $UNAME
 
 # reboot
 
-# source venv/bin/activate
+# cd covrig
 # screen -S sessionX
+# source venv/bin/activate
 # docker build -t git -f containers/git/Dockerfile containers/git
 # ./utils/run_analytics_parallel_nologs.sh git 100 4 git 0397305 5

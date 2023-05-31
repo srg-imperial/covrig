@@ -27,6 +27,9 @@ class Curl(Container):
     def compile(self):
         """ compile Curl """
         with self.conn.cd(self.path):
+            # For later revisions of curl, ignore restriction to lcov 1.13 since we are using 1.16
+            result = self.conn.run(
+                f"sed -i m4/ax_code_coverage.m4 -e 's/1.11 1.13/1.11 1.13 1.16/g'", warn=True)
             # create a directory for the coverage build (cvr)
             result = self.conn.run('autoreconf -fi && mkdir -p cvr', warn=True)
             # Disable certain tests that rely on curl -k and broken tests (1316, usually disabled in 82a4d53)
