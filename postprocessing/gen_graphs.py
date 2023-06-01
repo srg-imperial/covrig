@@ -330,7 +330,8 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
         plt.close(fig)
 
 
-def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False, savedir=None, weighted=False):
+def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False, savedir=None,
+                        weighted=False):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -338,7 +339,8 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     cleaned_data = utils.clean_data(data)
 
     # Get the coverage data using eloc_data, coverage_data, branch_data, branch_coverage_data and dates
-    eloc_data, cov_data, covered_lines_data, not_covered_lines_data, patchcoverage_data = utils.get_columns(cleaned_data, ['eloc', 'coverage', 'covlines', 'notcovlines', 'patchcoverage'])
+    eloc_data, cov_data, covered_lines_data, not_covered_lines_data, patchcoverage_data = utils.get_columns(
+        cleaned_data, ['eloc', 'coverage', 'covlines', 'notcovlines', 'patchcoverage'])
 
     # Count the number of revisions that introduce executable lines
     total_revs_exec = 0
@@ -394,7 +396,6 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
         num_lines_added_modified = covered_lines_data[i] + not_covered_lines_data[i] if \
             covered_lines_data[i] + not_covered_lines_data[i] > 0 else -1
         lines_bucket_membership.append(num_lines_added_modified)
-
 
     # Assert if we are in covrig mode we should not have any 0s or 5s in our bucket membership
     assert bucket_no != covrig_buckets or (0 not in bucket_membership and 5 not in bucket_membership)
@@ -458,8 +459,8 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     # Calculate the average coverage
     avg_coverage = sum(coverage_perc) / len(coverage_perc)
 
-    ax.bar(csv_name if multiple else 0, 0.5, bottom=avg_coverage, label="Average %", width=0.5, color='black',
-           zorder=4)
+    # ax.bar(csv_name if multiple else 0, 0.5, bottom=avg_coverage, label="Average %", width=0.5, color='black',
+    #        zorder=4)
 
     # Turn off ticks for the x axis
     if not multiple:
@@ -591,7 +592,9 @@ def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit_aut
     author, added_lines, dates = utils.get_columns(cleaned_data, ['author', 'addedlines', 'time'])
 
     # Get the unique authors
-    unique_authors = list(set(author))
+    author_dict = anonymize_names(author)
+
+    unique_authors = list(author_dict.values())
 
     # Get the number of authors
     num_authors = len(unique_authors)
@@ -606,8 +609,10 @@ def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit_aut
         commits_per_author[unique_authors[i]] = 0
         lines_added_per_author[unique_authors[i]] = 0
     for i in range(num_commits):
-        commits_per_author[author[i]] += 1
-        lines_added_per_author[author[i]] += added_lines[i]
+        # use author_dict to get the anonymized author
+        anon_author = author_dict[author[i]]
+        commits_per_author[anon_author] += 1
+        lines_added_per_author[anon_author] += added_lines[i]
 
     # look at dictionary and remove authors with less than <limit> commits
     for key in list(commits_per_author.keys()):
@@ -977,6 +982,11 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
     patch_coverage_data = [patch_coverage_data[i] for i in idxs]
     authors = [authors[i] for i in idxs]
 
+    author_to_anon = anonymize_names(authors)
+
+    # Take all authors and make them anonymous
+    authors = [author_to_anon[author] for author in authors]
+
     # Get the average patch coverage overall
     average_patch_coverage_overall = sum(patch_coverage_data) / len(patch_coverage_data)
 
@@ -1037,7 +1047,8 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
         fontsize=16,
         y=0.98)
     # Add a subtitle
-    fig.text(0.5, 0.95, f'(Numbers on bars represent number of commits attributed to author)', ha='center', fontsize=14,
+    fig.text(0.5, 0.945, f'(Numbers on bars represent number of commits attributed to author)', ha='center',
+             fontsize=14,
              fontweight='normal')
 
     # Label the vertical line as the average patch coverage overall in the legend and specify the value
@@ -1099,27 +1110,10 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     # Get the columns we want - author, date
     author_data, date_data = utils.get_columns(cleaned_data, ['author', 'time'])
 
-    # # Filter to only the authors with <limit> or more commits
-    # author_commit_frequency = {}
-    # for author in author_data:
-    #     if author not in author_commit_frequency:
-    #         author_commit_frequency[author] = 1
-    #     else:
-    #         author_commit_frequency[author] += 1
-    #
-    # filtered_authors = [author for author in author_commit_frequency if author_commit_frequency[author] >= limit]
-    #
-    # # Filter the data to only include commits by the filtered authors
-    # filtered_data = []
-    # for i in range(len(author_data)):
-    #     if author_data[i] in filtered_authors:
-    #         filtered_data.append((author_data[i], date_data[i]))
-    #
-    # author_data, date_data = zip(*filtered_data)
-    #
-    # # Convert author_data to a list and date_data to a list
-    # author_data = list(author_data)
-    # date_data = list(date_data)
+    anonymized_author_to_author = anonymize_names(author_data)
+
+    # Replace the author data with the anonymized author data
+    author_data = [anonymized_author_to_author[author] for author in author_data]
 
     # Filter to the top <limit> authors
     author_commit_frequency = {}
@@ -1414,7 +1408,125 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
 
     # Save the plot
     if save:
-        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-{type}-diffcov.png',
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-diffcov-{type}.png',
+                    bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir=None, size=DEFAULT_FIGSIZE, pos=0,
+                      multiple=False):
+    if plot is None:
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+    (fig, ax) = plot
+
+    type_to_line = {'line': 0, 'function': 1, 'branch': 2}
+    row = data[type_to_line[type]]
+
+    # Make all data ints
+    row = [int(x) for x in row]
+
+    bins = ['UNC', 'LBC', 'UIC', 'UBC', 'GBC', 'GIC', 'GNC', 'CBC', 'EUB', 'ECB', 'DUB', 'DCB']
+
+    names = ['Added Uncovered Code', 'Lost Baseline Cov.', 'Included Uncovered Code', 'Baseline Uncovered Code',
+             'Gained Baseline Cov.', 'Included Covered Code', 'Added Covered Code', 'Covered Baseline Code',
+             'Excluded Uncovered Code', 'Excluded Covered Code', 'Deleted Uncovered Code', 'Deleted Covered Code']
+
+    colours = ["#ff622a", "#cc6666", "#eeaa30", "#fde007", "#448844", "#30cc37", "#b5f7af", "#cad7fe", "#dddddd",
+               "#cc66ff", "#eeeeee", "#ffffff"]
+
+    # Pull out the data and put it in a map (int, bin, colour)
+    data_map = {}
+    for idx, val in enumerate(row):
+        data_map[bins[idx]] = (val, names[idx], colours[idx])
+
+    new_bin_order = ['UNC', 'LBC', 'UIC', 'UBC', 'GNC', 'GBC', 'GIC', 'CBC', 'EUB', 'ECB', 'DUB', 'DCB']
+
+    # Plot a stacked bar chart for the data (positives)
+    minimum = -9999999
+    maximum = 9999999
+    width = 0.25
+    total = 0
+    for bin in new_bin_order:
+        # Get the height of the bar
+        height = data_map[bin][0]
+        # Get the bottom of the bar
+        # Plot the bar
+        label = f"({bin}) {data_map[bin][1]}"
+        if bin == 'CBC':
+            # Plot negatively
+            ax.bar(csv_name, height, bottom=-height, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
+                   width=-width, label=label)
+            minimum = -height
+        elif bin == 'GBC' or bin == 'GIC' or bin == 'GNC':
+            ax.bar(csv_name, height, bottom=total, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
+                   width=-width, label=label)
+            total += height
+    maximum = total
+
+    total = 0
+    for bin in new_bin_order:
+        # Get the height of the bar
+        height = data_map[bin][0]
+        # Get the bottom of the bar
+        # Plot the bar
+        label = f"({bin}) {data_map[bin][1]}"
+        if bin == 'UBC':
+            # Plot negatively
+            ax.bar(csv_name, height, bottom=-height, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
+                   width=width, label=label)
+            minimum = min(-height, minimum)
+        elif bin == 'LBC' or bin == 'UIC' or bin == 'UNC':
+            ax.bar(csv_name, height, bottom=total, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
+                   width=width, label=label)
+            total += height
+    maximum = max(total, maximum)
+
+    # Plot a horizontal line at 0 across the whole graph
+    ax.axhline(y=0, color='black', linewidth=1, zorder=2)
+
+    # Label the y axis as Count
+    # take type_to_line[type] and make its first letter uppercase
+    ax.set_ylabel(f'{type.capitalize()} Count')
+
+    # Give the plot a title
+    if not multiple:
+        ax.set_title(f'{csv_name}')
+    else:
+        ax.set_title(f'Differential Coverage across projects')
+        # Make the xticks at 90 degrees
+        plt.xticks(rotation=90)
+
+    # Get the current y limits
+    y_min, y_max = ax.get_ylim()
+    # Check if y_min, y_max are smaller than minimum, maximum
+    changed = False
+    if y_min >= minimum:
+        y_min = minimum + minimum * 0.1
+        changed = True
+    if y_max <= maximum:
+        y_max = maximum + maximum * 0.1
+        changed = True
+    # Set the y limits
+    ax.set_ylim(bottom=y_min, top=y_max)
+
+    # Use locator params to have 9 ticks on the y axis
+    ax.yaxis.set_major_locator(plt.MaxNLocator(9))
+
+    # Give the plot a title
+    ax.set_yticklabels([f'{abs(x):.0f}' for x in ax.get_yticks()])
+
+    # Print the legend with the patch type names
+    if pos == 0:
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc='upper left', title='Diff. Cov. Categories',
+                  title_fontsize=12)
+
+    # Make it a grid
+    ax.grid(True, zorder=0, axis='y')
+
+    # Save the plot
+    if save:
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-diffcov-{type}-compressed.png',
                     bbox_inches='tight')
         plt.close(fig)
 
@@ -1520,6 +1632,48 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
 """ Utility Functions """
 
 
+def anonymize_names(author_data):
+    unique_authors = list(set(author_data))
+
+    # Attempt to anonymize the authors by splitting on any spaces, and turning them into initials
+    anonymized_authors = []
+    for i in range(len(unique_authors)):
+        # split on spaces
+        split = unique_authors[i].split(' ')
+        # get the first letter of each split
+        initials = [s[0] for s in split]
+        # Make initials[0] uppercase
+        initials[0] = initials[0].upper()
+        # join the initials together like "JH"
+        anonymized_authors.append(''.join(initials))
+
+    # Create a map between an anonymized author and a dupe count
+    anonymized_author_to_dupe_count = {}
+    for i in range(len(anonymized_authors)):
+        if anonymized_authors[i] not in anonymized_author_to_dupe_count.keys():
+            anonymized_author_to_dupe_count[anonymized_authors[i]] = 0
+        anonymized_author_to_dupe_count[anonymized_authors[i]] += 1
+
+    # Step through the anonymized authors, and if there are any duplicates, add a number to the end
+    anonymized_authors_out = []
+    for i in range(len(anonymized_authors)):
+        out_str = anonymized_authors[i]
+        if anonymized_author_to_dupe_count[anonymized_authors[i]] > 1:
+            out_str += str(anonymized_author_to_dupe_count[anonymized_authors[i]])
+            anonymized_author_to_dupe_count[anonymized_authors[i]] -= 1
+        anonymized_authors_out.append(out_str)
+
+    assert len(anonymized_authors_out) == len(anonymized_authors) == len(unique_authors)
+
+    # Create a map between the anonymized authors and the original authors (original -> anonymized)
+    anonymized_author_to_author = {}
+    for i in range(len(anonymized_authors_out)):
+        anonymized_author_to_author[unique_authors[i]] = anonymized_authors_out[i]
+
+    # Return the map, and then later call anonymized_author_to_author[author] to get the anonymized author
+    return anonymized_author_to_author
+
+
 def moving_average(series, window_size):
     window = np.ones(window_size) / window_size
     return np.convolve(series, window, 'same')
@@ -1545,7 +1699,8 @@ def date_check(args: dict):
 
 def get_250_timestamp(csv_name):
     # Get rid of the substring "_repeats" or "_all" from the csv_name
-    csv_name = csv_name.replace('_repeats', '').replace('_all_rep', '').replace('_all', '').replace('_nr', '').replace('_combined', '')
+    csv_name = csv_name.replace('_repeats', '').replace('_all_rep', '').replace('_all', '').replace('_nr', '').replace(
+        '_combined', '')
     ret_date = -1
     # Get the lower case name of the csv
     lowered = [(x.lower(), x) for x in commits_prev_compiling_range.keys()]
@@ -1556,6 +1711,7 @@ def get_250_timestamp(csv_name):
 
     # Return the date we believe is associated with the csv
     return ret_date
+
 
 def plot_vert_at_timestamp(ax, csv_name, date, round_to_month=False):
     # If we can find the legacy date, let's plot it as a vertical line
@@ -1598,7 +1754,8 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_commit_frequency(data, csv_name, savedir=savedir)
 
     # non-det graphs - old data won't have this
-    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats', 'Redis_all_rep2', 'Curl_2500_repeats', 'Vim_2500_reps']
+    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats',
+                      'Redis_all_rep2', 'Curl_2500_repeats', 'Vim_2500_reps']
     if csv_name in included_names:
         plot_non_det_hist(data, csv_name, date=date, savedir=savedir)
 
@@ -1612,6 +1769,8 @@ def plot_diffcov_individual(data, csv_name, savedir=None):
     plot_diffcov_hist(data, csv_name, type='function', savedir=savedir, size=diffcov_figsize)
     plot_diffcov_hist(data, csv_name, type='branch', savedir=savedir, size=diffcov_figsize)
 
+    plot_diffcov_bars(data, csv_name, type='line', savedir=savedir, size=diffcov_figsize)
+
 
 def plot_diffcov_multiple(paths, csv_names, savedir=None):
     if savedir is None:
@@ -1620,6 +1779,9 @@ def plot_diffcov_multiple(paths, csv_names, savedir=None):
     plot_diffcov_format_multiple(plot_diffcov_hist, 'diffcov-line', paths, csv_names, type='line')
     plot_diffcov_format_multiple(plot_diffcov_hist, 'diffcov-function', paths, csv_names, type='function')
     plot_diffcov_format_multiple(plot_diffcov_hist, 'diffcov-branch', paths, csv_names, type='branch')
+
+    plot_diffcov_format_combined(plot_diffcov_bars, 'diffcov-line-compressed', paths, csv_names, type='line',
+                                 custom_figsize=(9, 9))
 
 
 def plot_diffcov_format_multiple(metric, outname, paths, csv_names, **kwargs):
@@ -1643,19 +1805,33 @@ def plot_diffcov_format_multiple(metric, outname, paths, csv_names, **kwargs):
 
     fig.tight_layout()
     fig.subplots_adjust(top=0.92)
-    # Check if kwargs contains date, if so, add it to the filename
-    date = kwargs.get('date', False)
-    fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}.png', bbox_inches='tight',
-                dpi=300)
+    fig.savefig(f'postprocessing/graphs/{args.input}/{outname}.png', bbox_inches='tight', dpi=300)
+    print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
+
+
+def plot_diffcov_format_combined(metric, outname, paths, csv_names, **kwargs):
+    """ Plot a metric for multiple CSVs on subplots of the same figure. """
+    custom_figsize = kwargs.get('custom_figsize', None)
+    if custom_figsize is not None:
+        del kwargs['custom_figsize']
+    fig, axs = plt.subplots(figsize=custom_figsize if custom_figsize is not None else EXPANDED_FIGSIZE)
+    for i in range(len(csv_names)):
+        diffcov_data = utils.extract_diffcov_data(paths[i], csv_names[i])
+        if diffcov_data is not None:
+            metric(diffcov_data, csv_names[i], plot=(fig, axs), save=False, pos=i, multiple=True, **kwargs)
+
+    fig.tight_layout()
+    fig.savefig(f'postprocessing/graphs/{args.input}/{outname}.png', bbox_inches='tight', dpi=300)
     print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
 
 
 def plot_all_multiple(paths, csv_names, date, limit=None):
     # Plot each of the combined graphs
-    plot_metric_multiple(plot_eloc, 'eloc', paths, csv_names, date=date, custom_figsize=(11,9), limit=limit)
-    plot_metric_multiple(plot_tloc, 'tloc', paths, csv_names, date=date, custom_figsize=(11,9), limit=limit)
-    plot_metric_multiple(plot_evolution_of_eloc_and_tloc, 'evolution_of_eloc_and_tloc', paths, csv_names, date=date, custom_figsize=(11,9), limit=limit)
-    plot_metric_multiple(plot_coverage, 'coverage', paths, csv_names, date=date, custom_figsize=(9,11), limit=limit)
+    plot_metric_multiple(plot_eloc, 'eloc', paths, csv_names, date=date, custom_figsize=(11, 9), limit=limit)
+    plot_metric_multiple(plot_tloc, 'tloc', paths, csv_names, date=date, custom_figsize=(11, 9), limit=limit)
+    plot_metric_multiple(plot_evolution_of_eloc_and_tloc, 'evolution_of_eloc_and_tloc', paths, csv_names, date=date,
+                         custom_figsize=(11, 9), limit=limit)
+    plot_metric_multiple(plot_coverage, 'coverage', paths, csv_names, date=date, custom_figsize=(9, 11), limit=limit)
 
     plot_metric_multiple(plot_average_patch_coverage_per_author, 'average_patch_coverage_per_author', paths, csv_names,
                          limit_authors=10, limit=limit)
@@ -1666,7 +1842,8 @@ def plot_all_multiple(paths, csv_names, date, limit=None):
 
     # The combined graphs for patch coverage and patch type are a bit different - they need to be plotted on the same graph rather than subplots
     plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=4, limit=limit)
-    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6, weighted=False, limit=limit)
+    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6, weighted=False,
+                         limit=limit)
     plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names, limit=limit, no_filter=True)
 
     plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names, limit=limit)
@@ -1803,11 +1980,14 @@ if __name__ == '__main__':
         # Remove the following CSV files from the list since they are either not complete, lack fields or we don't want to show them anymore
         excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
                           'remotedata/binutils/Binutils.csv', 'remotedata/binutils-gdb/BinutilsGdb_repeats.csv',
-                          'remotedata/binutils/Binutils_repeats.csv', 'remotedata/binutils-gdb/BinutilsGdb_repeats_section2.csv',
+                          'remotedata/binutils/Binutils_repeats.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_repeats_section2.csv',
                           'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/binutils/Binutils_all.csv',
                           'remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv',
-                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv', 'remotedata/git/Git1.csv',
-                          'remotedata/redis_repeated/Redis_2500_reps.csv', 'remotedata/vim/Vim_2500_reps.csv', 'remotedata/vim/Vim_rep_1_3.csv',
+                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv',
+                          'remotedata/git/Git1.csv',
+                          'remotedata/redis_repeated/Redis_2500_reps.csv', 'remotedata/vim/Vim_2500_reps.csv',
+                          'remotedata/vim/Vim_rep_1_3.csv',
                           'remotedata/vim/Vim_rep_1_4.csv', 'remotedata/curl/Curl_2500_repeats.csv',
                           'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky.csv',
                           'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky2.csv',
@@ -1903,7 +2083,7 @@ if __name__ == '__main__':
         plot_all_multiple(paths, csv_names, date=args.date, limit=args.limit)
         diffcov_csvs = glob.glob(f'{args.input}/*/diffcov_*.csv')
         if args.diffcov:
-            plot_diffcov_multiple(diffcov_paths, diffcov_names, limit=args.limit)
+            plot_diffcov_multiple(diffcov_paths, diffcov_names)
 
     else:
         # Make sure we have a file not a directory and that it is a CSV, throw a nice error otherwise
@@ -1951,9 +2131,11 @@ if __name__ == '__main__':
 
         data = utils.extract_data(args.input, csv_name, callback=date_check)
 
-        plot_all_individual(data, csv_name, date=args.date, savedir=directory, limit=args.limit)
+        if args.limit:
+            data = data[-args.limit:]
 
-        # if diffcov arg and diffcov dir exists, plot diffcov plots
+        plot_all_individual(data, csv_name, date=args.date, savedir=directory)
+
         if args.diffcov:
             # Try to find a csv file in the same directory with name diffcov_*.csv
             diffcov_csv = glob.glob(f'{search_dir}/diffcov_*.csv')
@@ -1961,9 +2143,9 @@ if __name__ == '__main__':
                 print(f'No diffcov csv found for {csv_name}')
             else:
                 diffcov_csv = diffcov_csv[0]
-                diffcov_data = utils.extract_diffcov_data(diffcov_csv, csv_name, limit=args.limit)
+                diffcov_data = utils.extract_diffcov_data(diffcov_csv, csv_name)
                 if diffcov_data is not None:
-                    plot_diffcov_individual(diffcov_data, csv_name, savedir=directory, limit=args.limit)
+                    plot_diffcov_individual(diffcov_data, csv_name, savedir=directory)
 
         print("=====================================================")
         print(f'Finished plotting {csv_name}. You can find the plots in graphs/{csv_name}')
