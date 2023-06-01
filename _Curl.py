@@ -9,8 +9,8 @@ class Curl(Container):
 
     # Inspired by https://github.com/curl/curl/blob/master/scripts/coverage.sh
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
 
         # set variables
         if self.offline:
@@ -22,11 +22,14 @@ class Curl(Container):
             self.timeout = 600
 
         self.tsuite_path = ('tests',)
-        self.ignore_coverage_from = ('include/*',)
+        self.ignore_coverage_from = ('include/*', '*/tests/*')
 
     def compile(self):
         """ compile Curl """
         with self.conn.cd(self.path):
+            # For later revisions of curl, ignore restriction to lcov 1.13 since we are using 1.16
+            result = self.conn.run(
+                f"sed -i m4/ax_code_coverage.m4 -e 's/1.11 1.13/1.11 1.13 1.16/g'", warn=True)
             # create a directory for the coverage build (cvr)
             result = self.conn.run('autoreconf -fi && mkdir -p cvr', warn=True)
             # Disable certain tests that rely on curl -k and broken tests (1316, usually disabled in 82a4d53)
@@ -35,7 +38,7 @@ class Curl(Container):
                 warn=True)
             with self.conn.cd('cvr'):
                 result = self.conn.run('../configure --disable-shared --enable-debug --enable-maintainer-mode --enable-manual '
-                                       '--enable-code-coverage --with-openssl CFLAGS="-fprofile-arcs -ftest-coverage -g -O0" LDFLAGS="-lgcov --coverage" && make -sj', warn=True)
+                                       '--enable-code-coverage --with-openssl CFLAGS="-fprofile-abs-path --coverage -g -O0" LDFLAGS="--coverage" && make -sj', warn=True)
                 if result.failed:
                     self.compileError = True
 
@@ -44,7 +47,11 @@ class Curl(Container):
         super(Curl, self).make_test()
         # if compile failed, skip this step
         if not self.compileError and not self.emptyCommit:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.source_path):
-                result = self.conn.run(f"export USER=root && timeout {self.timeout} make test", warn=True)
-                if result.failed:
-                    self.maketestError = result.return_code
+                for i in range(self.repeats):
+                    result = self.conn.run(f"export USER=root && timeout {self.timeout} make test", warn=True)
+                    if result.failed:
+                        self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)
+                self.conn.run('killall curl', warn=True)

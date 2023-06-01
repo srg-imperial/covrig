@@ -1,3 +1,6 @@
+# Ubuntu 14.04 comes with gcc 4.8.4 (Ubuntu 4.8.4-2ubuntu1~14.04.4), and original data was collected with gcc 4.7.2 (Ubuntu/Linaro 4.7.2-2ubuntu1) (consulting coverage archives' build_info files).
+# Dockerfile-12 works, but gcc/gcov version is 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5)
+
 FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \
@@ -9,12 +12,13 @@ RUN apt-get update && apt-get install -y \
 	git \
 	curl \
 	openssh-server \
-    lcov \
     realpath \
 	--no-install-recommends
 
-#RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
+RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
+RUN cd /tmp && curl -L -k https://download.libsodium.org/libsodium/releases/old/unsupported/libsodium-1.0.0.tar.gz | tar xz && cd libsodium-* && ./configure && make && make check && make install && ldconfig
+
 
 RUN mkdir -p /var/run/sshd
 

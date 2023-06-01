@@ -7,7 +7,7 @@
 Covrig is a flexible infrastructure that can be used to run each version of a system in isolation to collect static and dynamic software metrics (code coverage, lines of code), originally developed by Paul Marinescu and Petr Hosek at Imperial College London.
 
 ### Changelog (April 2023)
-- Upgraded to python3 3 (incl. deps)
+- Upgraded to python3 (incl. deps)
 - Added more examples for containers
 - Added support for differential coverage calculation
 - Rewrote and extended postprocessing graph generation
@@ -156,6 +156,13 @@ Scenario: I have a list of revisions. How do I get more interesting information 
 Solution: As before, but use the `postprocessing/faultcoverage-multiple.sh` script.
 
 This can be used to analyse buggy code coverage. Running this on a list of bug fixing revisions is intuitively similar to running the previous script on a list of revisions introducing the respective bugs.
+
+---
+Differential Coverage
+---
+To get differential coverage information, run `utils/diffcov.sh`.
+Example: `utils/diffcov.sh apr remotedata/apr/coverage/ 886b908 8fb7fa4`
+A quicker script if your file structure is correct is `utils/diffcov_runner.sh`, but the contents of which should make sense.
 
 ---
 Tests

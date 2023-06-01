@@ -17,15 +17,16 @@ REPO=$1
 NUM_COMMITS=$2
 NUM_PROCESSES=$3
 IMAGE=$4
+FINAL_COMMIT=$5
 
-# if fifth arg is given, use it as the commit to end at
-if [ "$#" -eq 5 ]; then
-  FINAL_COMMIT=$5
+# if sixth arg is given, use it as the repeats arg
+if [ "$#" -eq 6 ]; then
+  REPEATS=$6
 fi
 
-# Check we have 3 or 4 args
-if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
-  echo "Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> <image> [commit]"
+# Check we have 5 or 6 args
+if [ "$#" -lt 5 ] || [ "$#" -gt 6 ]; then
+  echo "Usage: run_analytics_parallel.sh <repo> <num_commits> <num_processes> <image> <commit> [repeats]"
   exit 1
 fi
 
@@ -80,15 +81,16 @@ analytics(){
   NUM_COMMITS=$4
   IMAGE=$5
   FINAL_COMMIT=$6
+  REPEATS=$7
   # Run the analytics
   echo "============================"
   echo "> python3 analytics.py --output $FILENAME --limit $LIMIT --image $IMAGE $REPO $NUM_COMMITS"
   echo "============================"
   # If the final commit is not specified, don't provide --endatcommit
-  if [ -z "$FINAL_COMMIT" ]; then
-    python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" "$REPO" "$NUM_COMMITS"
-  else
+  if [ -z "$REPEATS" ]; then
     python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" --endatcommit "$FINAL_COMMIT" "$REPO" "$NUM_COMMITS"
+  else
+    python3 analytics.py --output "$FILENAME" --limit "$LIMIT" --image "$IMAGE" --endatcommit "$FINAL_COMMIT" --repeats "$REPEATS" "$REPO" "$NUM_COMMITS"
   fi
 }
 export -f analytics
@@ -123,7 +125,7 @@ done
 #rm -rf data/"$REPO"_logs
 #mkdir -p "data/""$REPO""_logs"
 
-parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" "$FINAL_COMMIT" ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" &
+parallel --link -j "$NUM_PROCESSES" -k analytics {1} {2} "$REPO" {3} "$IMAGE" "$FINAL_COMMIT" "$REPEATS" ::: "${OUTPUT_FILES[@]}" ::: "${NCPP_ARRAY[@]}" ::: "${COMMIT_RANGES[@]}" &
 pid=$!
 
 # Kill the parallel process if script killed

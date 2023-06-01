@@ -1,3 +1,5 @@
+# Use this Dockerfile up to f144349, then Dockerfile-16 up to 98ea1dc, and finally Dockerfile-22 until 1058654.
+
 FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \

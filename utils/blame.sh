@@ -48,8 +48,8 @@ mv blame.txt $FILE.annotated
 
 # TODO: use the blame.txt file to annotate the source files by passing our file into utils/annotate.sh?
 
+# Remove the rawblame.txt and date.txt files
+rm rawblame.txt date.txt
+
 # Go back to the original directory
 cd $ORIGIN
-
-# Output the blame file
-#cat blame.txt

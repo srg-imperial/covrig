@@ -1,7 +1,6 @@
-FROM ubuntu:16.04
-LABEL ubuntu_version=16.04
-
-# use this Dockerfile for revisions of lighttpd2 from 9263dea onwards (>24/08/2019)
+FROM ubuntu:22.04
+LABEL ubuntu_version=22.04
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
 	sudo \
@@ -14,10 +13,11 @@ RUN apt-get update && apt-get install -y \
 	openssh-server \
 	--no-install-recommends
 
+# Necessary to do earlier since curl throws an error otherwise on the patch download
 RUN apt-get install -yq --reinstall ca-certificates
 
-# realpath is installed by default in Ubuntu 16.04
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
+# Patching cloc bug for later versions of Ubuntu (which come with a newer version of Perl, as in Github runner)
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && curl -L https://bugs.archlinux.org/task/45494?getfile=13174 > cloc.1.64.patch && patch -p1 < cloc.1.64.patch && make install
 
 RUN mkdir -p /var/run/sshd
@@ -29,28 +29,10 @@ RUN chmod -R 700 /root/.ssh
 
 RUN echo "root:root" | chpasswd
 
-RUN apt-get install -yq \
-	libglib2.0-dev \
-	libev-dev \
-	libssl-dev \
-    libgnutls28-dev \
-	zlib1g-dev \
-	libbz2-dev \
-	liblua5.1-dev \
-    python-pycurl \
-	ragel \
-    libunwind-dev \
-    librtmp-dev \
-    libcurl4-gnutls-dev # or libcurl4-openssl-dev
+RUN apt-get install -yq ed libcppunit-dev libltdl-dev libssl-dev
 
-RUN apt-get -yq install python3-pip
-RUN pip3 install pycurl
-
-RUN git clone https://github.com/lighttpd/lighttpd2.git /home/lighttpd2
+RUN git clone https://github.com/squid-cache/squid.git /home/squid
 ADD measure-cov.sh /root/
-
-# We have both python2 and python3 installed, so we need to make sure that we use python3
-#RUN echo "alias python=python3" >> /root/.bashrc
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]

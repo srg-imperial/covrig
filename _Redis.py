@@ -7,8 +7,8 @@ from Container import Container
 class Redis(Container):
     """ redis class """
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
 
         # set variables
         if self.offline:
@@ -27,9 +27,9 @@ class Redis(Container):
             # Shouldn't get here as compile is only done if we're online
             self.path = self.conn.local("realpath 'repos/redis'").stdout
         """ compile redis """
-        with self.conn.cd('/home/redis'):
+        with self.conn.cd(self.path):
             self.conn.run('chown -R regular:regular .', warn=True)
-            result = self.conn.run('su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0\'', warn=True)
+            result = self.conn.run(f'su regular -c \'make clean\' && su regular -c \'make gcov OPTIMIZATION=-O0 CFLAGS=-std=gnu99\'', warn=True)
             if result.failed:
                 self.compileError = True
 
@@ -38,9 +38,11 @@ class Redis(Container):
         super(Redis, self).make_test()
         # if compile failed, skip this step
         if not self.compileError:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.source_path):
-                for i in range(5):
+                for i in range(self.repeats):
                     result = self.conn.run('su regular -c \'timeout ' + str(self.timeout) + ' make test\'', warn=True)
                     if result.failed:
                         self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)
                 self.conn.run('killall redis', warn=True)

@@ -26,19 +26,21 @@ class Container(object):
         NotExecutable = 2
         Covered = 3
 
-    def __init__(self, _image, _user, _pwd):
+    def __init__(self, _image, _user, _pwd, _repeats=1):
         self.container = None
         self.client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 
         self.image = _image
         self.user = _user
         self.pwd = _pwd
+        self.repeats = _repeats
 
         self.offline = not _image
         # no errors yet :)
         self.compileError = False
         self.maketestError = False
         self.emptyCommit = False
+        self.exit_status_list = []
         """ how many lines from previous patches are covered now """
         self.changed_files = []
         self.echanged_files = []
@@ -537,6 +539,18 @@ class Container(object):
             self.prev_covered[backcnt] += covered
         return prev_files, prev_lines
 
+    def get_non_determinism_flag(self):
+        # Returns whether a test is non-deterministic or not (true if non-deterministic, false otherwise)
+        # If we have a compile error, empty commit or no covered lines then return false (vacuously the case that the test is deterministic)
+        if self.compileError or self.emptyCommit or self.covered_eloc == 0:
+            return False
+
+        # Check whether all executions of the test have the same exit status - false if all are the same, true otherwise
+        if len(set(self.exit_status_list)) <= 1:
+            return False
+        # Therefore the test is non-deterministic so return true/1
+        return True
+
     def collect(self, author_name, timestamp, outputfolder, outputfile):
         """ create a Collector to collect all info and a XMLHandler to parse them """
         c = Collector()
@@ -550,6 +564,8 @@ class Container(object):
         c.timestamp = timestamp
         c.tsuite_size = self.tsize
         c.merge = self.merge
+        c.repeats = self.repeats
+        c.non_det = self.get_non_determinism_flag()
         # if compilation failed, halt
         if self.compileError:
             c.compileError = True

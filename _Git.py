@@ -7,8 +7,8 @@ from Container import Container
 class Git(Container):
     """ Git class """
 
-    def __init__(self, _image, _user, _pwd):
-        Container.__init__(self, _image, _user, _pwd)
+    def __init__(self, _image, _user, _pwd, _repeats):
+        Container.__init__(self, _image, _user, _pwd, _repeats)
 
         # set variables
         if self.offline:
@@ -25,8 +25,12 @@ class Git(Container):
     def compile(self):
         """ compile Git """
         with self.conn.cd(self.path):
+            # attempt to speed up by setting multiple jobs -
+            # tested on a multitude of revisions and is consistent - we can run the test suite in parallel without any
+            # issues. Speedup min. 2x (all coverage archives produced w/o this though for consistency, speedup helpful
+            # for identifying non-deterministic tests)
+            result = self.conn.run('sed -i "s/DEFAULT_TEST_TARGET=test -j1 test/DEFAULT_TEST_TARGET=test -j4 test/g" Makefile', warn=True)
             # for later versions, need -std=c99
-            # make configure && ./configure && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile
             result = self.conn.run("make configure && ./configure CFLAGS='-std=c99' && make -j`grep -c '^processor' /proc/cpuinfo` coverage-compile", warn=True)
             if result.failed:
                 self.compileError = True
@@ -36,7 +40,10 @@ class Git(Container):
         super(Git, self).make_test()
         # if compile failed, skip this step
         if not self.compileError:
+            print(f"Repeats: {self.repeats}")
             with self.conn.cd(self.path):
-                result = self.conn.run("timeout " + str(self.timeout) + " make coverage", warn=True)
-                if result.failed:
-                    self.maketestError = result.return_code
+                for i in range(self.repeats):
+                    result = self.conn.run("timeout " + str(self.timeout) + " make coverage", warn=True)
+                    if result.failed:
+                        self.maketestError = result.return_code
+                    self.exit_status_list.append(result.return_code)

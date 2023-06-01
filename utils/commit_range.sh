@@ -7,6 +7,13 @@ INPUT_HASH=$1
 # Number of commits to jump forward
 JUMP=$2
 
+# If neither argument is provided, print usage and exit
+if [ -z "$INPUT_HASH" ] || [ -z "$JUMP" ]; then
+    echo "Usage: $0 <commit hash> <number of commits to jump forward>"
+    exit 1
+fi
+
+
 # Make sure JUMP is at least 1
 if [ $JUMP -lt 1 ]; then
     echo "JUMP must be at least 1"

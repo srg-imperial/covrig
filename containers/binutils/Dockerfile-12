@@ -1,3 +1,5 @@
+# Used this Dockerfile to build the image that resulted in the container that was used to run the tests.
+
 FROM ubuntu:12.04
 
 RUN sed -i s/archive/old-releases/g etc/apt/sources.list

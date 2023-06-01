@@ -17,7 +17,7 @@ from _Binutils import *
 from _BinutilsGdb import *
 # from _Findutils import *
 from _Dovecot import *
-# from _Squid import *
+from _Squid import *
 from _Vim import *
 
 # Flow of control:
@@ -70,9 +70,9 @@ class Analytics(object):
         return cls(_pclass, _image, clist)
 
     @classmethod
-    def run_custom(cls, _pclass, _image, _commit, _count, _startaftercommit=None, _maxcommits=0):
+    def run_custom(cls, _pclass, _image, _commit, _count, _startaftercommit=None, _maxcommits=0, _repeats=1):
         """ process a custom range of commits, given as tuple """
-        r = _pclass(_image, 'root', 'root')
+        r = _pclass(_image, 'root', 'root', _repeats)
         clist = []
         r.spawn()
         # attach timestamp and author to the commit
@@ -93,7 +93,7 @@ class Analytics(object):
         print("Will analyse %d commits" % len(clist))
         return cls(_pclass, _image, clist)
 
-    def go(self, outputfolder, outputfile):
+    def go(self, outputfolder, outputfile, repeats=1):
         """ run all the tests for every version specified in a new container """
 
         # create a data/program-name directory where data will be collected
@@ -113,7 +113,7 @@ class Analytics(object):
             timestamp = a[1]
             author_name = a[2]
 
-            c = self.pclass(self.image, 'root', 'root')
+            c = self.pclass(self.image, 'root', 'root', repeats)
             c.outputfolder = outputfolder
             c.spawn()
             if c.offline:  # TODO: Don't really know why being offline changes the commit hash length we get...
@@ -157,6 +157,7 @@ def main():
     parser.add_argument('--endatcommit', help="process revisions up to this commit")
     parser.add_argument('--limit', type=int, help="limit to n number of revisions")
     parser.add_argument('--output', help="output file name")
+    parser.add_argument('--repeats', type=int, default=1, help="number of times to repeat the test suite (default: %(default)s)")
     parser.add_argument('program', help="program to analyse")
     parser.add_argument('revisions', type=int, nargs='?', default=0, help="number of revisions to process")
     args = parser.parse_args()
@@ -177,7 +178,7 @@ def main():
         # "dovecot": {"class": Dovecot, "revision": "fbf5813", "n": 1000},
         # matches up with mercurial/git-hg commits for ffbf5813, some commits don't work since have external dependencies we can't roll back to (Unicode)
         "dovecot": {"class": Dovecot, "revision": "121b017", "n": 1000},
-        # "squid": {"class": Squid, "revision": "fa4c8a3", "n": 1000},
+        "squid": {"class": Squid, "revision": "ae64d121", "n": 1500}, # 3896 commits from 1st Jan 2013 (f1402d4) to 6 May 2023
         "git": {"class": Git, "revision": "d7aced9", "n": 500},
         # For Vim, Jun 2013 revision, v7 last rev is edeb846c
         "vim": {"class": Vim, "revision": "f751255", "n": 500},
@@ -202,7 +203,7 @@ def main():
                                          args.endatcommit if args.endatcommit else b["revision"],
                                          args.revisions if args.revisions else b["n"], lastrev,
                                          args.limit)
-        container.go(outputfolder, outputfile)
+        container.go(outputfolder, outputfile, repeats=args.repeats)
     except KeyError:
         print("Unrecognized program name %s" % args.program)
 
