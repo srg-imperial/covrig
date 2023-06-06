@@ -1,8 +1,6 @@
-# Here as an example, but used Dockerfile-12 to build the image that resulted in the container that was used to run the tests.
+# Ubuntu 14.04 comes with gcc 4.8.4 (Ubuntu 4.8.4-2ubuntu1~14.04.4), and original data was collected with gcc 4.7.2 (Ubuntu/Linaro 4.7.2-2ubuntu1) (consulting coverage archives' build_info files).
 
-FROM ubuntu:12.04
-
-RUN sed -i s/archive/old-releases/g etc/apt/sources.list
+FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \
 	sudo \
@@ -17,9 +15,9 @@ RUN apt-get update && apt-get install -y \
 	--no-install-recommends
 
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/ltp/lcov-1.10.tar.gz | tar xz && cd lcov-* && make install
-RUN #cd /tmp && curl -L https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16.tar.gz | tar xz && cd lcov-* && make PREFIX=/usr install
 RUN cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && make install
-RUN cd /tmp && curl -L -k https://download.libsodium.org/libsodium/releases/old/unsupported/libsodium-1.0.0.tar.gz | tar xz && cd libsodium-* && ./configure && make && make check && make install && ldconfig
+#RUN cd /tmp && curl -L -k https://download.libsodium.org/libsodium/releases/old/unsupported/libsodium-1.0.0.tar.gz | tar xz && cd libsodium-* && ./configure && make && make check && make install && ldconfig
+
 
 RUN mkdir -p /var/run/sshd
 
@@ -29,6 +27,8 @@ RUN chown -R root:root /root/.ssh
 RUN chmod -R 700 /root/.ssh
 
 RUN echo "root:root" | chpasswd
+
+RUN apt-get install -yq --reinstall ca-certificates
 
 RUN git clone https://github.com/zeromq/zeromq4-x.git /home/zeromq4-x/
 ADD measure-cov.sh /root/

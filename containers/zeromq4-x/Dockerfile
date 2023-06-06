@@ -1,5 +1,5 @@
 # Ubuntu 14.04 comes with gcc 4.8.4 (Ubuntu 4.8.4-2ubuntu1~14.04.4), and original data was collected with gcc 4.7.2 (Ubuntu/Linaro 4.7.2-2ubuntu1) (consulting coverage archives' build_info files).
-# Dockerfile-12 works, but gcc/gcov version is 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5)
+# Dockerfile-12 (previous) works, but gcc/gcov version is 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5)
 
 FROM ubuntu:14.04
 
