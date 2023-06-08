@@ -27,6 +27,19 @@ class BinutilsGdb(Container):
         """ compile Binutils """
         with self.conn.cd(self.path):
             # We only care about the /binutils directory of the /binutils-gdb repo, so disable the rest (speeds up compilation and reduces dependencies)
+            result = self.conn.run("git rev-list 8f99fb69ddb5562afbc3b1b97f378aabf0316050 | grep $(git rev-parse HEAD)",
+                                   warn=True)
+            if result.stdout.strip() != "":
+                # fix a bug that stops compilation for certain commits
+                self.conn.run(
+                    "sed -i -e 's/@colophon/@@colophon/' -e 's/doc@cygnus.com/doc@@cygnus.com/' bfd/doc/bfd.texinfo",
+                    warn=True)
+                self.conn.run(
+                    "sed -i -e 's/@colophon/@@colophon/' -e 's/doc@cygnus.com/doc@@cygnus.com/' ld/ld.texinfo",
+                    warn=True)
+                self.conn.run(
+                    'sed -i -e "s/@itemx --output-mach=@var/@item --output-mach=@var/g" -e "s/@itemx --input-type=@var{type}/@item --input-type=@var{type}/g" -e "s/@itemx --output-type=@var{type}/@item --output-type=@var{type}/g" -e "s/@itemx --input-osabi=@var{osabi}/@item --input-osabi=@var{osabi}/g" -e "s/@itemx --output-osabi=@var{osabi}/@item --output-osabi=@var{osabi}/g" binutils/doc/binutils.texi',
+                    warn=True)
             result = self.conn.run(
                 './configure --disable-doc --disable-gdb --disable-gprof --disable-gprofng && make -j2 CFLAGS=\"-O0 -coverage -Wno-error\" LDFLAGS=\"-coverage\"',
                 warn=True)
