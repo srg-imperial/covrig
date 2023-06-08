@@ -19,7 +19,7 @@ def limit_data(data, end_at_commit, limit=250):
         # print(f'Warning: end_at_commit_index {end_at_commit_index} is less than limit {limit}, returning {end_at_commit_index} commits...')
         lower_bound = 0
     # Return the data up to the end_at_commit_index
-    return data[lower_bound:end_at_commit_index]
+    return data[lower_bound:end_at_commit_index + 1]
 
 
 def get_data_with_commits(data, commits):
@@ -34,12 +34,15 @@ def get_data_with_commits(data, commits):
 
 def filter_data_by_exec_test(data):
     # Take a list of rows (data) and return a list of rows that have 'covlines' + 'notcovlines' > 0 or 'changed_test_files' > 0
+    # Keep compileErrors in since we use them and they should get filtered out later with a clean_data call
 
     # Get the columns
-    covlines, notcovlines, changed_test_files = get_columns(data, ['covlines', 'notcovlines', 'changed_test_files'])
+    covlines, notcovlines, changed_test_files, exit_status = get_columns(data, ['covlines', 'notcovlines',
+                                                                                'changed_test_files', 'exit'])
 
     # Get the indices of the rows that have 'covlines' + 'notcovlines' > 0 or 'changed_test_files' > 0
-    indices = [i for i, x in enumerate(covlines) if x + notcovlines[i] > 0 or changed_test_files[i] > 0]
+    indices = [i for i, x in enumerate(covlines) if
+               x + notcovlines[i] > 0 or changed_test_files[i] > 0 or exit_status[i] == 'compileError']
 
     # Return the data with the indices
     return [data[x] for x in indices], indices
@@ -127,3 +130,35 @@ def extract_data(input_file, csv_name, callback=None):
         callback({'dates': dates, 'csv_name': csv_name, 'input_file': input_file, 'lines': lines})
 
     return lines
+
+
+def reformat_csv_names(csv_names):
+    # Trim the csv names to remove the _repeats, _all, _nr, _combined, _all_rep, and _all_rep
+    reformatted_csv_names = []
+    for i in range(len(csv_names)):
+        reformatted = csv_names[i].replace('_repeats', '').replace('_all', '').replace('_nr', '').replace(
+            '_combined', '').replace('_all_rep', '').replace('_all_rep', '').replace('Gdb', '')
+        if reformatted == 'Apr':
+            # Capitalize Apr
+            reformatted = 'APR'
+        elif reformatted == 'Zeromq':
+            reformatted = 'ZeroMQ'
+        reformatted_csv_names.append(reformatted)
+    return reformatted_csv_names
+
+
+def filter_to_non_det_supported(paths, csv_names):
+    # Assumes that the paths are in the same order as the csv_names
+    # Get the first line of each CSV file from paths. If the first line doesn't contain the string 'non_det', then throw out the paths/csv_names combo
+    for i in range(len(paths)):
+        with open(f'{paths[i]}', 'r') as f:
+            first_line = f.readline()
+            # Could also compare with config.file_header_raw
+            if 'non_det' not in first_line:
+                paths[i] = None
+                csv_names[i] = None
+
+    # Remove the None values from paths and csv_names
+    paths = [path for path in paths if path is not None]
+    csv_names = [csv_name for csv_name in csv_names if csv_name is not None]
+    return paths, csv_names

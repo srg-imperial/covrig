@@ -14,10 +14,10 @@ file_header_list = [x.replace('#', '').replace('*', '') for x in file_header_raw
 file_header_list_v1 = file_header_list[:-2]
 
 # Legacy is without last two columns and with only one covlinesprevpatches column in that list (so 0 to 9 and 19 to the end)
-file_header_list_legacy = file_header_list[:10] + file_header_list[19:]
+file_header_list_legacy = file_header_list_v1[:10] + file_header_list_v1[19:]
 
 # The case for Lighttpd-gnutls.csv
-file_header_list_legacy_nobr = file_header_list_v1[:-2]
+file_header_list_legacy_nobr = file_header_list_legacy[:-2]
 
 # Create a map to hold the type of each column
 file_header_type = {

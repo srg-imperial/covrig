@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.dates as mdates
 from copy import deepcopy
+from textwrap import wrap
 
 from matplotlib.ticker import MaxNLocator
 
@@ -21,14 +22,16 @@ file_header_list = config.file_header_list
 file_header_type = config.file_header_type
 
 # Other globals
+markersize = 3
 output_location = 'postprocessing/graphs/'
 SMALL_FIGSIZE = (5, 5)
+MED_FIGSIZE = (8, 8)
 DEFAULT_FIGSIZE = (11, 11)
 EXPANDED_FIGSIZE = (15, 15)
 date_warning_thrown = []
 
 LEGACY_NUM_REVS = 250
-# previous final commits (jun2015data) - all commits, not just 250, but end elem is also end of 250
+# timestamps of first commits in jun2015 files (not necessarily first of 250 data), and last commits (which will be the last of 250 data)
 commits_prev_compiling_range = {
     'Apr': (-1, -1),
     'Binutils': (1266228576, 1381776346),
@@ -59,7 +62,7 @@ commits_prev_operating_range = {
 
 def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+        plot = plt.subplots(figsize=SMALL_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -69,11 +72,11 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
 
     # Plot the eloc data against the dates as small dots
     if date:
-        ax.plot(dates, eloc_data, '+', markersize=5)
+        ax.plot(dates, eloc_data, '+', markersize=markersize)
         ax.tick_params(axis='x', rotation=45)
         ax.set_xlim(dates[0], dates[-1])
     else:
-        ax.plot(eloc_data, '+', markersize=5)
+        ax.plot(eloc_data, '+', markersize=markersize)
         ax.set_xlabel('Revision')
         ax.set_xlim(0, len(eloc_data))
     # Label the axes, do not show xticks
@@ -99,7 +102,7 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
 
 def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+        plot = plt.subplots(figsize=SMALL_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -109,11 +112,11 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
 
     # Plot the eloc data against the dates as small dots
     if date:
-        ax.plot(dates, tloc_data, '+', markersize=5, color='red')
+        ax.plot(dates, tloc_data, '+', markersize=markersize, color='red')
         ax.tick_params(axis='x', rotation=45)
         ax.set_xlim(left=dates[0], right=dates[-1])
     else:
-        ax.plot(tloc_data, '+', markersize=5, color='red')
+        ax.plot(tloc_data, '+', markersize=markersize, color='red')
         ax.set_xlabel('Revision')
         ax.set_xlim(left=0, right=len(tloc_data))
     # Label the axes, do not show xticks
@@ -139,7 +142,7 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
 def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroone", date=False,
                                     plot=None, savedir=None):
     if plot is None:
-        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+        plot = plt.subplots(figsize=SMALL_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -202,8 +205,6 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
     ax.set_ylabel('Revisions')
     # Make the upper y axis limit as the maximum number of revisions rounded up to the nearest 50
     ax.set_ylim(bottom=0, top=math.ceil(max(eloc_counter_list + tloc_counter_list) / 50) * 50)
-    # Draw a grid
-    ax.grid()
 
     # Label the x axis as Commits (i.e. the number of commits)
     ax.set_xlabel('Commits')
@@ -222,8 +223,10 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
 
 
 def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None):
+    local_multiple = True
     if plot is None:
         plot = plt.subplots(figsize=SMALL_FIGSIZE)
+        local_multiple = False
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -250,13 +253,13 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None
     # Plot the eloc data against the dates as small dots
     if date:
         corresponding_dates = [dates[i] for i in idxs]
-        ax.plot(corresponding_dates, line_coverage, '+', markersize=5)
-        ax.plot(corresponding_dates, br_coverage, 'x', markersize=5, color='red')
+        ax.plot(corresponding_dates, line_coverage, '+', markersize=markersize)
+        ax.plot(corresponding_dates, br_coverage, 'x', markersize=markersize, color='red')
         ax.tick_params(axis='x', rotation=45)
         ax.set_xlim(left=dates[0], right=dates[-1])
     else:
-        ax.plot(line_coverage, '+', markersize=5)
-        ax.plot(br_coverage, 'x', markersize=5, color='red')
+        ax.plot(line_coverage, '+', markersize=markersize)
+        ax.plot(br_coverage, 'x', markersize=markersize, color='red')
         ax.set_xlabel('Revision')
         ax.set_xlim(left=0, right=len(dates))
 
@@ -270,7 +273,10 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None
     ax.set_title(f'{csv_name}')
 
     # Print the legend
-    ax.legend(['Line Coverage', 'Branch Coverage'], prop={'size': 6}, loc='upper right')
+    if local_multiple:
+        ax.legend(['Line Coverage', 'Branch Coverage'], prop={'size': 6}, loc='upper right')
+    else:
+        ax.legend(['Line Coverage', 'Branch Coverage'], prop={'size': 9}, loc='upper right')
 
     # If we can find the legacy date, let's plot it as a vertical line
     plot_vert_at_timestamp(ax, csv_name, date)
@@ -307,10 +313,10 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
 
     if date:
         corresponding_dates = [dates[i] for i in idxs]
-        ax.plot(corresponding_dates, churn_list, '+', markersize=5)
+        ax.plot(corresponding_dates, churn_list, '+', markersize=markersize)
         ax.tick_params(axis='x', rotation=45)
     else:
-        ax.plot(churn_list, '+', markersize=5)
+        ax.plot(churn_list, '+', markersize=markersize)
         ax.set_xlabel('Revision')
 
     # Label the y axis as Churn
@@ -333,7 +339,7 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
 def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0, multiple=False, savedir=None,
                         weighted=False):
     if plot is None:
-        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+        plot = plt.subplots(figsize=SMALL_FIGSIZE)
     (fig, ax) = plot
     # Clean the data to ignore rows with exits "EmptyCommit", "NoCoverage" or "compileError"
     cleaned_data = utils.clean_data(data)
@@ -440,7 +446,7 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
     cumulative_total = 0
     idx = 0
     for bucket_p in bucket_percentages:
-        ax.bar(csv_name if multiple else 0, bucket_p, bottom=cumulative_total, label=bucket_names[idx], width=0.5,
+        ax.bar(csv_name if multiple else 0, bucket_p, bottom=cumulative_total, label=bucket_names[idx], width=0.7,
                color=colours[idx],
                edgecolor='black', zorder=3)
         cumulative_total += bucket_p
@@ -1040,6 +1046,12 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
     ax.tick_params(axis='x', labelrotation=90)
     ax.set_ylim(0, 100)
 
+    # TODO: Move this to get_stats
+    # Print out the top n authors and their average patch coverage
+    # print(f'Top {n} authors by average patch coverage:')
+    # for author in sorted_average_patch_coverage:
+    #     print(f'{author[0]}: {author[1]:.2f}%')
+
     # Give the plot a title
     ax.set_title(f'{csv_name}')
     fig.suptitle(
@@ -1457,7 +1469,7 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
             ax.bar(csv_name, height, bottom=-height, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
                    width=-width, label=label)
             minimum = -height
-        elif bin == 'GBC' or bin == 'GIC' or bin == 'GNC':
+        elif bin == 'GBC' or bin == 'GIC' or bin == 'GNC' or bin == 'DUB':
             ax.bar(csv_name, height, bottom=total, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
                    width=-width, label=label)
             total += height
@@ -1475,7 +1487,7 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
             ax.bar(csv_name, height, bottom=-height, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
                    width=width, label=label)
             minimum = min(-height, minimum)
-        elif bin == 'LBC' or bin == 'UIC' or bin == 'UNC':
+        elif bin == 'LBC' or bin == 'UIC' or bin == 'UNC' or bin == 'DCB':
             ax.bar(csv_name, height, bottom=total, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
                    width=width, label=label)
             total += height
@@ -1510,16 +1522,27 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
     ax.set_ylim(bottom=y_min, top=y_max)
 
     # Use locator params to have 9 ticks on the y axis
-    ax.yaxis.set_major_locator(plt.MaxNLocator(9))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(19))
 
     # Give the plot a title
     ax.set_yticklabels([f'{abs(x):.0f}' for x in ax.get_yticks()])
 
     # Print the legend with the patch type names
     if pos == 0:
+        # Define a title string
+        title = f"Note: For each project, the sum of diff. cov. bins ({' + '.join(new_bin_order[:8])}) equals the ELOC of the last revision."
+        # Wrap the title every 29 characters
+        title = "\n".join(wrap(title, 29))
+        # Draw a text box on the RHS outside the plot stating that for each project the sum of all new_bins[:8] is the final ELOC
+        legend_suppl = ax.legend(handles=[], bbox_to_anchor=(1.05, 0.5),
+                  title=title,
+                  loc='upper left', title_fontsize=11)
+        ax.add_artist(legend_suppl)
+
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc='upper left', title='Diff. Cov. Categories',
+        main_legend = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc='upper left', title='Diff. Cov. Categories',
                   title_fontsize=12)
+
 
     # Make it a grid
     ax.grid(True, zorder=0, axis='y')
@@ -1600,18 +1623,25 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
 
     # Plot the data as a histogram
     if date:
-        ax.bar(x_data, y_data, width=30, color='#ff622a', edgecolor='black')
+        ax.bar(x_data, y_data, width=30, color='#ff622a')
+        # Make sure the x limits are the first and last month in the data
+        ax.set_xlim(earliest_commit_date, latest_commit_date)
     else:
-        ax.bar(x_data, y_data, color='#ff622a', edgecolor='black', align='edge', width=bin_size)
+        ax.bar(x_data, y_data, color='#ff622a', align='edge', width=bin_size)
+        # Make sure the x limits are 0 and the length of the data
+        ax.set_xlim(0, len(date_data))
 
     # Label the x axis as Month
     if date:
         ax.set_xlabel('Time (bin size = 1 month)')
     else:
         ax.set_xlabel('Number of Commits (bin size = 10 commits)')
+        # Set y lim to be 0 to bin_size
+        ax.set_ylim(0, bin_size)
 
     # Label the y axis as Number of Nondet Commits
-    ax.set_ylabel('Number of Commits exhibiting Nondeterministic Behaviour')
+    ax.set_ylabel('Number of Flaky Commits')
+
 
     # Make sure y ticks only show whole numbers
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
@@ -1696,11 +1726,7 @@ def date_check(args: dict):
             return False
     return True
 
-
 def get_250_timestamp(csv_name):
-    # Get rid of the substring "_repeats" or "_all" from the csv_name
-    csv_name = csv_name.replace('_repeats', '').replace('_all_rep', '').replace('_all', '').replace('_nr', '').replace(
-        '_combined', '')
     ret_date = -1
     # Get the lower case name of the csv
     lowered = [(x.lower(), x) for x in commits_prev_compiling_range.keys()]
@@ -1754,8 +1780,8 @@ def plot_all_individual(data, csv_name, date, savedir=None):
     plot_commit_frequency(data, csv_name, savedir=savedir)
 
     # non-det graphs - old data won't have this
-    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats',
-                      'Redis_all_rep2', 'Curl_2500_repeats', 'Vim_2500_reps']
+    included_names = ['Apr_repeats', 'BinutilsGdb_repeats', 'Curl_repeats', 'Git_repeats', 'Lighttpd2_repeats',
+                      'Memcached_repeats', 'Redis_repeats', 'Vim_repeats', 'Zeromq_repeats']
     if csv_name in included_names:
         plot_non_det_hist(data, csv_name, date=date, savedir=savedir)
 
@@ -1827,10 +1853,10 @@ def plot_diffcov_format_combined(metric, outname, paths, csv_names, **kwargs):
 
 def plot_all_multiple(paths, csv_names, date, limit=None):
     # Plot each of the combined graphs
-    plot_metric_multiple(plot_eloc, 'eloc', paths, csv_names, date=date, custom_figsize=(11, 9), limit=limit)
-    plot_metric_multiple(plot_tloc, 'tloc', paths, csv_names, date=date, custom_figsize=(11, 9), limit=limit)
+    plot_metric_multiple(plot_eloc, 'eloc', paths, csv_names, date=date, custom_figsize=(10, 10), limit=limit)
+    plot_metric_multiple(plot_tloc, 'tloc', paths, csv_names, date=date, custom_figsize=(10, 10), limit=limit)
     plot_metric_multiple(plot_evolution_of_eloc_and_tloc, 'evolution_of_eloc_and_tloc', paths, csv_names, date=date,
-                         custom_figsize=(11, 9), limit=limit)
+                         custom_figsize=(10, 10), limit=limit)
     plot_metric_multiple(plot_coverage, 'coverage', paths, csv_names, date=date, custom_figsize=(9, 11), limit=limit)
 
     plot_metric_multiple(plot_average_patch_coverage_per_author, 'average_patch_coverage_per_author', paths, csv_names,
@@ -1841,14 +1867,21 @@ def plot_all_multiple(paths, csv_names, date, limit=None):
     # TODO: do a plot_metric_multiple for the non-det graphs (so only for the ones that have non-det data)
 
     # The combined graphs for patch coverage and patch type are a bit different - they need to be plotted on the same graph rather than subplots
-    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=4, limit=limit)
+    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, custom_figsize=(10, 9), bucket_no=4, limit=limit)
     plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6, weighted=False,
+                         limit=limit)
+    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6, weighted=True,
                          limit=limit)
     plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names, limit=limit, no_filter=True)
 
     plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names, limit=limit)
     plot_metric_combined(plot_timespan, 'timespan', paths, csv_names, custom_figsize=(10, 7), labels=csv_names,
                          commits_prev_compiling_range=commits_prev_compiling_range, dpi=300, limit=limit)
+
+    paths, csv_names = utils.filter_to_non_det_supported(paths, csv_names)
+
+    # Plot the non-det graphs
+    plot_metric_multiple(plot_non_det_hist, 'non_det_hist', paths, csv_names, limit=limit)
 
 
 def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
@@ -1930,8 +1963,9 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     # Check if kwargs contains date, if so, add it to the filename
     date = kwargs.get('date', False)
     bucket_no = kwargs.get('bucket_no', None)
+    weighted = kwargs.get('weighted', False)
     fig.savefig(
-        f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}{bucket_no if bucket_no is not None else ""}.png',
+        f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}{bucket_no if bucket_no is not None else ""}{"-weighted" if weighted else ""}.png',
         bbox_inches='tight', dpi=dpi)
     print(
         f'Finished plotting combined {outname}{"-date" if date else ""}. You can find the plots in graphs/{args.input}')
@@ -1976,32 +2010,21 @@ if __name__ == '__main__':
         if len(paths) == 0:
             paths += glob.glob(f'{args.input}/*.csv')
 
-        # TODO: remove when data fixed
-        # Remove the following CSV files from the list since they are either not complete, lack fields or we don't want to show them anymore
-        excluded_paths = ['remotedata/binutils-gdb/BinutilsGdb_gaps.csv', 'remotedata/binutils-gdb/BinutilsGdb_all.csv',
-                          'remotedata/binutils/Binutils.csv', 'remotedata/binutils-gdb/BinutilsGdb_repeats.csv',
-                          'remotedata/binutils/Binutils_repeats.csv',
-                          'remotedata/binutils-gdb/BinutilsGdb_repeats_section2.csv',
-                          'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/binutils/Binutils_all.csv',
-                          'remotedata/apr/Apr_repeats_mangled.csv', 'remotedata/zeromq/Zeromq_repeats.csv',
-                          'remotedata/lighttpd2/Lighttpd2_repeats.csv', 'remotedata/memcached/Memcached_repeats.csv',
-                          'remotedata/git/Git1.csv',
-                          'remotedata/redis_repeated/Redis_2500_reps.csv', 'remotedata/vim/Vim_2500_reps.csv',
-                          'remotedata/vim/Vim_rep_1_3.csv',
-                          'remotedata/vim/Vim_rep_1_4.csv', 'remotedata/curl/Curl_2500_repeats.csv',
-                          'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky.csv',
-                          'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky2.csv',
-                          'remotedata/binutils-gdb/BinutilsGdb_repeats_flaky3.csv',
-                          'remotedata/vim/Vim_rep_1_1.csv', 'remotedata/vim/Vim_rep_1_r1.csv',
-                          'remotedata/vim/Vim_rep_1_r2.csv',
-                          'remotedata/vim/Vim_rep_1_r3.csv',
-                          'jun2015data/Dovecot/Dovecot.csv', 'jun2015data/Lighttpd-gnutls/Lighttpd.csv']
+        included_paths = ['remotedata/apr/Apr_repeats.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_repeats.csv',
+                          'remotedata/curl/Curl_repeats.csv',
+                          'remotedata/git/Git_repeats.csv',
+                          'remotedata/lighttpd2/Lighttpd2_repeats.csv',
+                          'remotedata/memcached/Memcached_repeats.csv',
+                          'remotedata/redis/Redis_repeats.csv',
+                          'remotedata/vim/Vim_repeats.csv',
+                          'remotedata/zeromq/Zeromq_repeats.csv']
 
         # Make sure we have at least one CSV file
         if len(paths) == 0:
             raise FileNotFoundError(f'No CSV files found in {args.input}')
 
-        paths = [x for x in paths if x not in excluded_paths]
+        paths = [x for x in paths if x in included_paths]
 
         # Make sure no paths include the #diffcov directory
         paths = [x for x in paths if 'diffcov_' not in x]
@@ -2014,6 +2037,9 @@ if __name__ == '__main__':
 
         # Remove the .csv extension
         csv_names = [x[:-4] for x in csv_names]
+
+        # Trim CSV names
+        csv_names = utils.reformat_csv_names(csv_names)
 
         csv_paths = sorted(zip(csv_names, paths))
         csv_names, paths = zip(*csv_paths)
@@ -2042,6 +2068,7 @@ if __name__ == '__main__':
             search_dir = None
 
             csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)
+            csv_data, _ = utils.filter_data_by_exec_test(csv_data)
             if args.limit:
                 csv_data = csv_data[-args.limit:]
             if csv_data is not None:
@@ -2130,6 +2157,7 @@ if __name__ == '__main__':
             os.makedirs(f'postprocessing/graphs/{directory}/{csv_name}')
 
         data = utils.extract_data(args.input, csv_name, callback=date_check)
+        data, _ = utils.filter_data_by_exec_test(data)
 
         if args.limit:
             data = data[-args.limit:]

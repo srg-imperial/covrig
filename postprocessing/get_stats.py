@@ -295,13 +295,7 @@ def write_stats(paths, csv_names, limit=None):
     write_multiple_csv(export_code_coverage, paths, csv_names, ['App', 'Final Cov. %'], 'code_coverage', limit=limit)
     write_multiple_csv(export_coverage_delta, paths, csv_names, ['App', 'Start Cov. %', 'End Cov. %', 'Cov. % Δ'], 'coverage_delta', limit=limit)
 
-    # Now filter paths to only include those in the following list
-    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats', 'Curl_2500_repeats', 'Redis_all_rep2']
-    # Get the indices of the included names
-    included_indices = [i for i in range(len(csv_names)) if csv_names[i] in included_names]
-    # Get the included paths and csv names
-    csv_names = [csv_names[i] for i in included_indices]
-    paths = [paths[i] for i in included_indices]
+    paths, csv_names = utils.filter_to_non_det_supported(paths, csv_names)
 
     write_multiple_csv(export_non_det_revisions, paths, csv_names, ['App', 'Nondet. Result', '% Total Working Flaky', 'Repeats', 'Nondet. Commits'], 'non_det_revs')
 
@@ -378,14 +372,15 @@ if __name__ == '__main__':
         if len(paths) == 0:
             paths += glob.glob(f'{args.input}/*.csv')
 
-        # TODO: remove when data fixed
-        # Remove the following CSV files from the list since they are either not complete or lack fields
-        excluded_paths = ['remotedata/binutils/Binutils_all.csv', 'remotedata/binutils/Binutils_repeats.csv',
-                          'remotedata/binutils-binutils-gdb-combined/Binutils_combined.csv',
-                          'remotedata/binutils-gdb/BinutilsGdb_all.csv', 'remotedata/curl/Curl_2500_nr.csv',
-                          'remotedata/lighttpd2/Lighttpd2_nr.csv', 'remotedata/memcached/Memcached_all.csv',
-                          'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/redis_repeated/Redis_all_rep.csv',
-                          'remotedata/vim/Vim_rep_1.csv', 'remotedata/zeromq/Zeromq.csv', 'remotedata/vim/Vim_2500_nr.csv']
+        included_paths = ['remotedata/apr/Apr_repeats.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_repeats.csv',
+                          'remotedata/curl/Curl_repeats.csv',
+                          'remotedata/git/Git_repeats.csv',
+                          'remotedata/lighttpd2/Lighttpd2_repeats.csv',
+                          'remotedata/memcached/Memcached_repeats.csv',
+                          'remotedata/redis/Redis_repeats.csv',
+                          'remotedata/vim/Vim_repeats.csv',
+                          'remotedata/zeromq/Zeromq_repeats.csv']
 
         # Get indices of all paths that contain the word 'diffcov'
         diffcov_indices = [i for i in range(len(paths)) if 'diffcov' in paths[i]]
@@ -396,7 +391,7 @@ if __name__ == '__main__':
         if len(paths) == 0:
             raise FileNotFoundError(f'No CSV files found in {args.input}')
 
-        paths = [x for x in paths if x not in excluded_paths]
+        paths = [x for x in paths if x in included_paths]
 
         # Make sure we have at least one valid CSV file
         if len(paths) == 0:
@@ -406,6 +401,9 @@ if __name__ == '__main__':
 
         # Remove the .csv extension
         csv_names = [x[:-4] for x in csv_names]
+
+        # Trim CSV names
+        csv_names = utils.reformat_csv_names(csv_names)
 
         csv_paths = sorted(zip(csv_names, paths))
         csv_names, paths = zip(*csv_paths)
