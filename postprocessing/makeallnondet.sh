@@ -1,13 +1,18 @@
 #!/bin/bash
 
 ./postprocessing/nondet.sh --only-ok --latex --prefix=binutils /data/analytics-data/vmdata/Binutils1/Binutils.csv /data/analytics-data/vmdata/Binutils1 /data/analytics-data/vmdata/Binutils2 /data/analytics-data/vmdata/Binutils3 /data/analytics-data/vmdata/Binutils4 /data/analytics-data/vmdata/Binutils5 >latex/binutils-nondet.tex
-
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=binutils data/binutils1/Binutils.csv data/binutils1 data/binutils2 data/binutils3 data/binutils4 data/binutils5 >latex/binutils-nondet.tex
 ./postprocessing/nondet.sh --only-ok --latex --prefix=zeromq /data/analytics-data/vmdata/Zeromq1/Zeromq.csv /data/analytics-data/vmdata/Zeromq1 /data/analytics-data/vmdata/Zeromq2 /data/analytics-data/vmdata/Zeromq3 /data/analytics-data/vmdata/Zeromq4 /data/analytics-data/vmdata/Zeromq5 >latex/zeromq-nondet.tex
-
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=zeromq data/zeromq1/Zeromq.csv data/zeromq1 data/zeromq2 data/zeromq3 data/zeromq4 data/zeromq5 >latex/zeromq-nondet.tex
 ./postprocessing/nondet.sh --only-ok --latex --prefix=lighttpd /data/analytics-data/vmdata/Lighttpd1/Lighttpd.csv /data/analytics-data/vmdata/Lighttpd1 /data/analytics-data/vmdata/Lighttpd2 /data/analytics-data/vmdata/Lighttpd3 /data/analytics-data/vmdata/Lighttpd4 /data/analytics-data/vmdata/Lighttpd5 >latex/lighttpd-nondet.tex
-
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=lighttpd2 data/lighttpd21/Lighttpd2.csv data/lighttpd21 data/lighttpd22 data/lighttpd23 data/lighttpd24 data/lighttpd25 >latex/lighttpd2-nondet.tex
 ./postprocessing/nondet.sh --only-ok --latex --prefix=redis /data/analytics-data/vmdata/Redis1/Redis.csv /data/analytics-data/vmdata/Redis1 /data/analytics-data/vmdata/Redis2 /data/analytics-data/vmdata/Redis3 /data/analytics-data/vmdata/Redis4 /data/analytics-data/vmdata/Redis5 >latex/redis-nondet.tex
-
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=redis data/redis1/Redis.csv data/redis1 data/redis2 data/redis3 data/redis4 data/redis5 >latex/redis-nondet.tex
 ./postprocessing/nondet.sh --only-ok --latex --prefix=memcached /data/analytics-data/vmdata/Memcached2/Memcached.csv /data/analytics-data/vmdata/Memcached1 /data/analytics-data/vmdata/Memcached2 /data/analytics-data/vmdata/Memcached3 /data/analytics-data/vmdata/Memcached4 /data/analytics-data/vmdata/Memcached5 >latex/memcached-nondet.tex
-
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=memcached data/memcached1/Memcached.csv data/memcached1 data/memcached2 data/memcached3 data/memcached4 data/memcached5 >latex/memcached-nondet.tex
 ./postprocessing/nondet.sh --only-ok --latex --prefix=git /data/analytics-data/vmdata/Git1/Git.csv /data/analytics-data/vmdata/Git1 /data/analytics-data/vmdata/Git2 /data/analytics-data/vmdata/Git3 /data/analytics-data/vmdata/Git4 /data/analytics-data/vmdata/Git5 >latex/git-nondet.tex
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=git data/git1/Git.csv data/git1 data/git2 data/git3 data/git4 data/git5 >latex/git-nondet.tex
+
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=curl data/curl1/Curl.csv data/curl1 data/curl2 data/curl3 data/curl4 data/curl5 >latex/curl-nondet.tex
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=apr data/apr1/Apr.csv data/apr1 data/apr2 data/apr3 data/apr4 data/apr5 >latex/apr-nondet.tex
+# ./postprocessing/nondet.sh --only-ok --latex --prefix=vim data/vim1/Vim.csv data/vim1 data/vim2 data/vim3 data/vim4 data/vim5 >latex/vim-nondet.tex

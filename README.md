@@ -20,6 +20,8 @@ To build the project, you will need:
 - Python packages: [docker-py](https://pypi.org/project/docker-py/), [fabric 2.7.1](https://pypi.org/project/fabric/2.7.1/), and [matplotlib](https://pypi.org/project/matplotlib/)
 - LCOV (latest unstable release from https://github.com/linux-test-project/lcov.git) needed for differential coverage
 
+> **_NOTE:_**  This project was developed on Linux (Ubuntu 20). It may work on other platforms, but this is not guaranteed since we do use shell commands when processing the data - the commands run on spawned Docker containers will of course be fine though.
+
 Once these dependencies are installed, you will need to generate an ssh keypair to connect to the VMs.
 Keep the private key in your `.ssh` directory and replace the `id_rsa` files in each `containers/<repo>` with your public key.
 

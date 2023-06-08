@@ -11,8 +11,10 @@ UNAME=$1
 # sudo ufw allow 80
 # sudo ufw allow 22
 # sudo addgroup $UNAME
+# useradd tfb19 -g tfb19
 # sudo usermod -a -G sudo $UNAME
 # sudo usermod -a -G ssh $UNAME
+# passwd tfb19
 # sudo mkdir /home/$UNAME
 # sudo chown $UNAME:$UNAME /home/$UNAME
 # mkdir /home/$UNAME/.ssh
@@ -20,13 +22,14 @@ UNAME=$1
 
 # From local machine
 # scp ~/.ssh/id_rsa $UNAME@cloud-vm-XX-XX.doc.ic.ac.uk:/home/$UNAME/.ssh/id_rsa
+# ssh-copy-id -i /home/tom/.ssh/id_ed25519.pub tfb19@45.77.88.150
 
 # git clone https://github.com/srg-imperial/covrig.git && cd covrig && git switch dev
 
 sudo apt-get install -y python3.8-venv
 python3.8 -m venv venv
 source venv/bin/activate
-pip install fabric==2.7.1 docker
+pip install fabric==2.7.1 docker  # assuming bash, otherwise use . instead of source
 
 sudo apt-get update
 sudo apt-get install ca-certificates curl gnupg

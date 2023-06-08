@@ -5,7 +5,7 @@ INITIAL_DIR="$(pwd)"
 IGNOREREVS="#|compileError|EmptyCommit|NoCoverage"
 SELECTACTUALCODEORTEST="awk 'BEGIN { FS=\",\" } ; { if (\$7 > 0 || \$8 > 0 || \$26 > 0) print \$1 }'"
 MAXNONDET=500
-REVISIONS=250
+#REVISIONS=250
 
 die () {
     echo >&2 "$@"
@@ -49,6 +49,10 @@ for F in "$@"; do
 done
 
 rm -f tmp/nondet-*
+
+# REVISIONS = the number of lines in REVFILE minus one (since revs in question should already compile etc)
+REVISIONS=$(wc -l $REVFILE | awk '{print $1}')
+REVISIONS=$((REVISIONS-1))
 
 ACTUALREVS=$($SCRIPT_DIR/internal/goodtobad.sh $REVFILE $REVISIONS)
 TOTALALLOK=0
