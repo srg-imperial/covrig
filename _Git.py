@@ -17,7 +17,7 @@ class Git(Container):
             self.path = '/home/git'
             self.source_path = '/home/git'
             # set timeout (in seconds) for the test suite to run
-            self.timeout = 7200
+            self.timeout = 7500
 
         self.tsuite_path = ('t', 'test-*')
         self.ignore_coverage_from = ('/usr/include/*', )

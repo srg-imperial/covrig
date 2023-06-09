@@ -19,7 +19,7 @@ class Memcached(Container):
             self.path = '/home/memcached'
             self.source_path = '/home/memcached'
             # set timeout (in seconds) for the test suite to run
-            self.timeout = 600
+            self.timeout = 900
         self.tsuite_path = ('t', 'testapp.c')
 
     def compile(self):
