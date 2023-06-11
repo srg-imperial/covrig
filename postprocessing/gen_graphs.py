@@ -4,6 +4,7 @@ import numpy as np
 import statistics
 import datetime as dt
 from matplotlib import pyplot as plt
+import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.dates as mdates
 from copy import deepcopy
@@ -511,8 +512,117 @@ def plot_patch_coverage(data, csv_name, save=True, bucket_no=6, plot=None, pos=0
                     bbox_inches='tight')
         plt.close(fig)
 
+def plot_bucketed_patch_coverage(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None,
+                        weighted=False):
+    if plot is None:
+        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+    (fig, ax) = plot
+    # Clean the data
+    cleaned_data = utils.clean_data(data)
 
-def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None):
+    # Get the coverage data, eloc and echanged_files
+    eloc_data, coveredlines, notcoveredlines = utils.get_columns(cleaned_data, ['eloc', 'covlines', 'notcovlines'])
+
+    eloc_diffs = [coveredlines[i] + notcoveredlines[i] for i in range(len(coveredlines))]
+
+    nonzero_indices = []
+    for i in range(len(eloc_data)):
+        if eloc_data[i] > 0:
+            if coveredlines[i] + notcoveredlines[i] > 0:
+                nonzero_indices.append(i)
+
+    eloc_diffs = [eloc_diffs[i] for i in nonzero_indices]
+    coveredlines = [coveredlines[i] for i in nonzero_indices]
+
+    bins = [10, 100, 1000, float('inf')]
+
+    bucketed_cov_perc_data = [0] * len(bins)
+    total_covered = [0] * len(bins)
+    total_total = [0] * len(bins)
+
+    for i in range(len(eloc_diffs)):
+        for j in range(len(bins)):
+            if eloc_diffs[i] <= bins[j]:
+                bucketed_cov_perc_data[j] += 1
+                total_covered[j] += coveredlines[i]
+                total_total[j] += eloc_diffs[i]
+                break
+
+    # Get the average coverage percentages
+    bucketed_cov_perc_data_av = [total_covered[i] * 100 / total_total[i] if total_total[i] != 0 else 0 for i in
+                                 range(len(total_covered))]
+
+    # Calculate the proportions
+    proportions = [bucketed_cov_perc_data[i] / sum(bucketed_cov_perc_data) for i in range(len(bucketed_cov_perc_data))]
+
+    if weighted:
+        proportions = [total_total[i] / sum(total_total) for i in range(len(total_total))]
+
+    # Define the bin labels
+    bin_labels = ['≤ 10', '11-100', '101-1000', '> 1000']
+
+    # Define colours
+    colours = ['#5299D3', '#EE6C4D', '#FFE0B5', '#663F46']
+
+    # # Obtain the corresponding color from the Viridis colormap
+    # colours = [cm.viridis(p / 100) for p in bucketed_cov_perc_data_av]
+
+    # Create the horizontal bar chart
+    cumulative_proportions = list(np.cumsum(proportions))
+    # Add the 0 to the beginning of the list and remove the last element
+    cumulative_proportions = [0] + cumulative_proportions[:-1]
+
+    # Create stacked sections of the bar
+    for i in range(len(bin_labels)):
+        ax.barh(csv_name if multiple else 0, width=proportions[i], left=cumulative_proportions[i], align='center', label=bin_labels[i], color=colours[i], edgecolor='black')
+
+    # Use ax annotate to add the percentages to the bars (bucketed_cov_perc_data_av)
+    for i in range(len(bin_labels)):
+        text_colour = 'black'
+        if i == len(bin_labels) - 1:
+            text_colour = 'white'
+        if proportions[i] > 0.03:
+            ax.annotate(f'{bucketed_cov_perc_data_av[i]:.1f}%', xy=(cumulative_proportions[i] + proportions[i] / 2, csv_name if multiple else 0), ha='center', va='center', fontsize=8, color=text_colour)
+        elif proportions[i] != 0:
+            # Annotate with an arrow to the side of the bar
+            va = 'center'
+            ha = 'left'
+            xoffset = 0.05
+            yoffset = 0
+            if i == len(bin_labels) - 1:
+                va = 'top'
+                xoffset = 0.03
+                yoffset = -0.07
+            elif i == len(bin_labels) - 2:
+                va = 'bottom'
+                xoffset = 0.03
+                yoffset = 0.07
+            ax.annotate(f'{bucketed_cov_perc_data_av[i]:.1f}%', xy=(cumulative_proportions[i] + proportions[i] / 2 , pos + yoffset), xytext=(cumulative_proportions[i] + proportions[i] / 2 + xoffset, pos + yoffset), ha=ha, va=va, fontsize=8, color='black', arrowprops=dict(arrowstyle='->', color='black'))
+
+    # Set the x-axis label
+    if weighted:
+        ax.set_xlabel('Proportion of total ELOC contributed by patches')
+    else:
+        ax.set_xlabel('Proportion of patches')
+
+    if not multiple:
+        # Turn off ticks for the y-axis
+        ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+
+    if pos == 0:
+        # Set the legend in reverse
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=len(labels), fontsize=8, title='Bins for Patch Sizes (ELOC)')
+
+    ax.set_title('Patches bucketed by the size of the patch in ELOC with average patch coverages for each bin listed')
+
+    # Save the plot
+    if save:
+        ax.set_title(f'Patch Types for {csv_name}')
+        fig.savefig(f'postprocessing/graphs/{savedir}/{csv_name}/{csv_name}-patch-coverage-dist{"-weighted" if weighted else ""}.png', bbox_inches='tight')
+        plt.close(fig)
+
+def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False, savedir=None, proportional=False):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -549,12 +659,21 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False,
     # Plot our data
     patch_type_colours = ["#bd2121", "#bf3dff", "#6394ed", "#ededed"]
 
+    if proportional:
+        total = sum(patch_types.values())
+        for patch_type in patch_types:
+            patch_types[patch_type] = patch_types[patch_type] * 100 / total
+        ax.set_ylabel('Percentage of Patches')
+    else:
+        # Label the y axis as Number of Patches
+        ax.set_ylabel('Number of Patches')
+
     # Plot the data as a stacked vertical bar chart
     cumulative_total = 0
     idx = 0
     for patch_type in patch_types:
         ax.bar(csv_name if multiple else 0, patch_types[patch_type], bottom=cumulative_total, label=patch_type,
-               width=0.5,
+               width=0.7,
                color=patch_type_colours[idx], edgecolor='black', zorder=3)
         cumulative_total += patch_types[patch_type]
         idx += 1
@@ -563,9 +682,6 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False,
     if not multiple:
         ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
         ax.set_xlim(-1, 1)
-
-    # Label the y axis as Number of Patches
-    ax.set_ylabel('Number of Patches')
 
     # Give the plot a title
     if not multiple:
@@ -577,6 +693,13 @@ def plot_patch_type(data, csv_name, save=True, plot=None, pos=0, multiple=False,
     if pos == 0:
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    if proportional:
+        # So we get a sliver of space at the top of the graph
+        ax.set_ylim(0, 100.0001)
+    else:
+        # Use locator params to have 9 ticks on the y axis
+        ax.yaxis.set_major_locator(plt.MaxNLocator(9))
 
     # Make it a dotted grid
     ax.grid(linestyle='dotted', zorder=0, axis='y')
@@ -596,6 +719,8 @@ def plot_author_dist(data, csv_name, save=True, date=False, plot=None, limit_aut
     cleaned_data = utils.clean_data(data)
 
     author, added_lines, dates = utils.get_columns(cleaned_data, ['author', 'addedlines', 'time'])
+
+    author = replace_names(author)
 
     # Get the unique authors
     author_dict = anonymize_names(author)
@@ -704,7 +829,7 @@ def plot_exit_status_rates(data, csv_name, save=True, plot=None, pos=0, multiple
     cumulative_total = 0
     idx = 0
     for exit_status in commits_per_exit_status.keys():
-        ax.bar(csv_name if multiple else 0, commits_per_exit_status[exit_status], bottom=cumulative_total,
+        ax.bar(csv_name if multiple else 0, commits_per_exit_status[exit_status], bottom=cumulative_total, width=0.7,
                label=exit_status, color=exit_status_colours[idx], edgecolor='black', zorder=3)
         cumulative_total += commits_per_exit_status[exit_status]
         idx += 1
@@ -988,6 +1113,8 @@ def plot_average_patch_coverage_per_author(data, csv_name, save=True, plot=None,
     patch_coverage_data = [patch_coverage_data[i] for i in idxs]
     authors = [authors[i] for i in idxs]
 
+    authors = replace_names(authors)
+
     author_to_anon = anonymize_names(authors)
 
     # Take all authors and make them anonymous
@@ -1122,6 +1249,8 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     # Get the columns we want - author, date
     author_data, date_data = utils.get_columns(cleaned_data, ['author', 'time'])
 
+    author_data = replace_names(author_data)
+
     anonymized_author_to_author = anonymize_names(author_data)
 
     # Replace the author data with the anonymized author data
@@ -1212,13 +1341,18 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
                    color=author_colour_map[author[0]]['color'])
         datecounter += 1
 
-    # Use autodatelocator to label the x axis with dates and load in time_bins_dict
-    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    ax.xaxis.set_tick_params(rotation=30, labelsize=10)
     ax.set_xlabel('Month')
     ax.set_ylabel('Number of Commits')
     ax.set_title('Number of Commits per Month')
+
+    base = 1
+    # Figure out how many years are in the data
+    num_years = latest_commit_date.year - earliest_commit_date.year
+    # If there are more than 10 years, we want to show every 2 years
+    if num_years > 6:
+        base = 2
+    ax.xaxis.set_major_locator(mdates.YearLocator(base=base))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 
     # # Plot the data
     # for author in author_commit_frequency_per_month:
@@ -1530,7 +1664,7 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
     # Print the legend with the patch type names
     if pos == 0:
         # Define a title string
-        title = f"Note: For each project, the sum of diff. cov. bins ({' + '.join(new_bin_order[:8])}) equals the ELOC of the last revision."
+        title = f"Note: For each project, the sum of diff. cov. bins ({' + '.join(new_bin_order[:8])}) equals the ELOC of the final revision studied."
         # Wrap the title every 29 characters
         title = "\n".join(wrap(title, 29))
         # Draw a text box on the RHS outside the plot stating that for each project the sum of all new_bins[:8] is the final ELOC
@@ -1634,6 +1768,15 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
     # Label the x axis as Month
     if date:
         ax.set_xlabel('Time (bin size = 1 month)')
+        # Format the x axis so we only show whole years
+        base = 1
+        # Figure out how many years are in the data
+        num_years = latest_commit_date.year - earliest_commit_date.year
+        # If there are more than 10 years, we want to show every 2 years
+        if num_years > 7:
+            base = 2
+        ax.xaxis.set_major_locator(mdates.YearLocator(base=base))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
     else:
         ax.set_xlabel('Number of Commits (bin size = 10 commits)')
         # Set y lim to be 0 to bin_size
@@ -1661,8 +1804,17 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
 
 """ Utility Functions """
 
+def replace_names(author_data):
+
+    # Do any name replacements we might need to do.
+
+    # For Redis, replace all instances of 'antirez' with 'Salvatore Sanfilippo'
+    author_data = [author.replace('antirez', 'Salvatore Sanfilippo') for author in author_data]
+
+    return author_data
 
 def anonymize_names(author_data):
+
     unique_authors = list(set(author_data))
 
     # Attempt to anonymize the authors by splitting on any spaces, and turning them into initials
@@ -1763,6 +1915,7 @@ def plot_all_individual(data, csv_name, date, savedir=None):
 
     plot_patch_coverage(data, csv_name, bucket_no=4, savedir=savedir)
     plot_patch_coverage(data, csv_name, bucket_no=6, savedir=savedir)
+    plot_bucketed_patch_coverage(data, csv_name, savedir=savedir)
     # Note plot_patch_type will operate on filtered data here so there should be no 'other' category. Filtering is turned off for combined plot.
     plot_patch_type(data, csv_name, savedir=savedir)
 
@@ -1868,20 +2021,29 @@ def plot_all_multiple(paths, csv_names, date, limit=None):
 
     # The combined graphs for patch coverage and patch type are a bit different - they need to be plotted on the same graph rather than subplots
     plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, custom_figsize=(10, 9), bucket_no=4, limit=limit)
-    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6, weighted=False,
+    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, custom_figsize=(10, 9), bucket_no=6, weighted=False,
                          limit=limit)
-    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, bucket_no=6, weighted=True,
+    plot_metric_combined(plot_patch_coverage, 'patch_coverage', paths, csv_names, custom_figsize=(10, 9), bucket_no=6, weighted=True,
                          limit=limit)
-    plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names, limit=limit, no_filter=True)
+    plot_metric_combined(plot_bucketed_patch_coverage, 'bucketed_patch_coverage', paths, csv_names, custom_figsize=(15, 7),
+                         limit=limit, reverse=True)
+    plot_metric_combined(plot_bucketed_patch_coverage, 'bucketed_patch_coverage', paths, csv_names,
+                         custom_figsize=(15, 7),
+                         limit=limit, reverse=True, weighted=True)
 
-    plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names, limit=limit)
+    # Both patch type and exit status rates don't filter the data to only include revisions that modify code and/or tests
+    plot_metric_combined(plot_patch_type, 'patch_type-absolute', paths, csv_names, custom_figsize=(10, 9), limit=limit,
+                         no_filter=True, proportional=True)
+    plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names, custom_figsize=(10, 9), limit=limit, no_filter=True, proportional=True)
+
+    plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names, custom_figsize=(10, 9), limit=limit, no_filter=True)
     plot_metric_combined(plot_timespan, 'timespan', paths, csv_names, custom_figsize=(10, 7), labels=csv_names,
                          commits_prev_compiling_range=commits_prev_compiling_range, dpi=300, limit=limit)
 
     paths, csv_names = utils.filter_to_non_det_supported(paths, csv_names)
 
     # Plot the non-det graphs
-    plot_metric_multiple(plot_non_det_hist, 'non_det_hist', paths, csv_names, limit=limit)
+    plot_metric_multiple(plot_non_det_hist, 'non_det_hist', paths, csv_names, date=date, limit=limit)
 
 
 def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
@@ -1936,6 +2098,12 @@ def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
     no_filter = kwargs.get('no_filter', None)
     if no_filter is not None:
         del kwargs['no_filter']
+    # Reverse is useful if we want to plot the graphs in reverse order (e.g. for timespan)
+    reverse = kwargs.get('reverse', None)
+    if reverse is not None:
+        del kwargs['reverse']
+        paths = paths[::-1]
+        csv_names = csv_names[::-1]
     fig, axs = plt.subplots(figsize=custom_figsize if custom_figsize is not None else EXPANDED_FIGSIZE)
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i], callback=date_check)

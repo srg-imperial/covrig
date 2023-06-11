@@ -50,19 +50,19 @@ mkdir -p data
 
 OUT_DIR="data/${REPO}1"
 
-# If the output directory already exists, ask the user if they want to overwrite it
-if [ -d "$OUT_DIR" ]; then
-  read -p "The output directory already exists. Do you want to overwrite it? (Y/n) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
-  then
-    exit 1
-  fi
-  for I in $(seq "$REPEATS")
-  do
-    rm -rf "data/${REPO}""$I"
-  done
-fi
+## If the output directory already exists, ask the user if they want to overwrite it
+#if [ -d "$OUT_DIR" ]; then
+#  read -p "The output directory already exists. Do you want to overwrite it? (Y/n) " -n 1 -r
+#  echo
+#  if [[ ! $REPLY =~ ^[Yy]$ ]]
+#  then
+#    exit 1
+#  fi
+#  for I in $(seq "$REPEATS")
+#  do
+#    rm -rf "data/${REPO}""$I"
+#  done
+#fi
 
 # Create the output directory
 mkdir -p "$OUT_DIR"
