@@ -1,12 +1,12 @@
 # Short script to set up vars for and run diffcov.sh over a series of repos.
 
 DIFF_CMDS=(
-#    "apr remotedata/apr/coverage 886b908 8fb7fa4"
+    "apr remotedata/apr/coverage 876dcf2 8fb7fa4"
 #    "binutils remotedata/binutils/coverage 0302afd 2b9ed0a binutils"
 #    "binutils-gdb remotedata/binutils-gdb/coverage 20cef68 28ab94f binutils"
 #    "binutils-gdb remotedata/binutils-gdb/coverage 781303c 28ab94f binutils"
-#    "curl remotedata/curl/coverage 8026bd7 4379259"
-    "git remotedata/git/coverage 001d116 4762bf3"
+#    "curl remotedata/curl/coverage 8026bd7 abff183"
+#    "git remotedata/git/coverage 001d116 f15a486"
 #    "lighttpd2 remotedata/lighttpd2/coverage a40a03c 1058654 src"
 #    "memcached remotedata/memcached/coverage 5f95d05 7d6907e"
 #    "redis remotedata/redis/coverage 47da765 00a29b1 src"

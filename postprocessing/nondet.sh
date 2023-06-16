@@ -42,6 +42,14 @@ REVFILE="$1"
 shift
 FOLDERCNT=$#
 
+# Copy REVFILE to to a temporary file, so we can modify it
+mkdir -p tmp
+cp $REVFILE tmp/revfile
+# Remove any lines that begin with #
+sed -i '/^#/ d' tmp/revfile
+# Point REVFILE to the temporary file
+REVFILE=tmp/revfile
+
 declare -a FOLDERS
 for F in "$@"; do
   [ -d "$F" ] || die "Folder does not exist: $F"

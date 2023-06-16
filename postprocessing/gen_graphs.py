@@ -76,6 +76,7 @@ def plot_eloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
         ax.plot(dates, eloc_data, '+', markersize=markersize)
         ax.tick_params(axis='x', rotation=45)
         ax.set_xlim(dates[0], dates[-1])
+        adjust_dates_on_xaxis(ax, dates)
     else:
         ax.plot(eloc_data, '+', markersize=markersize)
         ax.set_xlabel('Revision')
@@ -116,6 +117,7 @@ def plot_tloc(data, csv_name, save=True, date=False, plot=None, savedir=None):
         ax.plot(dates, tloc_data, '+', markersize=markersize, color='red')
         ax.tick_params(axis='x', rotation=45)
         ax.set_xlim(left=dates[0], right=dates[-1])
+        adjust_dates_on_xaxis(ax, dates)
     else:
         ax.plot(tloc_data, '+', markersize=markersize, color='red')
         ax.set_xlabel('Revision')
@@ -192,6 +194,7 @@ def plot_evolution_of_eloc_and_tloc(data, csv_name, save=True, graph_mode="zeroo
         ax.plot(corresponding_dates, tloc_counter_list, color='red', linestyle='dashed')
         ax.tick_params(axis='x', rotation=45)
         ax.set_xlim(left=dates[0], right=dates[-1])
+        adjust_dates_on_xaxis(ax, corresponding_dates)
     else:
         # Plot the eloc data against the dates as a line
         ax.plot(eloc_counter_list)
@@ -258,6 +261,7 @@ def plot_coverage(data, csv_name, save=True, date=False, plot=None, savedir=None
         ax.plot(corresponding_dates, br_coverage, 'x', markersize=markersize, color='red')
         ax.tick_params(axis='x', rotation=45)
         ax.set_xlim(left=dates[0], right=dates[-1])
+        adjust_dates_on_xaxis(ax, corresponding_dates)
     else:
         ax.plot(line_coverage, '+', markersize=markersize)
         ax.plot(br_coverage, 'x', markersize=markersize, color='red')
@@ -316,6 +320,7 @@ def plot_churn(data, csv_name, save=True, date=False, plot=None, savedir=None):
         corresponding_dates = [dates[i] for i in idxs]
         ax.plot(corresponding_dates, churn_list, '+', markersize=markersize)
         ax.tick_params(axis='x', rotation=45)
+        adjust_dates_on_xaxis(ax, corresponding_dates)
     else:
         ax.plot(churn_list, '+', markersize=markersize)
         ax.set_xlabel('Revision')
@@ -577,12 +582,13 @@ def plot_bucketed_patch_coverage(data, csv_name, save=True, plot=None, pos=0, mu
         ax.barh(csv_name if multiple else 0, width=proportions[i], left=cumulative_proportions[i], align='center', label=bin_labels[i], color=colours[i], edgecolor='black')
 
     # Use ax annotate to add the percentages to the bars (bucketed_cov_perc_data_av)
+    annotation_fontsize = 10
     for i in range(len(bin_labels)):
         text_colour = 'black'
         if i == len(bin_labels) - 1:
             text_colour = 'white'
-        if proportions[i] > 0.03:
-            ax.annotate(f'{bucketed_cov_perc_data_av[i]:.1f}%', xy=(cumulative_proportions[i] + proportions[i] / 2, csv_name if multiple else 0), ha='center', va='center', fontsize=8, color=text_colour)
+        if proportions[i] > 0.04:
+            ax.annotate(f'{bucketed_cov_perc_data_av[i]:.1f}%', xy=(cumulative_proportions[i] + proportions[i] / 2, csv_name if multiple else 0), ha='center', va='center', fontsize=annotation_fontsize, color=text_colour)
         elif proportions[i] != 0:
             # Annotate with an arrow to the side of the bar
             va = 'center'
@@ -597,7 +603,7 @@ def plot_bucketed_patch_coverage(data, csv_name, save=True, plot=None, pos=0, mu
                 va = 'bottom'
                 xoffset = 0.03
                 yoffset = 0.07
-            ax.annotate(f'{bucketed_cov_perc_data_av[i]:.1f}%', xy=(cumulative_proportions[i] + proportions[i] / 2 , pos + yoffset), xytext=(cumulative_proportions[i] + proportions[i] / 2 + xoffset, pos + yoffset), ha=ha, va=va, fontsize=8, color='black', arrowprops=dict(arrowstyle='->', color='black'))
+            ax.annotate(f'{bucketed_cov_perc_data_av[i]:.1f}%', xy=(cumulative_proportions[i] + proportions[i] / 2 , pos + yoffset), xytext=(cumulative_proportions[i] + proportions[i] / 2 + xoffset, pos + yoffset), ha=ha, va=va, fontsize=annotation_fontsize, color='black', arrowprops=dict(arrowstyle='->', color='black'))
 
     # Set the x-axis label
     if weighted:
@@ -1345,14 +1351,7 @@ def plot_commit_frequency(data, csv_name, save=True, plot=None, limit=5, savedir
     ax.set_ylabel('Number of Commits')
     ax.set_title('Number of Commits per Month')
 
-    base = 1
-    # Figure out how many years are in the data
-    num_years = latest_commit_date.year - earliest_commit_date.year
-    # If there are more than 10 years, we want to show every 2 years
-    if num_years > 6:
-        base = 2
-    ax.xaxis.set_major_locator(mdates.YearLocator(base=base))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    adjust_dates_on_xaxis(ax, date_data_copy)
 
     # # Plot the data
     # for author in author_commit_frequency_per_month:
@@ -1461,7 +1460,7 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
                                         label='Legacy data for original Covrig paper (250 commits)')
 
                 # Start of all the data in jun2015data/
-                ax.barh(pos, 15, left=start_date_p_d, height=bar_height, color='black', zorder=4)
+                # ax.barh(pos, 15, left=start_date_p_d, height=bar_height, color='black', zorder=4)
                 # # End of the 250 revisions studied under Covrig
                 # ax.barh(pos, 10, left=end_date_p, height=bar_height, color='#333333', zorder=4)
                 # # Start of the 250 revisions studied under Covrig
@@ -1522,7 +1521,7 @@ def plot_timespan(data, csv_name, save=True, plot=None, pos=0, multiple=False, s
         plt.close(fig)
 
 
-def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir=None, size=DEFAULT_FIGSIZE):
+def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir=None, size=DEFAULT_FIGSIZE, merge=True):
     if plot is None:
         plot = plt.subplots(figsize=size)
     (fig, ax) = plot
@@ -1538,6 +1537,20 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
 
     colours = ["#ff622a", "#cc6666", "#eeaa30", "#fde007", "#448844", "#30cc37", "#b5f7af", "#cad7fe", "#dddddd",
                "#cc66ff", "#eeeeee", "#ffffff"]
+
+    if merge:
+        # Get the index of UIC, and merge into UNC
+        merge_targets = [('UIC', 'UNC'), ('GIC', 'GNC'), ('EUB', 'DUB'), ('ECB', 'DCB')]
+
+        for merge_target in merge_targets:
+            idx = bins.index(merge_target[0])
+            target = bins.index(merge_target[1])
+            row[target] += row[idx]
+            # Get rid of the merged bin
+            row.pop(idx)
+            bins.pop(idx)
+            colours.pop(idx)
+
 
     # Plot the data
     ax.bar(bins, row, color=colours, edgecolor='black')
@@ -1560,7 +1573,7 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
 
 
 def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir=None, size=DEFAULT_FIGSIZE, pos=0,
-                      multiple=False):
+                      multiple=False, merge=True):
     if plot is None:
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
@@ -1580,12 +1593,33 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
     colours = ["#ff622a", "#cc6666", "#eeaa30", "#fde007", "#448844", "#30cc37", "#b5f7af", "#cad7fe", "#dddddd",
                "#cc66ff", "#eeeeee", "#ffffff"]
 
+    if merge:
+        # Get the index of UIC, and merge into UNC
+        merge_targets = [('UIC', 'UNC'), ('GIC', 'GNC'), ('EUB', 'DUB'), ('ECB', 'DCB')]
+
+        for merge_target in merge_targets:
+            idx = bins.index(merge_target[0])
+            target = bins.index(merge_target[1])
+            row[target] += row[idx]
+            # Get rid of the merged bin
+            row.pop(idx)
+            bins.pop(idx)
+            names.pop(idx)
+            colours.pop(idx)
+
     # Pull out the data and put it in a map (int, bin, colour)
     data_map = {}
     for idx, val in enumerate(row):
         data_map[bins[idx]] = (val, names[idx], colours[idx])
 
     new_bin_order = ['UNC', 'LBC', 'UIC', 'UBC', 'GNC', 'GBC', 'GIC', 'CBC', 'EUB', 'ECB', 'DUB', 'DCB']
+
+    if merge:
+        # Remove UIC, GIC, EUB and ECB
+        new_bin_order.remove('UIC')
+        new_bin_order.remove('GIC')
+        new_bin_order.remove('EUB')
+        new_bin_order.remove('ECB')
 
     # Plot a stacked bar chart for the data (positives)
     minimum = -9999999
@@ -1664,7 +1698,7 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
     # Print the legend with the patch type names
     if pos == 0:
         # Define a title string
-        title = f"Note: For each project, the sum of diff. cov. bins ({' + '.join(new_bin_order[:8])}) equals the ELOC of the final revision studied."
+        title = f"Note: For each project, the sum of diff. cov. bins ({' + '.join(new_bin_order[:6])}) equals the ELOC of the final revision studied."
         # Wrap the title every 29 characters
         title = "\n".join(wrap(title, 29))
         # Draw a text box on the RHS outside the plot stating that for each project the sum of all new_bins[:8] is the final ELOC
@@ -1769,14 +1803,7 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
     if date:
         ax.set_xlabel('Time (bin size = 1 month)')
         # Format the x axis so we only show whole years
-        base = 1
-        # Figure out how many years are in the data
-        num_years = latest_commit_date.year - earliest_commit_date.year
-        # If there are more than 10 years, we want to show every 2 years
-        if num_years > 7:
-            base = 2
-        ax.xaxis.set_major_locator(mdates.YearLocator(base=base))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        adjust_dates_on_xaxis(ax, date_data_copy, adjust=7)
     else:
         ax.set_xlabel('Number of Commits (bin size = 10 commits)')
         # Set y lim to be 0 to bin_size
@@ -1803,6 +1830,16 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
 
 
 """ Utility Functions """
+
+def adjust_dates_on_xaxis(ax, date_data, adjust=6):
+    base = 1
+    # Figure out how many years are in the data
+    num_years = date_data[-1].year - date_data[0].year
+    # If there are more than 10 years, we want to show every 2 years
+    if num_years > adjust:
+        base = 2
+    ax.xaxis.set_major_locator(mdates.YearLocator(base=base))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 
 def replace_names(author_data):
 
@@ -2033,7 +2070,7 @@ def plot_all_multiple(paths, csv_names, date, limit=None):
 
     # Both patch type and exit status rates don't filter the data to only include revisions that modify code and/or tests
     plot_metric_combined(plot_patch_type, 'patch_type-absolute', paths, csv_names, custom_figsize=(10, 9), limit=limit,
-                         no_filter=True, proportional=True)
+                         no_filter=True, proportional=False)
     plot_metric_combined(plot_patch_type, 'patch_type', paths, csv_names, custom_figsize=(10, 9), limit=limit, no_filter=True, proportional=True)
 
     plot_metric_combined(plot_exit_status_rates, 'exit_status_rates', paths, csv_names, custom_figsize=(10, 9), limit=limit, no_filter=True)
@@ -2082,6 +2119,8 @@ def plot_metric_multiple(metric, outname, paths, csv_names, **kwargs):
     fig.savefig(f'postprocessing/graphs/{args.input}/{outname}{"-date" if date else ""}.png', bbox_inches='tight',
                 dpi=300)
     print(f'Finished plotting combined {outname}. You can find the plots in graphs/{args.input}')
+    # Close the figure to free up memory
+    plt.close(fig)
 
 
 def plot_metric_combined(metric, outname, paths, csv_names, **kwargs):
