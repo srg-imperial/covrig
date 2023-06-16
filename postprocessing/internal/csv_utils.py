@@ -1,5 +1,5 @@
 from .csv_config import file_header_list, file_header_type, file_header_list_v1, file_header_list_legacy, \
-    file_header_list_legacy_nobr
+    file_header_list_legacy_nobr, file_header_list_v1_no_br
 import datetime
 
 
@@ -115,8 +115,9 @@ def extract_data(input_file, csv_name, callback=None):
 
         # Skip any lines that don't have the correct number of columns
         lines = [line for line in lines if
-                 len(line) == len(file_header_list) or len(line) == len(file_header_list_v1) or len(line) == len(
-                     file_header_list_legacy) or len(line) == len(file_header_list_legacy_nobr)]
+                 len(line) == len(file_header_list) or len(line) == len(file_header_list_v1)
+                 or len(line) == len(file_header_list_v1_no_br) or len(line) == len(file_header_list_legacy)
+                 or len(line) == len(file_header_list_legacy_nobr)]
 
         if len(lines) == 0:
             print(f'Warning: {csv_name} is missing columns, skipping...')

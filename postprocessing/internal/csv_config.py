@@ -13,6 +13,8 @@ file_header_list = [x.replace('#', '').replace('*', '') for x in file_header_raw
 # V1 is without last two columns
 file_header_list_v1 = file_header_list[:-2]
 
+file_header_list_v1_no_br = file_header_list_v1[:-2]
+
 # Legacy is without last two columns and with only one covlinesprevpatches column in that list (so 0 to 9 and 19 to the end)
 file_header_list_legacy = file_header_list_v1[:10] + file_header_list_v1[19:]
 

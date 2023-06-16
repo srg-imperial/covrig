@@ -23,12 +23,21 @@ commits_prev_operating_range = {
 
 
 # Commands run:
+# (Old)
 # python3 postprocessing/compare_csv.py jun2015data/Binutils/Binutils.csv remotedata/binutils/Binutils_all.csv --limit 250
 # python3 postprocessing/compare_csv.py jun2015data/Git/Git.csv remotedata/git/Git_all.csv --limit 250
 # python3 postprocessing/compare_csv.py jun2015data/Lighttpd-gnutls/Lighttpd.csv remotedata/lighttpd2/Lighttpd2_nr.csv --limit 250
 # python3 postprocessing/compare_csv.py jun2015data/Memcached/Memcached.csv remotedata/memcached/Memcached_all.csv --limit 250
 # python3 postprocessing/compare_csv.py jun2015data/Redis/Redis.csv remotedata/redis/tmp/Redis_all_rep_no_non_det_stats.csv --limit 250
 # python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq/Zeromq.csv --limit 250
+
+# (New)
+## binutils
+# python3 postprocessing/compare_csv.py jun2015data/Git/Git.csv remotedata/git/Git_repeats.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Lighttpd-gnutls/Lighttpd.csv remotedata/lighttpd2/Lighttpd2_repeats.csv
+# python3 postprocessing/compare_csv.py jun2015data/Memcached/Memcached.csv remotedata/memcached/Memcached_repeats.csv --limit 250
+## redis
+# python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq/Zeromq_repeats.csv --limit 250
 
 # No libsodium comparison
 # python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq-no-ls/Zeromq_no_ls.csv --limit 250
