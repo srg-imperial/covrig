@@ -4,7 +4,7 @@ import internal.csv_utils as utils
 import statistics
 
 
-def export_number_revs(data, csv_name):
+def export_number_revs(data, csv_name, no_compile_fail=False):
     # Export the number of revisions to a file
 
     # Clean the data
@@ -34,15 +34,42 @@ def export_number_revs(data, csv_name):
     print(f'Number of revisions for {csv_name}: {num_revs}')
     print(f'Number of months for {csv_name}: {num_months}')
 
+    set_to_analyze = ['OK', 'SomeTestFailed', 'TimedOut', 'compileError']
+    if no_compile_fail:
+        set_to_analyze.remove('compileError')
+
     # Transform the num_revs dict into a list of numbers
     status_numbers = ','.join(
-        [str(num_revs[status]) for status in ['OK', 'SomeTestFailed', 'TimedOut', 'compileError']])
+        [str(num_revs[status]) for status in set_to_analyze])
 
     # Append the sum of the numbers to the end of the list apart from compileError
     status_numbers += f',{sum([num_revs[status] for status in ["OK", "SomeTestFailed", "TimedOut"]])}'
 
     # Construct a CSV row with format csv_name, status numbers, num_months
     csv_row = f'{csv_name},{status_numbers},{num_months}'
+
+    return csv_row
+
+def export_date_range(data, csv_name):
+    # Clean the data
+    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage', 'compileError'])
+
+    # Get the dates
+    covlines, notcovlines, changed_test_files, dates = utils.get_columns(cleaned_data, ['covlines', 'notcovlines', 'changed_test_files', 'time'])
+
+    # Get the indices of lines where covlines + notcovlines > 0 or changed_test_files > 0
+    indices = [i for i in range(len(covlines)) if covlines[i] + notcovlines[i] > 0 or changed_test_files[i] > 0]
+
+    # Get the first and last dates given the indices
+    first_date = dates[indices[0]]
+    last_date = dates[indices[-1]]
+
+    # Write the dates as month(space)year with month as a string (like Apr)
+    first_date = f'{first_date.strftime("%b")} {first_date.year}'
+    last_date = f'{last_date.strftime("%b")} {last_date.year}'
+
+    # Construct a CSV row with format csv_name, first_date, last_date
+    csv_row = f'{csv_name},{first_date},{last_date}'
 
     return csv_row
 
@@ -83,15 +110,24 @@ def export_eloc_tloc(data, csv_name):
     tloc = tloc_data[-1]
 
     # Construct a CSV row with format csv_name, lang, eloc, test_lang, tloc
-    csv_row = f'{csv_name},{lang},{eloc},{test_lang},{tloc}'
+    csv_row = f'{csv_name},{lang},"{eloc:,}",{test_lang},"{tloc:,}"'
 
     return csv_row
+
 
 def export_delta_eloc_tloc(data, csv_name):
     cleaned_data = utils.clean_data(data)
 
     # Get eloc, tloc, and language
-    eloc_data, tloc_data = utils.get_columns(cleaned_data, ['eloc', 'testsize'])
+    revs, eloc_data, tloc_data = utils.get_columns(cleaned_data, ['rev', 'eloc', 'testsize'])
+
+    if csv_name == 'Lighttpd2':
+        # Get index of revision 21d9d5e
+        index = revs.index('21d9d5e')
+        # Now filter revisions, eloc_data, and coverage to only include revisions after (and including) 21d9d5e
+        revisions = revs[index:]
+        eloc_data = eloc_data[index:]
+        tloc_data = tloc_data[index:]
 
     # Get the last eloc and tloc
     eloc = eloc_data[-1]
@@ -117,19 +153,37 @@ def export_delta_eloc_tloc(data, csv_name):
 
     return csv_row
 
+
 def export_code_coverage(data, csv_name):
     # Export the final percentage code coverage
 
     cleaned_data = utils.clean_data(data)
 
     # Get the eloc and coverage
-    eloc_data, coverage_data = utils.get_columns(cleaned_data, ['eloc', 'coverage'])
+    eloc_data, coverage_data, covlines, notcovlines, patch_coverage = utils.get_columns(cleaned_data, ['eloc', 'coverage', 'covlines', 'notcovlines', 'patchcoverage'])
 
     # Calculate the percentage code coverage which is the last coverage divided by the last eloc multiplied by 100
     percent_coverage = coverage_data[-1] / eloc_data[-1] * 100
 
+    # Get all indices where covlines + notcovlines is not 0
+    nonzero_indices = [i for i in range(len(covlines)) if covlines[i] + notcovlines[i] != 0]
+
+    lines_modified = [covlines[i] + notcovlines[i] for i in nonzero_indices]
+
+    patch_coverage = [patch_coverage[i] for i in nonzero_indices]
+
+    # Normalize the lines modified into line weights (so that the sum of all line weights is 1)
+    line_weights = [lines_modified[i] / sum(lines_modified) for i in range(len(lines_modified))]
+
+    weighted_patch_coverage = [patch_coverage[i] * line_weights[i] for i in range(len(patch_coverage))]
+
+    avg_weighted_patch_coverage = sum(weighted_patch_coverage)
+
+    # Calculate the average patch coverage
+    avg_patch_coverage = sum(patch_coverage) / len(patch_coverage)
+
     # Construct a CSV row with format csv_name, percent coverage
-    csv_row = f'{csv_name},{percent_coverage:.1f}%'
+    csv_row = f'{csv_name},{percent_coverage:.1f}%,{avg_patch_coverage:.1f}%,{avg_weighted_patch_coverage:.1f}%'
 
     return csv_row
 
@@ -151,7 +205,6 @@ def export_lines_hunks_files(data, csv_name):
 
     # sum the covlines and notcovlines to get the total lines of code
     lines = [cov_lines[i] + not_cov_lines[i] for i in range(len(cov_lines))]
-
 
     # # Limit to the first 250 revisions
     # lines = lines[:250]
@@ -201,32 +254,30 @@ def export_bucketed_patch_coverage(data, csv_name):
     eloc_diffs = [eloc_diffs[i] for i in nonzero_indices]
     coveredlines = [coveredlines[i] for i in nonzero_indices]
 
+    bins = [10, 100, 1000, float('inf')]
 
-    # bucket the coverage percentages into 3 buckets (<= 10, 11-100, > 100) in terms of eloc
-    bucketed_cov_perc_data = [0, 0, 0]
-    total_covered = [0, 0, 0]
-    total_total = [0, 0, 0]
+    bucketed_cov_perc_data = [0] * len(bins)
+    total_covered = [0] * len(bins)
+    total_total = [0] * len(bins)
+
     for i in range(len(eloc_diffs)):
-        if eloc_diffs[i] <= 10:
-            bucketed_cov_perc_data[0] += 1
-            total_covered[0] += coveredlines[i]
-            total_total[0] += eloc_diffs[i]
-        elif eloc_diffs[i] <= 100:
-            bucketed_cov_perc_data[1] += 1
-            total_covered[1] += coveredlines[i]
-            total_total[1] += eloc_diffs[i]
-        else:
-            bucketed_cov_perc_data[2] += 1
-            total_covered[2] += coveredlines[i]
-            total_total[2] += eloc_diffs[i]
+        for j in range(len(bins)):
+            if eloc_diffs[i] <= bins[j]:
+                bucketed_cov_perc_data[j] += 1
+                total_covered[j] += coveredlines[i]
+                total_total[j] += eloc_diffs[i]
+                break
 
     # Get the average coverage percentages
-    bucketed_cov_perc_data_av = [total_covered[i] * 100 / total_total[i] for i in range(len(total_covered))]
+    bucketed_cov_perc_data_av = [total_covered[i] * 100 / total_total[i] if total_total[i] != 0 else 0 for i in range(len(total_covered))]
 
-    # Construct a CSV row with format csv_name, <= 10, <=10 av, 11-100, 11-100 av, > 100, > 100 av
-    csv_row = f'{csv_name},{bucketed_cov_perc_data[0]},{bucketed_cov_perc_data_av[0]:.1f}%,{bucketed_cov_perc_data[1]},{bucketed_cov_perc_data_av[1]:.1f}%,{bucketed_cov_perc_data[2]},{bucketed_cov_perc_data_av[2]:.1f}%'
+    # Also replace any 0s in bucketed_cov_perc_data with -
+    csv_data = [csv_name] + [f'{data},{av:.1f}%' if av != 0 else f'{data},-' for data, av in
+                             zip(bucketed_cov_perc_data, bucketed_cov_perc_data_av)]
+    csv_row = ','.join(csv_data)
 
     return csv_row
+
 
 def export_non_det_revisions(data, csv_name):
     # Clean the data (not removing all OK rows since some repos return OK but have different return values under the
@@ -256,12 +307,24 @@ def export_non_det_revisions(data, csv_name):
 
     return csv_row
 
+
 def export_coverage_delta(data, csv_name):
-    # Clean the data of all apart from OK
-    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage', 'compileError', 'TimedOut', 'SomeTestFailed'])
+    # Assumes the last test failure registered doesn't massively affect the coverage
+    cleaned_data = utils.clean_data(data,
+                                    omit=['EmptyCommit', 'NoCoverage', 'compileError', 'TimedOut'])
 
     # Get the coverage data and eloc
-    eloc_data, coverage = utils.get_columns(cleaned_data, ['eloc', 'coverage'])
+    revisions, eloc_data, coverage = utils.get_columns(cleaned_data, ['rev','eloc', 'coverage'])
+
+    # Filtering out initial bug that cause coverage to be 2% from a bug whereas it should be at least 34% for Lighttpd2.
+    if csv_name == 'Lighttpd2':
+        # Get index of revision 21d9d5e
+        index = revisions.index('21d9d5e')
+        # Now filter revisions, eloc_data, and coverage to only include revisions after (and including) 21d9d5e
+        revisions = revisions[index:]
+        eloc_data = eloc_data[index:]
+        coverage = coverage[index:]
+
 
     # Calculate the coverage at the start and end of the project
     start_coverage = coverage[0] / eloc_data[0] * 100
@@ -282,42 +345,44 @@ def export_coverage_delta(data, csv_name):
 
 
 def write_stats(paths, csv_names, limit=None):
-
-    write_multiple_csv(export_number_revs, paths, csv_names, ['App', 'OK', 'TF', 'TO', 'CF', 'TotalWorking', 'Time'],
-                       'num_revs', limit=limit)
-    write_multiple_csv(export_eloc_tloc, paths, csv_names, ['App', 'Lang.', 'ELOC', 'Lang.', 'TLOC'], 'eloc_tloc', limit=limit)
-    write_multiple_csv(export_delta_eloc_tloc, paths, csv_names, ['App', 'ΔELOC', 'ΔELOC%', 'ΔTLOC', 'ΔTLOC%'], 'delta_eloc_tloc', limit=limit)
+    write_multiple_csv(export_number_revs, paths, csv_names, ['App', 'OK', 'TF', 'TO', 'CF', 'Total Working', 'Time'],
+                       'num_revs_all', limit=limit, no_filter=True)
+    write_multiple_csv(export_number_revs, paths, csv_names, ['App', 'OK', 'TF', 'TO', 'MCT', 'Time'],
+                       'num_revs_mct', limit=limit, no_compile_fail=True)
+    write_multiple_csv(export_date_range, paths, csv_names, ['App', 'Start Date', 'End Date'], 'date_range',
+                       limit=limit)
+    write_multiple_csv(export_eloc_tloc, paths, csv_names, ['App', 'Lang.', 'ELOC', 'Lang.', 'TLOC'], 'eloc_tloc',
+                       limit=limit)
+    write_multiple_csv(export_delta_eloc_tloc, paths, csv_names, ['App', 'ΔELOC', 'ΔELOC%', 'ΔTLOC', 'ΔTLOC%'],
+                       'delta_eloc_tloc', limit=limit)
     write_multiple_csv(export_lines_hunks_files, paths, csv_names, ['App', 'Lines', 'Hunks', 'Files'],
                        'lines_hunks_files', limit=limit)
     write_multiple_csv(export_bucketed_patch_coverage, paths, csv_names,
-                       ['App', '<= 10 NP', '<= 10 C', '11-100 NP', '11-100 C', '> 100 NP', '> 100 C'],
+                       ['App', '<= 10 NP', '<= 10 C', '11-100 NP', '11-100 C', '101-1000 NP', '101-1000 C', '> 1000 NP', '> 1000 C'],
                        'bucketed_patch_coverage', limit=limit)
-    write_multiple_csv(export_code_coverage, paths, csv_names, ['App', 'Final Cov. %'], 'code_coverage', limit=limit)
-    write_multiple_csv(export_coverage_delta, paths, csv_names, ['App', 'Start Cov. %', 'End Cov. %', 'Cov. % Δ'], 'coverage_delta', limit=limit)
+    write_multiple_csv(export_code_coverage, paths, csv_names, ['App', 'Final Cov. %', 'Avg. Patch Cov. %', 'Line-Weighted A.P.C. %'], 'code_coverage', limit=limit)
+    write_multiple_csv(export_coverage_delta, paths, csv_names, ['App', 'Start Cov. %', 'End Cov. %', 'Cov. % Δ'],
+                       'coverage_delta', limit=limit)
 
-    # Now filter paths to only include those in the following list
-    included_names = ['Apr_repeats', 'Lighttpd2_repeats', 'Zeromq_repeats', 'Memcached_repeats', 'BinutilsGdb_repeats', 'Curl_2500_repeats', 'Redis_all_rep2']
-    # Get the indices of the included names
-    included_indices = [i for i in range(len(csv_names)) if csv_names[i] in included_names]
-    # Get the included paths and csv names
-    csv_names = [csv_names[i] for i in included_indices]
-    paths = [paths[i] for i in included_indices]
+    paths, csv_names = utils.filter_to_non_det_supported(paths, csv_names)
 
-    write_multiple_csv(export_non_det_revisions, paths, csv_names, ['App', 'Nondet. Result', '% Total Working Flaky', 'Repeats', 'Nondet. Commits'], 'non_det_revs')
+    write_multiple_csv(export_non_det_revisions, paths, csv_names,
+                       ['App', 'Nondet. Result', '% Total Working Flaky', 'Repeats', 'Nondet. Commits'], 'non_det_revs')
 
 
-def write_multiple_csv(func, paths, csv_names, header, name, limit=None):
+def write_multiple_csv(func, paths, csv_names, header, name, limit=None, no_filter=False, **kwargs):
     # Run a function on multiple CSV files
     rows = []
     for i in range(len(csv_names)):
         csv_data = utils.extract_data(f'{paths[i]}', csv_names[i])
         if csv_data is None:
             continue
-        # Filter the data to only include revisions that modify executable code or test files
-        csv_data, _ = utils.filter_data_by_exec_test(csv_data)
+        if not no_filter:
+            # Filter the data to only include revisions that modify executable code or test files
+            csv_data, _ = utils.filter_data_by_exec_test(csv_data)
         if limit is not None:
             csv_data = csv_data[-limit:]
-        res = func(csv_data, csv_names[i])
+        res = func(csv_data, csv_names[i], **kwargs)
         if res is not None:
             rows.append(res)
 
@@ -378,14 +443,15 @@ if __name__ == '__main__':
         if len(paths) == 0:
             paths += glob.glob(f'{args.input}/*.csv')
 
-        # TODO: remove when data fixed
-        # Remove the following CSV files from the list since they are either not complete or lack fields
-        excluded_paths = ['remotedata/binutils/Binutils_all.csv', 'remotedata/binutils/Binutils_repeats.csv',
-                          'remotedata/binutils-binutils-gdb-combined/Binutils_combined.csv',
-                          'remotedata/binutils-gdb/BinutilsGdb_all.csv', 'remotedata/curl/Curl_2500_nr.csv',
-                          'remotedata/lighttpd2/Lighttpd2_nr.csv', 'remotedata/memcached/Memcached_all.csv',
-                          'remotedata/redis_non_det/Redis_sofar.csv', 'remotedata/redis_repeated/Redis_all_rep.csv',
-                          'remotedata/vim/Vim_rep_1.csv', 'remotedata/zeromq/Zeromq.csv', 'remotedata/vim/Vim_2500_nr.csv']
+        included_paths = ['remotedata/apr/Apr_repeats.csv',
+                          'remotedata/binutils-gdb/BinutilsGdb_repeats.csv',
+                          'remotedata/curl/Curl_repeats.csv',
+                          'remotedata/git/Git_repeats.csv',
+                          'remotedata/lighttpd2/Lighttpd2_repeats.csv',
+                          'remotedata/memcached/Memcached_repeats.csv',
+                          'remotedata/redis/Redis_repeats.csv',
+                          'remotedata/vim/Vim_repeats.csv',
+                          'remotedata/zeromq/Zeromq_repeats.csv']
 
         # Get indices of all paths that contain the word 'diffcov'
         diffcov_indices = [i for i in range(len(paths)) if 'diffcov' in paths[i]]
@@ -396,7 +462,7 @@ if __name__ == '__main__':
         if len(paths) == 0:
             raise FileNotFoundError(f'No CSV files found in {args.input}')
 
-        paths = [x for x in paths if x not in excluded_paths]
+        paths = [x for x in paths if x in included_paths]
 
         # Make sure we have at least one valid CSV file
         if len(paths) == 0:
@@ -406,6 +472,9 @@ if __name__ == '__main__':
 
         # Remove the .csv extension
         csv_names = [x[:-4] for x in csv_names]
+
+        # Trim CSV names
+        csv_names = utils.reformat_csv_names(csv_names)
 
         csv_paths = sorted(zip(csv_names, paths))
         csv_names, paths = zip(*csv_paths)

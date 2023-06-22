@@ -19,7 +19,7 @@ class Curl(Container):
             self.path = '/home/curl'
             self.source_path = '/home/curl/cvr'
             # set timeout (in seconds) for the test suite to run
-            self.timeout = 600
+            self.timeout = 1000
 
         self.tsuite_path = ('tests',)
         self.ignore_coverage_from = ('include/*', '*/tests/*')

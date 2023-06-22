@@ -58,8 +58,8 @@ NUM=$((NUM+1))
 # TEST CORRECTNESS
 # ====================
 
-# Inspect the csv file and make sure it's correct
-ONLINE_CORRECT_STRING="9d10bf2,25267,4138,4212,H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
+# Inspect the csv file and make sure it's correct. Binutils VM will have cloc version 1.60, so TESTSIZE=4007.
+ONLINE_CORRECT_STRING="9d10bf2,25267,4138,4007,H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
 # Note: This is the same string as for the offline test - they should be the same
 
 # Get the last line of the csv file using tail and make sure it matches the correct string

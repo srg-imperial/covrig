@@ -23,13 +23,15 @@ commits_prev_operating_range = {
 
 
 # Commands run:
-# python3 postprocessing/compare_csv.py jun2015data/Binutils/Binutils.csv remotedata/binutils/Binutils.csv --limit 250
-# python3 postprocessing/compare_csv.py jun2015data/Git/Git.csv remotedata/git/Git_all.csv --limit 250
-# python3 postprocessing/compare_csv.py jun2015data/Lighttpd-gnutls/Lighttpd.csv remotedata/lighttpd2/Lighttpd2_nr.csv --limit 250
-# python3 postprocessing/compare_csv.py jun2015data/Memcached/Memcached.csv remotedata/memcached/Memcached_all.csv --limit 250
-# python3 postprocessing/compare_csv.py jun2015data/Redis/Redis.csv remotedata/redis/tmp/Redis_all_rep_no_non_det_stats.csv --limit 250
-# python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq/Zeromq.csv --limit 250
-# ^^ Zeromq one fails but this is ok since we compile it with different flags (e.g. --without-documentation)
+# python3 postprocessing/compare_csv.py jun2015data/Binutils/Binutils.csv remotedata/binutils/Binutils_repeats.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Git/Git.csv remotedata/git/Git_repeats.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Lighttpd-gnutls/Lighttpd.csv remotedata/lighttpd2/Lighttpd2_repeats.csv
+# python3 postprocessing/compare_csv.py jun2015data/Memcached/Memcached.csv remotedata/memcached/Memcached_repeats.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Redis/Redis.csv remotedata/redis/Redis_repeats.csv --limit 250
+# python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq/Zeromq_repeats.csv --limit 250
+
+# No libsodium comparison
+# python3 postprocessing/compare_csv.py jun2015data/Zeromq/Zeromq.csv remotedata/zeromq-no-ls/Zeromq_no_ls.csv --limit 250
 def compare_csv(data1, data2):
     # Create an array to store the differences for each column
     # Work with file_header_list_v1 since Covrig data is in v1 format
@@ -146,7 +148,8 @@ def chi_squared(data1, data2, column_idxs):
         # Calculate the chi squared test
         # Emit a waring if the name of the column isn't exit
         if config.file_header_list_v1[col_idx] != 'exit':
-            print(f'Warning: column {config.file_header_list_v1[col_idx]} is not exit - something\'s probably wrong since this is the only string column that could differ')
+            print(
+                f'Warning: column {config.file_header_list_v1[col_idx]} is not exit - something\'s probably wrong since this is the only string column that could differ')
             chisq[i] = -1
             p_vals[i] = -1
             continue
@@ -184,8 +187,9 @@ def report_diffs(diffs):
     print('Int/Float differences are absolute values (abs(x - y)), String differences are 1 if different, 0 if same')
     print('Differences:')
     for i in range(len(diffs)):
-        print(f'{config.file_header_list_v1[i]}: {diffs[i]}')
+        print(f'{config.file_header_list_v1[i]}: {diffs[i]:.2f}')
     print("-" * 25)
+
 
 def match_commits(data1, data2):
     # Get the commit hashes from each data set
@@ -209,6 +213,56 @@ def match_commits(data1, data2):
             print(f'Warning: commits {ret_data1[i][0]} and {ret_data2[i][0]} do not match')
 
     return ret_data1, ret_data2
+
+
+def dump_csv(avg_differences, significant_diffs_idxs, significant_diffs_names, significant_diffs_types, p_val_list, p):
+    # Check if the output directory exists, if not, create it - compare_stats
+    if not os.path.exists('compare_stats'):
+        os.mkdir('compare_stats')
+
+    # Get the name of the CSV file (basename)
+    csv_name = os.path.basename(args.basefile)
+    # Get the name of the CSV file without the extension
+    csv_name = os.path.splitext(csv_name)[0] + '_comparison.csv'
+
+    prev_patches_avg = 0
+    count = 0
+
+    # Open the CSV file for writing
+    with open(os.path.join('compare_stats', csv_name), 'w') as f:
+        # Write the header - Field, Abs. Difference, P-Value
+        f.write('Field,Mean Abs. $\Delta$,p-Value\n')
+        # Write the data
+        for i in range(len(avg_differences)):
+            # Use config.file_header_list_v1 to get the name of the field
+            field_name = config.file_header_list_v1[i]
+
+            # Average this field
+            if field_name == 'covlinesprevpatches':
+                count += 1
+                prev_patches_avg += avg_differences[i]
+                if count < 10:
+                    continue
+                abs_diff = prev_patches_avg / count
+                field_name = f"{field_name}*"
+            else:
+                # Get the absolute difference
+                abs_diff = avg_differences[i]
+            # Get the p-value if applicable
+            if i in significant_diffs_idxs:
+                # Get the index of i
+                idx = significant_diffs_idxs.index(i)
+                if significant_diffs_types[idx] == 'str':
+                    p_val = p_val_list[idx]
+                else:
+                    p_val = p[idx]
+                p_val = f'{p_val:.5f}'
+            else:
+                p_val = "-"
+            # Write the data to the CSV file
+            f.write(f'{field_name},{abs_diff:.2f},{p_val}\n')
+
+        print(f'Wrote comparison data to {os.path.join("compare_stats", csv_name)}')
 
 
 # def report_vars(vars, names):
@@ -270,7 +324,7 @@ if __name__ == '__main__':
         exit(0)
 
     # Filter data1 to the range between start_commit and end_commit
-    data1 = data1[start_idx:end_idx+1]
+    data1 = data1[start_idx:end_idx + 1]
 
     # Filter to those that modify executable code or tests
     data1, _ = utils.filter_data_by_exec_test(data1)
@@ -279,9 +333,24 @@ if __name__ == '__main__':
     cleaned_data1 = utils.clean_data(data1)
     cleaned_data2 = utils.clean_data(data2)
 
+    # Get all revs in cleaned_data1
+    revs1 = utils.get_columns(cleaned_data1, ['rev'])[0]
+    # Get all revs in cleaned_data2
+    revs2 = utils.get_columns(cleaned_data2, ['rev'])[0]
+
+    if revs1 != revs2:
+        # Get the intersection of revs and revs2
+        if csv_name2 == 'Zeromq_no_ls':
+            revs1 = sorted(list(set(revs1).intersection(revs2)), key=revs2.index)
+            # Filter cleaned_data1 to only include revs1
+            cleaned_data1 = utils.get_data_with_commits(cleaned_data1, revs1)
+        else:
+            # Print warning
+            print('Warning: Not the same set of revisions, attempting to match up the commits...')
+
     # Filter the data to include <limit> commits up to <endatcommit>
     limited_data1 = utils.limit_data(cleaned_data1, commit_range[1], limit=args.limit)
-    # limited_data2 = utils.limit_data(cleaned_data2, args.endatcommit, limit=args.limit)
+
     limited_data2 = utils.get_data_with_commits(cleaned_data2, utils.get_columns(limited_data1, ['rev'])[0])
 
     # Emit a warning if data is not the same length
@@ -291,7 +360,8 @@ if __name__ == '__main__':
 
     # If revisions don't line up
     if utils.get_columns(limited_data1, ['rev'])[0] != utils.get_columns(limited_data2, ['rev'])[0]:
-        print('Revisions don\'t line up (a rev likely compiles in one dataset but not in the other), attempting to match up the commits...')
+        print(
+            'Revisions don\'t line up (a rev likely compiles in one dataset but not in the other), attempting to match up the commits...')
         # Remove commits that are not in both data sets
         limited_data1, limited_data2 = match_commits(limited_data1, limited_data2)
         print(f'Number of commits matched: {len(limited_data1)}')
@@ -338,6 +408,7 @@ if __name__ == '__main__':
     #     print(f'{significant_diffs_names[i]}: {variances1[i]} {variances2[i]}')
 
     string_idxs = []
+    p_val_list = None
     if 'str' in significant_diffs_types:
         # Calculate the ChiSq test for the string columns
         # Get the indices of the string columns
@@ -351,7 +422,8 @@ if __name__ == '__main__':
     # If p_values returned are less than p_value, then the variances are significantly different
     # print("-" * 25)
     print(f'Levene\'s test (variance similarity on those with difference > {threshold}):')
-    print(f'p: {p_value} (H0: variances are similar with p-value >= {p_value}, H1: variances are significantly different with p < {p_value})')
+    print(
+        f'p: {p_value} (H0: variances are similar with p-value >= {p_value}, H1: variances are significantly different with p < {p_value})')
     score, p = levenes_test(limited_data1, limited_data2, significant_diffs_idxs)
     for i in range(len(significant_diffs_idxs)):
         if score[i] == -1 or p[i] == -1:  # i.e. string column
@@ -365,7 +437,8 @@ if __name__ == '__main__':
         print(f'{significant_diffs_names[i]}: Score: {score[i]:.5f} p-value: {p[i]:.5f} ({info_string})')
 
     if ok_count == len(significant_diffs_idxs):
-        print('Success: All variances are similar, so we just have an offset between the two data sets, which is fine! (Caused by environmental factors)')
+        print(
+            'Success: All variances are similar, so we just have an offset between the two data sets, which is fine! (Caused by environmental factors)')
     else:
         print('Failure: We have a problem, the variances of the datasets are significantly different')
 
@@ -374,7 +447,8 @@ if __name__ == '__main__':
     if 'str' in significant_diffs_types and len(string_idxs) > 0 and len(chisq_list) > 0 and len(p_val_list) > 0:
         print("-" * 25)
         print('Chi-Squared test:')
-        print(f'p: {p_value} (H0: frequencies are similar with p-value >= {p_value}, H1: frequencies are significantly different with p-value < {p_value})')
+        print(
+            f'p: {p_value} (H0: frequencies are similar with p-value >= {p_value}, H1: frequencies are significantly different with p-value < {p_value})')
         for i in string_idxs:
             # Check if the p-value is less than 0.05
             if chisq_list[i] == -1 or p_val_list[i] == -1:  # i.e. numeric column
@@ -393,5 +467,8 @@ if __name__ == '__main__':
             print(
                 'Success: All string distributions are similar!')
         else:
-            print('Warning: The exit codes are not distributed similarly between the two data sets (different distributions of OK and SomeTestFailed)')
+            print(
+                'Warning: The exit codes are not distributed similarly between the two data sets (different distributions of OK and SomeTestFailed)')
             print("This can be OK if dependency issues were resolved on the more recent data set.")
+    dump_csv(avg_differences, significant_diffs_idxs, significant_diffs_names, significant_diffs_types,
+             p_val_list=p_val_list, p=p)

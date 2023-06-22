@@ -1,16 +1,16 @@
 # Short script to set up vars for and run diffcov.sh over a series of repos.
 
 DIFF_CMDS=(
-    "apr remotedata/apr/coverage 886b908 8fb7fa4"
-    "binutils remotedata/binutils/coverage 0302afd 2b9ed0a binutils"
-    "binutils-gdb remotedata/binutils-gdb/coverage 20cef68 28ab94f binutils"
-    "curl remotedata/curl/coverage 8026bd7 4379259"
-    "git remotedata/git/coverage d2dbd39 4762bf3"
-    "lighttpd2 remotedata/lighttpd2/coverage a40a03c 1058654 src"
-    "memcached remotedata/memcached/coverage 5f95d05 7d6907e"
-    "redis remotedata/redis/coverage 47da765 00a29b1 src"
-    "vim remotedata/vim/coverage f939c4e 451f849 src"
-    "zeromq remotedata/zeromq/coverage 1ef63bc 267699b src"
+    "apr remotedata/apr/coverage 3b87c3b 99fffba"
+#    "binutils remotedata/binutils/coverage 0302afd 2b9ed0a binutils"
+    "binutils-gdb remotedata/binutils-gdb/coverage 781303c 28ab94f binutils"
+    "curl remotedata/curl/coverage 8026bd7 abff183"
+    "git remotedata/git/coverage 001d116 ba928e9"
+    "lighttpd2 remotedata/lighttpd2/coverage ce4f939 1058654 src"
+    "memcached remotedata/memcached/coverage d9220d6 7d6907e"
+    "redis remotedata/redis/coverage 011fa89 4208666 src"
+    "vim remotedata/vim/coverage 9d182dd 763209c src"
+    "zeromq remotedata/zeromq/coverage 36bfaaa d82117f src"
 )
 
 # Running instructions:
@@ -53,4 +53,4 @@ for cmd in "${DIFF_CMDS[@]}"; do
 done
 
 # Sum the two binutils files
-python3 utils/sum_diffcovs.py remotedata/binutils-binutils-gdb-combined/diffcov_binutils_combined.csv remotedata/binutils/diffcov_binutils.csv remotedata/binutils-gdb/diffcov_binutils-gdb.csv
+#python3 utils/sum_diffcovs.py remotedata/binutils-binutils-gdb-combined/diffcov_binutils_combined.csv remotedata/binutils/diffcov_binutils.csv remotedata/binutils-gdb/diffcov_binutils-gdb.csv

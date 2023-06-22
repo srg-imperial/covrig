@@ -19,7 +19,7 @@ class Apr(Container):
             self.path = '/home/apr'
             self.source_path = '/home/apr'
             # set timeout (in seconds) for the test suite to run
-            self.timeout = 200
+            self.timeout = 300
 
         self.tsuite_path = ('test',)
         self.ignore_coverage_from = ('include/*', '*/test/*')

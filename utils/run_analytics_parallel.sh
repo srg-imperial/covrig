@@ -106,12 +106,12 @@ TOTAL=0
 
 for I in $(seq "$NUM_PROCESSES")
 do
-  OUTPUT_FILES+=("$REPO""$I")
+  OUTPUT_FILES+=("partial""$REPO""$I")
   # Use the NCPP_ARRAY elements to get TOTAL
   TOTAL=$((TOTAL + NCPP_ARRAY[I - 1]))
   COMMIT_RANGES+=("$TOTAL")
   # Remove all the output directories just in case
-  rm -rf "data/""$REPO""$I"
+  rm -rf "data/partial""$REPO""$I"
 done
 
 # Run the analytics in parallel using GNU parallel
@@ -137,12 +137,12 @@ while kill -0 $pid 2> /dev/null; do
     for I in $(seq "$NUM_PROCESSES")
     do
       # Check if the directory exists and is not empty
-      if [ -d "data/""$REPO""$I" ] && [ "$(ls -A "data/""$REPO""$I")" ]; then
+      if [ -d "data/partial""$REPO""$I" ] && [ "$(ls -A "data/partial""$REPO""$I")" ]; then
         # Get the name of the csv file inside "data"/"$REPO""$I", that is "$REPO" with the first letter uppercase and all the other letters lowercase
-        CSV_FILE_NAME=$(find "data/""$REPO""$I" -name "*.csv" -printf "%f\n")
+        CSV_FILE_NAME=$(find "data/partial""$REPO""$I" -name "*.csv" -printf "%f\n")
         if [ -n "$CSV_FILE_NAME" ]; then
           # Add the number of lines in the csv file to the sum, minus 1 because the first line is the header
-          SUM=$((SUM + $(cat "data/""$REPO""$I""/""$CSV_FILE_NAME" | wc -l) - 1))
+          SUM=$((SUM + $(cat "data/partial""$REPO""$I""/""$CSV_FILE_NAME" | wc -l) - 1))
         fi
       fi
     done
@@ -162,7 +162,7 @@ echo "Done running analytics, merging files..."
 # Merge the files
 
 # Now merge all the directories into one
-FIRST_DIR="data/""$REPO""1"
+FIRST_DIR="data/partial""$REPO""1"
 
 # Get the name of the csv file inside "data"/"$REPO"
 CSV_FILE_NAME=$(find "$FIRST_DIR" -name "*.csv" -printf "%f\n")
@@ -178,18 +178,18 @@ OUT_MSG=""
 for I in $(seq "$NUM_PROCESSES" -1 1)
 do
   # Remove the first line of the csv file
-  tail -n +2 "data/""$REPO""$I"/"$CSV_FILE_NAME" >> "$OUT_FILE"
+  tail -n +2 "data/partial""$REPO""$I"/"$CSV_FILE_NAME" >> "$OUT_FILE"
   # Copy over all the tar files
 
   # Get all tar.bz2 files in the directory
-  TAR_FILE_NAME=$(find "data/""$REPO""$I" -name "*.tar.bz2" -printf "%f\n")
+  TAR_FILE_NAME=$(find "data/partial""$REPO""$I" -name "*.tar.bz2" -printf "%f\n")
   if [ -z "$TAR_FILE_NAME" ]; then
     OUT_MSG="Warning: No tar.bz2 files found for parallel partition ${I}.\n${OUT_MSG}"
   else
   # Copy all the tar.bz2 files to the output directory
-  find "data/""$REPO""$I" -name "*.tar.bz2" -exec cp {} "$OUT_DIR" \;
+  find "data/partial""$REPO""$I" -name "*.tar.bz2" -exec cp {} "$OUT_DIR" \;
   fi
-  rm -rf "data/""$REPO""$I"
+  rm -rf "data/partial""$REPO""$I"
 done
 
 # Print the output message

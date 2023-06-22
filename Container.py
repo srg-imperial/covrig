@@ -545,6 +545,9 @@ class Container(object):
         if self.compileError or self.emptyCommit or self.covered_eloc == 0:
             return False
 
+        # Filter out any 124 exit statuses (timeout) from the list of exit statuses
+        self.exit_status_list = [x for x in self.exit_status_list if x != 124]
+
         # Check whether all executions of the test have the same exit status - false if all are the same, true otherwise
         if len(set(self.exit_status_list)) <= 1:
             return False

@@ -45,8 +45,18 @@ NUM=$((NUM+1))
 # TEST CORRECTNESS
 # ====================
 
-# Inspect the csv file and make sure it's correct
-OFFLINE_CORRECT_STRING="9d10bf2,25267,4138,4212,H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
+# If cloc --version == 1.64, TESTSIZE=4212, If cloc --version == 1.60, TESTSIZE=4007, Else fail
+CLOC_VERSION=$(cloc --version | head -n 1 | cut -d ' ' -f 2)
+TESTSIZE=0
+if [ "${CLOC_VERSION}" == "1.64" ]; then
+    TESTSIZE=4212
+elif [ "${CLOC_VERSION}" == "1.60" ]; then
+    TESTSIZE=4007
+else
+    echo "Failed, cloc version is not 1.64 or 1.60."
+    exit 1
+fi
+OFFLINE_CORRECT_STRING="9d10bf2,25267,4138,${TESTSIZE},H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
 
 # Get the last line of the csv file using tail and make sure it matches the correct string
 OFFLINE_LAST_LINE=$(tail -n 1 data/binutils/BinutilsOffline.csv | sed 's/\r//g')

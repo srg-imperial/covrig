@@ -152,22 +152,14 @@ rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
 cd "$ROOT"/diffcov/current
 
-#EXTRA_ARGS=""
-#EXTRA_FLAG=""
-## if we're looking at binutils, binutils-gdb, lighttpd2 we need to pass in extra flags
-#if [ "$REPO" = "binutils" ] || [ "$REPO" = "binutils-gdb" ] || [ "$REPO" = "lighttpd2" ] || [ "$REPO" = "redis" ] || [ "$REPO" = "vim" ] || [ "$REPO" = "memcached" ]; then
-#    EXTRA_ARGS=",annotate,source"
-#    # Add a space to this EXTRA_FLAG since it should be split into a new argument for genhtml (the reason it's not in quotes later)
-#    EXTRA_FLAG=" --synthesize-missing"
-#fi
-## if we're looking at zeromq, we need to pass in extra flags
-#if [ "$REPO" = "zeromq" ]; then
-#    EXTRA_ARGS=",path"
-#fi
-
 if [ "$REPO" = "lighttpd2" ]; then
   # Use lcov to skip the file src/modules/mod_proxy.c - complains of a gained baseline coverage error otherwise
   lcov  --rc lcov_branch_coverage=1 -r total.info "*/src/modules/mod_proxy.c" -o total.info
+fi
+
+if [ "$REPO" = "curl" ]; then
+  # Skip the file lib/imap.c, complains about the author "ehlertjd" not responsible for any GNC lines
+  lcov  --rc lcov_branch_coverage=1 -r total.info "*/lib/imap.c" -o total.info
 fi
 
 COMMAND_DUMP="$ROOT"/diffcov/genhtml_output_"$REPO".txt
