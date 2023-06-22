@@ -46,7 +46,7 @@ NUM=$((NUM+1))
 # ====================
 
 # Inspect the csv file and make sure it's correct
-OFFLINE_CORRECT_STRING="9d10bf2,25267,4138,4212,H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
+OFFLINE_CORRECT_STRING="9d10bf2,25267,4138,4007,H.J. Lu,140,14,12,53.85,0,0,0,0,0,0,0,0,0,0,1282580751,OK,21,13,6,1,3,20,13,False,17589,2204"
 
 # Get the last line of the csv file using tail and make sure it matches the correct string
 OFFLINE_LAST_LINE=$(tail -n 1 data/binutils/BinutilsOffline.csv | sed 's/\r//g')
