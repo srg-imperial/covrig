@@ -69,6 +69,9 @@ TOTALCONTRIB=0
 
 for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUALCODEORTEST); do
   MAXDIFF=-1
+  MAXDIFFFILE="N/A"
+  MAXDIFFLN=-1
+  grouped_lines=""
   ALLOK=1
   ALLFAILED=1
   for ((i=0; i < $FOLDERCNT-1; i++ ));  do
@@ -85,11 +88,71 @@ for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUA
           tar xjf "${FOLDERS[$i]}/coverage-$R.tar.bz2" -C tmp/nondet1 --wildcards '*total.info'
           tar xjf "${FOLDERS[$j]}/coverage-$R.tar.bz2" -C tmp/nondet2 --wildcards '*total.info'
   
-          CDIFF=$($SCRIPT_DIR/internal/nondetone.sh tmp/nondet1/total.info tmp/nondet2/total.info)
+#          CDIFF=$($SCRIPT_DIR/internal/nondetone.sh tmp/nondet1/total.info tmp/nondet2/total.info)
           #use a limit that makes sense for the difference in line count. this avoids artefacts created
           #by test suites which kill the programs (lighttpd)
+#          FILE1="tmp/nondet1/total.info"
+#          FILE2="tmp/nondet2/total.info"
+#
+#          egrep '^DA:|^SF:' "$FILE1" | sed -e 's/[1-9][0-9]*$/1/g' > "$FILE1.p"
+#          egrep '^DA:|^SF:' "$FILE2" | sed -e 's/[1-9][0-9]*$/1/g' > "$FILE2.p"
+#
+#          C=$(diff -U0 --minimal "$FILE1.p" "$FILE2.p" | grep 'DA:' | wc -l)
+#          CDIFF=$(($C/2))
+#
+#          if [[ "$CDIFF" -gt $MAXDIFF && ( "$CDIFF" -lt $MAXNONDET ) ]]; then
+#            MAXDIFF=$CDIFF
+#            MAXDIFFFILE=$(egrep '^SF:' "$FILE1" | sed -e 's/^SF://' | head -n 1)
+#            MAXDIFFNUMS=$(diff -U0 --minimal "$FILE1.p" "$FILE2.p" | grep 'DA:')
+#            MAXDIFFLN=$(echo "$MAXDIFFNUMS" | awk -F'[,:]+' '{ for (i = 2; i <= NF; i+=3) if (!seen[$i]++) print $i }' | paste -sd ",")
+#          fi
+          FILE1="tmp/nondet1/total.info"
+          FILE2="tmp/nondet2/total.info"
+
+          egrep '^DA:|^SF:' "$FILE1" | sed -e 's/[1-9][0-9]*$/1/g' > "$FILE1.p"
+          egrep '^DA:|^SF:' "$FILE2" | sed -e 's/[1-9][0-9]*$/1/g' > "$FILE2.p"
+
+          # For file 1
+          while IFS= read -r line; do
+            if [[ $line =~ ^SF: ]]; then
+              prev_SF=$line
+            elif [[ $line =~ ^DA: ]]; then
+              echo "$line,SF:${prev_SF#*:}"
+            else
+              echo "$line"
+            fi
+          done < "$FILE1.p" > "$FILE1.f"
+
+          # For file 2
+          while IFS= read -r line; do
+            if [[ $line =~ ^SF: ]]; then
+              prev_SF=$line
+            elif [[ $line =~ ^DA: ]]; then
+              echo "$line,SF:${prev_SF#*:}"
+            else
+              echo "$line"
+            fi
+          done < "$FILE2.p" > "$FILE2.f"
+
+          C=$(diff -U0 --minimal "$FILE1.p" "$FILE2.p" | grep 'DA:' | wc -l)
+          CDIFF=$(($C/2))
+
           if [[ "$CDIFF" -gt $MAXDIFF && ( "$CDIFF" -lt $MAXNONDET ) ]]; then
             MAXDIFF=$CDIFF
+            diff_out=$(diff -U0 --minimal "$FILE1.f" "$FILE2.f" | grep 'DA:')
+
+            transformed_lines=""
+            while IFS= read -r line; do
+              if [[ $line =~ ^[-+]DA:([0-9]+),[0-9]+,SF:(.*)$ ]]; then
+                transformed_line="${BASH_REMATCH[1]},${BASH_REMATCH[2]}"
+                transformed_lines+="$transformed_line"$'\n'
+              fi
+            done <<< "$diff_out"
+
+            transformed_lines=$(echo "$transformed_lines" | awk '!seen[$0]++')
+
+            grouped_lines=$(echo "$transformed_lines" | awk -F',' '{ files[$2] = files[$2] $1 "," } END { for (file in files) print file ":" substr(files[file], 1, length(files[file])-1) }')
+            grouped_lines=$(echo "$grouped_lines" | tr '\n' ' ')
           fi
           echo $CDIFF >> "tmp/nondet-$i-$j"
         else
@@ -105,7 +168,7 @@ for R in $(tail -$ACTUALREVS $REVFILE | egrep -v $IGNOREREVS | eval $SELECTACTUA
     done
   done
   if [[ $MAXDIFF -ge 0 ]]; then
-    echo $R $MAXDIFF >> "tmp/nondet-max"
+    echo $R $MAXDIFF $grouped_lines >> "tmp/nondet-max"
   fi
   if [[ $MAXDIFF -gt 0 ]]; then
     ((TOTALCONTRIB += 1))

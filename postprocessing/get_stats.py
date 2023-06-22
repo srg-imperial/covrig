@@ -74,7 +74,6 @@ def export_date_range(data, csv_name):
     return csv_row
 
 
-
 def export_eloc_tloc(data, csv_name):
     # Export stats like ELOC and TLOC and language
 
@@ -122,13 +121,13 @@ def export_delta_eloc_tloc(data, csv_name):
     # Get eloc, tloc, and language
     revs, eloc_data, tloc_data = utils.get_columns(cleaned_data, ['rev', 'eloc', 'testsize'])
 
-    # if csv_name == 'Lighttpd2':
-    #     # Get index of revision 21d9d5e
-    #     index = revs.index('21d9d5e')
-    #     # Now filter revisions, eloc_data, and coverage to only include revisions after (and including) 21d9d5e
-    #     revisions = revs[index:]
-    #     eloc_data = eloc_data[index:]
-    #     tloc_data = tloc_data[index:]
+    if csv_name == 'Lighttpd2':
+        # Get index of revision 21d9d5e
+        index = revs.index('21d9d5e')
+        # Now filter revisions, eloc_data, and coverage to only include revisions after (and including) 21d9d5e
+        revisions = revs[index:]
+        eloc_data = eloc_data[index:]
+        tloc_data = tloc_data[index:]
 
     # Get the last eloc and tloc
     eloc = eloc_data[-1]
@@ -310,7 +309,7 @@ def export_non_det_revisions(data, csv_name):
 
 
 def export_coverage_delta(data, csv_name):
-    # Clean the data of all apart from OK
+    # Assumes the last test failure registered doesn't massively affect the coverage
     cleaned_data = utils.clean_data(data,
                                     omit=['EmptyCommit', 'NoCoverage', 'compileError', 'TimedOut'])
 
