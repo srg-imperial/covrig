@@ -17,28 +17,32 @@ Covrig is a flexible infrastructure that can be used to run each version of a sy
 To build the project, you will need:
 - Python 3.8 or higher
 - Docker (see https://docs.docker.com/engine/install/ubuntu/)
-- Python packages: [docker-py](https://pypi.org/project/docker-py/), [fabric 2.7.1](https://pypi.org/project/fabric/2.7.1/), and [matplotlib](https://pypi.org/project/matplotlib/)
-- LCOV (latest unstable release from https://github.com/linux-test-project/lcov.git) needed for differential coverage
+- Python packages: [docker](https://pypi.org/project/docker/), [fabric 2.7.1](https://pypi.org/project/fabric/2.7.1/), and [matplotlib 3.7.0](https://pypi.org/project/matplotlib/3.7.0/)
+- LCOV 2.0 or higher needed for differential coverage (https://github.com/linux-test-project/lcov)
 
 > **_NOTE:_**  This project was developed on Linux (Ubuntu 20). It may work on other platforms, but this is not guaranteed since we do use shell commands when processing the data - the commands run on spawned Docker containers will of course be fine though.
 
-Once these dependencies are installed, you will need to generate an ssh keypair to connect to the VMs.
-Keep the private key in your `.ssh` directory and replace the `id_rsa` files in each `containers/<repo>` with your public key.
+Covrig works by spawning a series of VMs to run revisions of software. To connect to these VMs, we automatically SSH to them. To do this, generate an SSH keypair with `ssh-keygen`.
+Keep the private key in your `~/.ssh` directory and replace the `id_rsa.pub` files in each `containers/<repo>` with your public key that you generated in `~/.ssh` for each repo you would like to generate data for.
 
-To build a container, run this from the root of the repo:
+To build a repo's container from a Dockerfile, run this from the root of the project:
 ```
 docker build -t <image_name>:<tag> -f containers/<repo>/Dockerfile containers/<repo>
 ```
 
+For further analytics (e.g. some graphs), you may need local copies of the repos you are testing to be present in a `/repos` directory in the root of the project.
+
 -----
 ### Usage
+
+## Gathering Data
 ```
 python3 analytics.py <benchmark>
 ```
 
-Base benchmarks consist of lighttpd, redis, memcached, zeromq, binutils and git circa 2013.
+Base benchmarks consist of `lighttpd`, `redis`, `memcached`, `zeromq`, `binutils` and `git` circa 2013.
 
-Newly added benchmarks include apr, curl and vim.
+Newly added benchmarks include `apr`, `curl` and `vim`.
 
 The format for these containers is relatively simple. The `Dockerfile` contains the instructions for building the container.
 
@@ -46,7 +50,7 @@ The full options are
 
 ```
 usage: python3 analytics.py [-h] [--offline] [--resume] [--limit LIMIT] [--output OUTPUT] [--endatcommit COMMIT]
-                           program [revisions]
+                           program revisions
 
 positional arguments:
   program          program to analyse
@@ -57,7 +61,7 @@ optional arguments:
   --offline             process the revisions reusing previous coverage information
   --resume              resume processing from the last revision found in data file
                         (e.g. data/<program>/<program>.csv)
-  --limit LIMIT         limit to n number of revisions
+  --limit LIMIT         limit to n number of revisions (use the positional argument revisions if not sure)
   --output OUTPUT       output file name
   --image IMAGE         use a particular Docker image to analyze
   --endatcommit COMMIT  end processing at commit. Useful for debugging
@@ -122,7 +126,7 @@ Scenario: Experiments were executed. How to get meaningful data?
 
 ---
 
-Scenario: How to get non-determinism data?
+<!-- Scenario: How to get non-determinism data?
 
 Solution: Run the same benchmark multiple times
 ```
@@ -157,15 +161,36 @@ Scenario: I have a list of revisions. How do I get more interesting information 
 
 Solution: As before, but use the `postprocessing/faultcoverage-multiple.sh` script.
 
-This can be used to analyse buggy code coverage. Running this on a list of bug fixing revisions is intuitively similar to running the previous script on a list of revisions introducing the respective bugs.
+This can be used to analyse buggy code coverage. Running this on a list of bug fixing revisions is intuitively similar to running the previous script on a list of revisions introducing the respective bugs. -->
 
 ---
 Differential Coverage
 ---
-To get differential coverage information, run `utils/diffcov.sh`.
+To get pure differential coverage information, run `utils/diffcov.sh`.
 Example: `utils/diffcov.sh apr remotedata/apr/coverage/ 886b908 8fb7fa4`
-A quicker script if your file structure is correct is `utils/diffcov_runner.sh`, but the contents of which should make sense.
+A quicker script if your file structure is correct is `utils/diffcov_runner.sh`, which will also convert the data into CSVs and places them in the relevant directory alongside the original data (e.g. in the `data/<repo>` directory). These can then be graphed - see below.
 
+---
+Generating Graphs
+---
+As above, we can generate all the graphs using the `gen_graphs.py` script.
+
+For example, we can run `python3 postprocessing/gen_graphs.py <data/dir>`. Graphs are placed in graphs/.
+                Example: `python3 postprocessing/gen_graphs.py data/Redis/` for a single repo or 
+                            `python3 postprocessing/gen_graphs.py --dir data` to generate graphs for all benchmarks. (note this requires files to be )
+                        Ideal file structure is `data/Redis/Redis.csv` `data/Binutils/Binutils.csv` etc.
+
+If differential coverage data has been generated as above, run with the optional `--diffcov` argument to generate graphs for differential data.
+                Example: `python3 postprocessing/gen_graphs.py --diffcov --dir remotedata`
+
+---
+Generating Tables
+---
+Similar to graphs, we can generate the relevant tables using the `get_stats.py` script.
+
+For example, we can run `python3 postprocessing/get_stats.py <data/dir>`. Graphs are placed in graphs/.
+                Example: `python3 postprocessing/get_stats.py data/Redis/` for a single repo or 
+                            `python3 postprocessing/get_stats.py --dir data` to generate graphs for all benchmarks.
 ---
 Tests
 ---
