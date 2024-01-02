@@ -126,6 +126,8 @@ Scenario: Experiments were executed. How to get meaningful data?
 
 ---
 
+<!-- Legacy Instructions are listed below -->
+
 <!-- Scenario: How to get non-determinism data?
 
 Solution: Run the same benchmark multiple times
@@ -191,6 +193,7 @@ Similar to graphs, we can generate the relevant tables using the `get_stats.py` 
 For example, we can run `python3 postprocessing/get_stats.py <data/dir>`. Graphs are placed in graphs/.
                 Example: `python3 postprocessing/get_stats.py data/Redis/` for a single repo or 
                             `python3 postprocessing/get_stats.py --dir data` to generate graphs for all benchmarks.
+
 ---
 Tests
 ---
