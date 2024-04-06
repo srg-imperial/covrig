@@ -202,7 +202,7 @@ You can find the tests used by the Github CI in `tests/`. These can be run local
 ---
 Paper Reproducibility
 ---
-A pre-built docker image is available on Zenodo to be environment agnostic, and once downloaded can be extracted with `docker load -i covrig.tar.gz`.
+A pre-built docker image is available on Zenodo to be environment agnostic, and once downloaded can be extracted with `docker load -i covrig_artifact.tar.gz`.
 To run the image, you will need to have Docker installed.
 To run the image, use the following command to open an interactive terminal:
 ```
