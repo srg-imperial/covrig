@@ -1,0 +1,27 @@
+Dockerfile
+.git/
+
+*#
+*.pyc
+*.xml
+*.tar.bz2
+
+# Ignore archive directories
+jun2015data/
+remotedata/
+
+repos/
+
+# Ignore the data directory
+data/
+diffcov/
+graphs/
+latex/
+stats/
+
+# Ignore tests/logs directory
+tests/logs/
+compare_stats/
+.github/
+tmp/
+venv/

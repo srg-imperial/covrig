@@ -71,7 +71,7 @@ optional arguments:
 examples:
   python3 analytics.py redis 100
   python3 analytics.py --offline redis 100
-  python3 analytics.py --image redis:latest --endatcommit a1b2c3d redis 1
+  python3 analytics.py --image redis:latest --endatcommit 299b8f7 redis 1
 ```
 
 ---
@@ -202,6 +202,15 @@ You can find the tests used by the Github CI in `tests/`. These can be run local
 ---
 Paper Reproducibility
 ---
+A pre-built docker image is available on Zenodo to be environment agnostic, and once downloaded can be extracted with `docker load -i covrig_artifact.tar.gz`.
+To run the image, you will need to have Docker installed.
+To run the image, use the following command to open an interactive terminal:
+```
+docker run -v /var/run/docker.sock:/var/run/docker.sock -it covrig:latest
+```
+Then `cd root` and you will find the project in the root directory.
+All commands then can be run from here (tested on Redis, `python3 analytics.py --image redis:latest --endatcommit 299b8f7 redis 1`).
+
 To reproduce the results of the paper, you will need the dataset.
 The dataset gathered can be found on Zenodo at https://zenodo.org/records/8054755 and https://zenodo.org/records/8059463.
 To reproduce the results, create a folder `remotedata/` in the root directory of the project and then extract the archives as such:
