@@ -582,7 +582,7 @@ def plot_bucketed_patch_coverage(data, csv_name, save=True, plot=None, pos=0, mu
         ax.barh(csv_name if multiple else 0, width=proportions[i], left=cumulative_proportions[i], align='center', label=bin_labels[i], color=colours[i], edgecolor='black')
 
     # Use ax annotate to add the percentages to the bars (bucketed_cov_perc_data_av)
-    annotation_fontsize = 10
+    annotation_fontsize = 14
     for i in range(len(bin_labels)):
         text_colour = 'black'
         if i == len(bin_labels) - 1:
@@ -618,7 +618,7 @@ def plot_bucketed_patch_coverage(data, csv_name, save=True, plot=None, pos=0, mu
     if pos == 0:
         # Set the legend in reverse
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=len(labels), fontsize=8, title='Bins for Patch Sizes (ELOC)')
+        ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=len(labels), fontsize=14, title='Bins for Patch Sizes (ELOC)',  title_fontsize=14)
 
     ax.set_title('Patches bucketed by the size of the patch in ELOC with average patch coverages for each bin listed')
 
@@ -1575,7 +1575,7 @@ def plot_diffcov_hist(data, csv_name, save=True, plot=None, type='line', savedir
 def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir=None, size=DEFAULT_FIGSIZE, pos=0,
                       multiple=False, merge=True):
     if plot is None:
-        plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
+        plot = plt.subplots(figsize=size)
     (fig, ax) = plot
 
     type_to_line = {'line': 0, 'function': 1, 'branch': 2}
@@ -1586,8 +1586,8 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
 
     bins = ['UNC', 'LBC', 'UIC', 'UBC', 'GBC', 'GIC', 'GNC', 'CBC', 'EUB', 'ECB', 'DUB', 'DCB']
 
-    names = ['Added Uncovered Code', 'Lost Baseline Cov.', 'Included Uncovered Code', 'Baseline Uncovered Code',
-             'Gained Baseline Cov.', 'Included Covered Code', 'Added Covered Code', 'Covered Baseline Code',
+    names = ['Added Uncovered Code', 'Lost Baseline Coverage', 'Included Uncovered Code', 'Uncovered Baseline Code',
+             'Gained Baseline Coverage', 'Included Covered Code', 'Added Covered Code', 'Covered Baseline Code',
              'Excluded Uncovered Code', 'Excluded Covered Code', 'Deleted Uncovered Code', 'Deleted Covered Code']
 
     colours = ["#ff622a", "#cc6666", "#eeaa30", "#fde007", "#448844", "#30cc37", "#b5f7af", "#cad7fe", "#dddddd",
@@ -1631,7 +1631,8 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
         height = data_map[bin][0]
         # Get the bottom of the bar
         # Plot the bar
-        label = f"({bin}) {data_map[bin][1]}"
+        # label = f"({bin}) {data_map[bin][1]}"
+        label = bin
         if bin == 'CBC':
             # Plot negatively
             ax.bar(csv_name, height, bottom=-height, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
@@ -1649,7 +1650,8 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
         height = data_map[bin][0]
         # Get the bottom of the bar
         # Plot the bar
-        label = f"({bin}) {data_map[bin][1]}"
+        # label = f"({bin}) {data_map[bin][1]}"
+        label = bin
         if bin == 'UBC':
             # Plot negatively
             ax.bar(csv_name, height, bottom=-height, color=data_map[bin][2], edgecolor='black', zorder=3, align='edge',
@@ -1698,18 +1700,21 @@ def plot_diffcov_bars(data, csv_name, save=True, plot=None, type='line', savedir
     # Print the legend with the patch type names
     if pos == 0:
         # Define a title string
-        title = f"Note: For each project, the sum of diff. cov. bins ({' + '.join(new_bin_order[:6])}) equals the ELOC of the final revision studied."
-        # Wrap the title every 29 characters
-        title = "\n".join(wrap(title, 29))
-        # Draw a text box on the RHS outside the plot stating that for each project the sum of all new_bins[:8] is the final ELOC
-        legend_suppl = ax.legend(handles=[], bbox_to_anchor=(1.05, 0.5),
-                  title=title,
-                  loc='upper left', title_fontsize=11)
-        ax.add_artist(legend_suppl)
+        # title = f"Note: For each project, the sum of diff. cov. bins ({' + '.join(new_bin_order[:6])}) equals the ELOC of the final revision studied."
+        # # Wrap the title every 29 characters
+        # title = "\n".join(wrap(title, 29))
+        # # Draw a text box on the RHS outside the plot stating that for each project the sum of all new_bins[:8] is the final ELOC
+        # legend_suppl = ax.legend(handles=[], bbox_to_anchor=(1.05, 0.5),
+        #           title=title,
+        #           loc='upper left', title_fontsize=11)
+        # ax.add_artist(legend_suppl)
 
         handles, labels = ax.get_legend_handles_labels()
-        main_legend = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc='upper left', title='Diff. Cov. Categories',
-                  title_fontsize=12)
+        # main_legend = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc='upper left', title='Diff. Cov. Categories',
+        #           title_fontsize=12)
+        main_legend = ax.legend(handles, labels, bbox_to_anchor=(0.5, 1.12), loc='upper center',
+                                title='Diff. Cov. Categories',
+                                title_fontsize=12, ncol=len(labels))
 
 
     # Make it a grid
@@ -1727,7 +1732,7 @@ def plot_non_det_hist(data, csv_name, save=True, date=False, plot=None, savedir=
         plot = plt.subplots(figsize=DEFAULT_FIGSIZE)
     (fig, ax) = plot
 
-    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage', 'compileError'])
+    cleaned_data = utils.clean_data(data, omit=['EmptyCommit', 'NoCoverage', 'compileError', 'TimedOut'])
 
     # This should only be called for files that have a non_det column
     date_data, non_det_data, repeats_data = utils.get_columns(cleaned_data, ['time', 'non_det', 'repeats'])
@@ -1995,7 +2000,7 @@ def plot_diffcov_multiple(paths, csv_names, savedir=None):
     plot_diffcov_format_multiple(plot_diffcov_hist, 'diffcov-branch', paths, csv_names, type='branch')
 
     plot_diffcov_format_combined(plot_diffcov_bars, 'diffcov-line-compressed', paths, csv_names, type='line',
-                                 custom_figsize=(9, 9))
+                                 custom_figsize=(8, 10))
 
 
 def plot_diffcov_format_multiple(metric, outname, paths, csv_names, **kwargs):

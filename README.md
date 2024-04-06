@@ -199,3 +199,20 @@ Tests
 ---
 You can find the tests used by the Github CI in `tests/`. These can be run locally with `./tests/runtests.sh`.
 
+---
+Paper Reproducibility
+---
+To reproduce the results of the paper, you will need the dataset.
+The dataset gathered can be found on Zenodo at https://zenodo.org/records/8054755 and https://zenodo.org/records/8059463.
+To reproduce the results, create a folder `remotedata/` in the root directory of the project and then extract the archives as such:
+```
+tar -xvf <dataset_location>/remotedata-18-06-23-apr.tar.bz2 -C <covrig_location>/covrig/remotedata
+```
+You can equally just extract the CSVs for speed and omit the coverage archives.
+Then just specify something like `... apr apr/Apr_repeats.csv apr/diffcov_apr.csv` as arguments to the tar command.
+The CSV files contain all commits in a range, but we only analyse those that make changes to executable or test code or both.
+Since these archives are the results of the analysis, the only thing left to do is to generate the graphs and tables from them.
+To generate the graphs, run `python3 postprocessing/gen_graphs.py --dir remotedata`.
+To generate the tables, run `python3 postprocessing/get_stats.py --dir remotedata`.
+
+The non-determinism data can also be downloaded from Zenodo and extracted in the same way as above. This is only needed for a small subset of the figures and tables (ones that display statistics concerning the number of flaky lines per project).
