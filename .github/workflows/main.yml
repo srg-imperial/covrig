@@ -14,7 +14,7 @@ on:
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -50,7 +50,7 @@ jobs:
         run: sudo apt-get install -y lcov
 
       - name: Install cloc
-        run: cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && curl -L https://bugs.archlinux.org/task/45494?getfile=13174 > cloc.1.64.patch && patch -p1 < cloc.1.64.patch && sudo make install
+        run: cd /tmp && curl -L http://downloads.sourceforge.net/project/cloc/cloc/v1.64/cloc-1.64.tar.gz | tar xz && cd cloc-* && curl -L https://bugs.archlinux.org/attachments/45494/13174/cloc.1.64.patch > cloc.1.64.patch && patch -p1 < cloc.1.64.patch && sudo make install
 
       - name: Copy private ssh key to .ssh
         run: pwd && mkdir -p ~/.ssh && echo "$PRIVATE_SSH_KEY" > ~/.ssh/id_rsa && ls ~/.ssh
