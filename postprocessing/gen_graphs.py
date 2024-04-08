@@ -607,9 +607,9 @@ def plot_bucketed_patch_coverage(data, csv_name, save=True, plot=None, pos=0, mu
 
     # Set the x-axis label
     if weighted:
-        ax.set_xlabel('Proportion of total ELOC contributed by patches')
+        ax.set_xlabel('Proportion of total ELOC contributed by patches', fontsize=14)
     else:
-        ax.set_xlabel('Proportion of patches')
+        ax.set_xlabel('Proportion of patches', fontsize=14)
 
     if not multiple:
         # Turn off ticks for the y-axis
@@ -621,7 +621,7 @@ def plot_bucketed_patch_coverage(data, csv_name, save=True, plot=None, pos=0, mu
         ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=len(labels), fontsize=14, title='Bins for Patch Sizes (ELOC)',  title_fontsize=14)
 
     ax.set_title('Patches bucketed by the size of the patch in ELOC with average patch coverages for each bin listed')
-
+    ax.tick_params(axis='both', which='both', labelsize=14)
     # Save the plot
     if save:
         ax.set_title(f'Patch Types for {csv_name}')
